@@ -14,29 +14,43 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const session = require('express-session');
 const path = require('path');
-const serverless = require('serverless-http'); // ✅ for Vercel
+const serverless = require('serverless-http');
 const User = require('./models/User');
 
 const app = express();
 
 // --------------------------------------
+// DATABASE (fix: reuse cached connection for serverless)
+// --------------------------------------
+let isConnected = false;
+
+async function connectToDB() {
+  if (isConnected) return;
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    isConnected = true;
+    console.log('✅ Connected to MongoDB');
+  } catch (err) {
+    console.error('❌ MongoDB connection error:', err);
+  }
+}
+connectToDB(); // call it once when function starts
+
+// --------------------------------------
 // MIDDLEWARE
 // --------------------------------------
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json()); // 🔹 for JSON payloads
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || 'fallback-secret',
   resave: false,
   saveUninitialized: false,
 }));
 app.use(passport.initialize());
 app.use(passport.session());
-
-// --------------------------------------
-// DATABASE
-// --------------------------------------
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // --------------------------------------
 // PASSPORT CONFIG
@@ -49,28 +63,29 @@ passport.deserializeUser((id, done) => {
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: '/api/auth/google/callback' // ✅ update for Vercel path
+  callbackURL: '/api/auth/google/callback'
 }, async (accessToken, refreshToken, profile, done) => {
-  let user = await User.findOne({ googleId: profile.id });
-  if (!user) {
-    user = await User.create({
-      googleId: profile.id,
-      name: profile.displayName,
-      email: profile.emails[0].value,
-      photo: profile.photos[0].value,
-    });
+  try {
+    let user = await User.findOne({ googleId: profile.id });
+    if (!user) {
+      user = await User.create({
+        googleId: profile.id,
+        name: profile.displayName,
+        email: profile.emails[0].value,
+        photo: profile.photos[0].value,
+      });
+    }
+    return done(null, user);
+  } catch (err) {
+    return done(err, null);
   }
-  return done(null, user);
 }));
 
 // --------------------------------------
-// AUTH ROUTES
+// ROUTES
 // --------------------------------------
-app.use('/api/auth', require('./routes/auth')); // ✅ Vercel routes under /api/
+app.use('/api/auth', require('./routes/auth'));
 
-// --------------------------------------
-// ADMIN LOGIN SYSTEM
-// --------------------------------------
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = '1234';
 
@@ -82,11 +97,9 @@ function isAdminAuthenticated(req, res, next) {
   }
 }
 
-// View engine setup
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Admin login UI
 app.get('/api/admin/login', (req, res) => {
   res.send(`
     <form method="POST" action="/api/admin/login" style="max-width: 300px; margin: 50px auto;">
@@ -118,6 +131,6 @@ app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
 // --------------------------------------
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// ✅ Required for Vercel
+// ✅ EXPORT FOR VERCEL
 module.exports = app;
 module.exports.handler = serverless(app);
