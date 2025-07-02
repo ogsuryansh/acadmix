@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Panel</title>
+</head>
+<body>
+  
+  <h1>All Logged-in Users</h1>
+  <ul>
+    <% users.forEach(user => { %>
+      <li>
+        <img src="<%= user.photo %>" style="width:30px; border-radius:50%;" />
+        <strong><%= user.name %></strong> - <%= user.email %>
+      </li>
+    <% }) %>
+  </ul>
+</body>
+</html>
