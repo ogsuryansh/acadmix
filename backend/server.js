@@ -13,16 +13,19 @@ const mongoose = require('mongoose');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const session = require('express-session');
+const cookieParser = require('cookie-parser'); // ✅ Needed for cookie-based sessions
 const path = require('path');
 const serverless = require('serverless-http');
-const cors = require('cors'); // ✅ Add this
+const cors = require('cors');
 const User = require('./models/User');
 
 const app = express();
 
-// ✅ CORS setup (important for cookies + cross-origin auth)
+// --------------------------------------
+// ✅ CORS (cross-origin, allow cookies)
+// --------------------------------------
 app.use(cors({
-  origin: 'https://acadmix.shop',
+  origin: ['https://acadmix.shop', 'http://localhost:3000'],
   credentials: true
 }));
 
@@ -51,13 +54,15 @@ connectToDB();
 // --------------------------------------
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(cookieParser()); // ✅ Important for reading cookies
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback-secret',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: true,           // use HTTPS
-    sameSite: 'none',       // allow cross-site cookies
+    secure: true,           // ⬅️ Required for HTTPS cookies (Vercel)
+    sameSite: 'none',       // ⬅️ Required for cross-origin frontend/backend
   }
 }));
 
@@ -78,17 +83,19 @@ passport.use(new GoogleStrategy({
   callbackURL: 'https://acadmix-opal.vercel.app/api/auth/google/callback'
 }, async (accessToken, refreshToken, profile, done) => {
   try {
+    console.log('🔍 Google profile:', profile); // 🐞 Debug help
     let user = await User.findOne({ googleId: profile.id });
     if (!user) {
       user = await User.create({
         googleId: profile.id,
         name: profile.displayName,
-        email: profile.emails[0].value,
-        photo: profile.photos[0].value,
+        email: profile.emails?.[0]?.value || '',
+        photo: profile.photos?.[0]?.value || '',
       });
     }
     return done(null, user);
   } catch (err) {
+    console.error('❌ Google Strategy Error:', err); // 🐞 See actual crash
     return done(err, null);
   }
 }));
