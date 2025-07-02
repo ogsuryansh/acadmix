@@ -40,6 +40,10 @@ app.use(cors({
   origin: 'https://acadmix.shop',
   credentials: true
 }));
+app.get('/api/type-font/Colfax-Medium.woff', (req, res) => {
+  // Return empty response instead of 404
+  res.status(204).end();
+});
 
 // ✅ Handle missing font gracefully to silence CSP errors
 app.get('/api/type-font/Colfax-Medium.woff', (req, res) => {
