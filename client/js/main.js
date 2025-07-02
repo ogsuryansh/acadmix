@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const BASE_API = import.meta.env.VITE_API_URL;
+
   // ----------------------------------------
   // 🔁 Navbar toggle (mobile)
   // ----------------------------------------
@@ -24,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ----------------------------------------
   // 👤 Auth check
   // ----------------------------------------
-  fetch("/api/auth/user", { credentials: "include" })
+  fetch(`${BASE_API}/api/auth/user`, { credentials: "include" })
     .then((res) => {
       if (!res.ok) throw new Error("User fetch failed");
       return res.json();
@@ -41,14 +43,14 @@ document.addEventListener("DOMContentLoaded", () => {
         joinButtons.forEach((btn) => {
           btn.textContent = "Logout";
           btn.onclick = () => {
-            window.location.href = "/api/auth/logout";
+            window.location.href = `${BASE_API}/api/auth/logout`;
           };
         });
       } else {
         joinButtons.forEach((btn) => {
           btn.textContent = "Join";
           btn.onclick = () => {
-            window.location.href = "/api/auth/google";
+            window.location.href = `${BASE_API}/api/auth/google`;
           };
         });
       }
