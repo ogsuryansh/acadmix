@@ -20,16 +20,16 @@ const User           = require('./models/User');
 
 const app = express();
 
-// ─── 1) Trust proxy (for secure cookies on Vercel) ─────────────────────────
+// ─── Trust Vercel proxy so secure cookies work ─────────────────────────────
 app.set('trust proxy', 1);
 
-// ─── 2) Serve font BEFORE Helmet, so it’s really “self” ────────────────────
+// ─── Serve fonts before CSP so 'self' truly covers them ────────────────────
 app.use(
   '/api/type-font',
   express.static(path.join(__dirname, 'public', 'backend', 'api', 'type-font'))
 );
 
-// ─── 3) Helmet CSP – default to self; fontSrc only needs 'self' + data: ────
+// ─── Helmet CSP ────────────────────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -43,32 +43,46 @@ app.use(helmet({
   }
 }));
 
-// ─── 4) CORS for your front end ─────────────────────────────────────────────
+// ─── CORS ───────────────────────────────────────────────────────────────────
 app.use(cors({
   origin:      'https://acadmix.shop',
   credentials: true
 }));
 
-// ─── 5) DB connection ──────────────────────────────────────────────────────
-let isConnected = false;
+// ─── Body parsers ───────────────────────────────────────────────────────────
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+// ─── MongoDB Connection Utility (Serverless‑friendly) ───────────────────────
+/** 
+ * Uses a global cache to avoid opening new connections on every invocation.
+ */
 async function connectToDB() {
-  if (isConnected) return;
-  try {
-    await mongoose.connect(process.env.MONGO_URI, {
+  if (global._mongoConn) {
+    return global._mongoConn;
+  }
+  if (!global._mongoPromise) {
+    global._mongoPromise = mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser:    true,
       useUnifiedTopology: true,
     });
-    isConnected = true;
-    console.log('✅ Connected to MongoDB');
-  } catch (err) {
-    console.error('❌ MongoDB connection error:', err);
   }
+  global._mongoConn = await global._mongoPromise;
+  return global._mongoConn;
 }
-connectToDB();
 
-// ─── 6) Body & Session ─────────────────────────────────────────────────────
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+// ─── Ensure DB connected on every request ──────────────────────────────────
+app.use(async (req, res, next) => {
+  try {
+    await connectToDB();
+    return next();
+  } catch (err) {
+    console.error('❌ DB Connection Error:', err);
+    return res.status(500).json({ error: 'Database connection failed' });
+  }
+});
+
+// ─── Sessions & Passport ───────────────────────────────────────────────────
 app.use(session({
   secret:            process.env.SESSION_SECRET || 'fallback-secret',
   resave:            false,
@@ -78,11 +92,10 @@ app.use(session({
     sameSite: 'none',
   }
 }));
-
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ─── 7) Passport Google Strategy with Logging ──────────────────────────────
+// ─── Passport Google Strategy ──────────────────────────────────────────────
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser((id, done) =>
   User.findById(id)
@@ -95,7 +108,7 @@ passport.use(new GoogleStrategy({
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL:  'https://acadmix-opal.vercel.app/api/auth/google/callback'
 }, async (accessToken, refreshToken, profile, done) => {
-  console.log('🔔 Google profile payload:', profile);
+  console.log('🔔 Google profile:', profile);
   try {
     let user = await User.findOne({ googleId: profile.id });
     if (!user) {
@@ -108,43 +121,39 @@ passport.use(new GoogleStrategy({
     }
     return done(null, user);
   } catch (err) {
-    console.error('🚨 Error in GoogleStrategy:', err);
+    console.error('🚨 GoogleStrategy error:', err);
     return done(err, null);
   }
 }));
 
-// ─── 8) Auth Routes ─────────────────────────────────────────────────────────
+// ─── Auth Routes ───────────────────────────────────────────────────────────
 app.use('/api/auth', require('./routes/auth'));
 
-// ─── 9) Admin Panel ────────────────────────────────────────────────────────
+// ─── Admin Panel ───────────────────────────────────────────────────────────
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = '1234';
 function isAdminAuthenticated(req, res, next) {
   if (req.session?.admin) return next();
   return res.redirect('/api/admin/login');
 }
-
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-
-app.get('/api/admin/login', (req, res) => {
-  res.send(`...form markup...`);
-});
+app.get('/api/admin/login', (req, res) => { /* … form HTML … */ });
 app.post('/api/admin/login', (req, res) => { /* unchanged */ });
 app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
   const users = await User.find();
   res.render('admin', { users });
 });
 
-// ─── 10) Serve front-end static ─────────────────────────────────────────────
+// ─── Serve Public Static ───────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// ─── 11) Global Error Handler ──────────────────────────────────────────────
+// ─── Global Error Handler ──────────────────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error('💥 Uncaught error:', err);
+  console.error('💥 Uncaught Error:', err);
   res.status(500).json({ error: 'Internal Server Error', message: err.message });
 });
 
-// ─── 12) Export for Vercel ─────────────────────────────────────────────────
+// ─── Export for Vercel ─────────────────────────────────────────────────────
 module.exports = app;
 module.exports.handler = serverless(app);
