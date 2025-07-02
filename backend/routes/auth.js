@@ -22,15 +22,7 @@ router.get("/logout", (req, res) => {
 });
 
 router.get("/user", (req, res) => {
-  console.log('🔍 Session:', req.session);
-  console.log('🔍 User:', req.user);
-
-  if (!req.user) {
-    return res.status(401).json({ error: 'Not logged in' });
-  }
-
-  res.json(req.user);
+  res.json(req.user || null);
 });
-
 
 module.exports = router;
