@@ -1,58 +1,62 @@
 require('dotenv').config();
 
 console.log('🔑 ENV Check:', {
-  GOOGLE_CLIENT_ID: !!process.env.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_ID:     !!process.env.GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET: !!process.env.GOOGLE_CLIENT_SECRET,
-  MONGO_URI: !!process.env.MONGO_URI,
-  SESSION_SECRET: !!process.env.SESSION_SECRET,
+  MONGO_URI:            !!process.env.MONGO_URI,
+  SESSION_SECRET:       !!process.env.SESSION_SECRET,
 });
 console.log('🚀 Starting backend...');
 
-const express = require('express');
-const mongoose = require('mongoose');
-const passport = require('passport');
+const express        = require('express');
+const mongoose       = require('mongoose');
+const passport       = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const session = require('express-session');
-const path = require('path');
-const serverless = require('serverless-http');
-const cors = require('cors');
-const helmet = require('helmet');
-const User = require('./models/User');
+const session        = require('express-session');
+const path           = require('path');
+const serverless     = require('serverless-http');
+const cors           = require('cors');
+const helmet         = require('helmet');
+const User           = require('./models/User');
 
 const app = express();
 
-// ✅ Helmet Security Headers + CSP Fix
+// ─── 1) Trust Vercel’s proxy so secure cookies work ─────────────────────────
+app.set('trust proxy', 1);
+
+// ─── 2) Serve the font file BEFORE any CSP/Helmet middleware ────────────────
+app.use(
+  '/api/type-font',
+  express.static(path.join(__dirname, 'public', 'backend', 'api', 'type-font'))
+);
+
+// ─── 3) Helmet Security Headers + CSP ───────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      fontSrc: ["'self'", 'https://fonts.googleapis.com', 'https://fonts.gstatic.com', 'data:', 'https://acadmix-opal.vercel.app'],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://apis.google.com'],
-      imgSrc: ["'self'", 'https:', 'data:'],
-      connectSrc: ["'self'", 'https://acadmix.shop', 'https://acadmix-opal.vercel.app']
+      fontSrc:    ["'self'", "data:"],
+      styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      scriptSrc:  ["'self'", "'unsafe-inline'", 'https://apis.google.com'],
+      imgSrc:     ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'https://acadmix.shop']
     }
   }
 }));
 
-// ✅ CORS Setup
+// ─── 4) CORS (allow your front end) ─────────────────────────────────────────
 app.use(cors({
-  origin: 'https://acadmix.shop',
+  origin:      'https://acadmix.shop',
   credentials: true
 }));
 
-// ✅ Serve the actual font file from local path
-app.use('/api/type-font', express.static(path.join(__dirname, 'public', 'backend', 'api', 'type-font')));
-
-// --------------------------------------
-// Database
-// --------------------------------------
+// ─── 5) Database Connection ─────────────────────────────────────────────────
 let isConnected = false;
 async function connectToDB() {
   if (isConnected) return;
   try {
     await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
+      useNewUrlParser:    true,
       useUnifiedTopology: true,
     });
     isConnected = true;
@@ -63,44 +67,42 @@ async function connectToDB() {
 }
 connectToDB();
 
-// --------------------------------------
-// Middleware
-// --------------------------------------
+// ─── 6) Body Parsers + Session + Passport ──────────────────────────────────
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fallback-secret',
-  resave: false,
-  saveUninitialized: false,
+  secret:           process.env.SESSION_SECRET || 'fallback-secret',
+  resave:           false,
+  saveUninitialized:false,
   cookie: {
-    secure: true,
+    secure:   true,
     sameSite: 'none',
   }
 }));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
-// --------------------------------------
-// Passport Auth
-// --------------------------------------
+// ─── 7) Passport Google Strategy ───────────────────────────────────────────
 passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser((id, done) => {
-  User.findById(id).then(user => done(null, user));
-});
+passport.deserializeUser((id, done) =>
+  User.findById(id).then(user => done(null, user))
+);
 
 passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientID:     process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: 'https://acadmix-opal.vercel.app/api/auth/google/callback'
+  callbackURL:  'https://acadmix-opal.vercel.app/api/auth/google/callback'
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     let user = await User.findOne({ googleId: profile.id });
     if (!user) {
       user = await User.create({
         googleId: profile.id,
-        name: profile.displayName,
-        email: profile.emails[0].value,
-        photo: profile.photos[0].value,
+        name:     profile.displayName,
+        email:    profile.emails[0].value,
+        photo:    profile.photos[0].value,
       });
     }
     return done(null, user);
@@ -109,17 +111,15 @@ passport.use(new GoogleStrategy({
   }
 }));
 
-// --------------------------------------
-// Routes
-// --------------------------------------
+// ─── 8) Auth Routes ─────────────────────────────────────────────────────────
 app.use('/api/auth', require('./routes/auth'));
 
-// Admin Auth
+// ─── 9) Admin Panel ────────────────────────────────────────────────────────
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = '1234';
 
 function isAdminAuthenticated(req, res, next) {
-  if (req.session && req.session.admin === true) return next();
+  if (req.session?.admin) return next();
   return res.redirect('/api/admin/login');
 }
 
@@ -128,10 +128,10 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.get('/api/admin/login', (req, res) => {
   res.send(`
-    <form method="POST" action="/api/admin/login" style="max-width: 300px; margin: 50px auto;">
+    <form method="POST" action="/api/admin/login" style="max-width:300px;margin:50px auto;">
       <h2>Admin Login</h2>
-      <input type="text" name="username" placeholder="Username" required style="display:block;width:100%;margin-bottom:10px" />
-      <input type="password" name="password" placeholder="Password" required style="display:block;width:100%;margin-bottom:10px" />
+      <input type="text" name="username" placeholder="Username" required style="width:100%;margin-bottom:10px"/>
+      <input type="password" name="password" placeholder="Password" required style="width:100%;margin-bottom:10px"/>
       <button type="submit" style="width:100%">Login</button>
     </form>
   `);
@@ -151,11 +151,9 @@ app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
   res.render('admin', { users });
 });
 
-// --------------------------------------
-// Static Files
-// --------------------------------------
+// ─── 10) Public Static Files ────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// ✅ Export for Vercel
+// ─── 11) Export for Vercel ─────────────────────────────────────────────────
 module.exports = app;
 module.exports.handler = serverless(app);
