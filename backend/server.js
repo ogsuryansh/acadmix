@@ -26,7 +26,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      fontSrc: ["'self'", 'https://fonts.googleapis.com', 'https://fonts.gstatic.com', 'data:'],
+      fontSrc: ["'self'", 'https://fonts.googleapis.com', 'https://fonts.gstatic.com', 'data:', 'https://acadmix-opal.vercel.app'],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       scriptSrc: ["'self'", "'unsafe-inline'", 'https://apis.google.com'],
       imgSrc: ["'self'", 'https:', 'data:'],
@@ -40,16 +40,9 @@ app.use(cors({
   origin: 'https://acadmix.shop',
   credentials: true
 }));
-app.get('/api/type-font/Colfax-Medium.woff', (req, res) => {
-  res.setHeader('Content-Type', 'font/woff');
-  res.status(200).send(''); // Empty font response
-});
 
-
-// ✅ Handle missing font gracefully to silence CSP errors
-app.get('/api/type-font/Colfax-Medium.woff', (req, res) => {
-  res.status(204).end(); // No Content - silently skip
-});
+// ✅ Serve the actual font file from local path
+app.use('/api/type-font', express.static(path.join(__dirname, 'public', 'backend', 'api', 'type-font')));
 
 // --------------------------------------
 // Database
