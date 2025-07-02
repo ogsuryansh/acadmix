@@ -15,37 +15,41 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const session = require('express-session');
 const path = require('path');
 const serverless = require('serverless-http');
-const cors = require('cors'); // ✅ Add this
+const cors = require('cors');
+const helmet = require('helmet');
 const User = require('./models/User');
 
 const app = express();
-const helmet = require('helmet');
 
-// Enable Helmet with CSP config
+// ✅ Helmet Security Headers + CSP Fix
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      fontSrc: ["'self'", 'https://acadmix-opal.vercel.app', 'data:'],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://apis.google.com'], // if needed
+      fontSrc: ["'self'", 'https://fonts.googleapis.com', 'https://fonts.gstatic.com', 'data:'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://apis.google.com'],
       imgSrc: ["'self'", 'https:', 'data:'],
-      connectSrc: ["'self'", 'https://acadmix-opal.vercel.app', 'https://acadmix.shop']
+      connectSrc: ["'self'", 'https://acadmix.shop', 'https://acadmix-opal.vercel.app']
     }
   }
 }));
 
-// ✅ CORS setup (important for cookies + cross-origin auth)
+// ✅ CORS Setup
 app.use(cors({
   origin: 'https://acadmix.shop',
   credentials: true
 }));
 
+// ✅ Handle missing font gracefully to silence CSP errors
+app.get('/api/type-font/Colfax-Medium.woff', (req, res) => {
+  res.status(204).end(); // No Content - silently skip
+});
+
 // --------------------------------------
-// DATABASE
+// Database
 // --------------------------------------
 let isConnected = false;
-
 async function connectToDB() {
   if (isConnected) return;
   try {
@@ -62,7 +66,7 @@ async function connectToDB() {
 connectToDB();
 
 // --------------------------------------
-// MIDDLEWARE
+// Middleware
 // --------------------------------------
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -71,16 +75,15 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: true,           // use HTTPS
-    sameSite: 'none',       // allow cross-site cookies
+    secure: true,
+    sameSite: 'none',
   }
 }));
-
 app.use(passport.initialize());
 app.use(passport.session());
 
 // --------------------------------------
-// PASSPORT CONFIG
+// Passport Auth
 // --------------------------------------
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser((id, done) => {
@@ -109,19 +112,17 @@ passport.use(new GoogleStrategy({
 }));
 
 // --------------------------------------
-// ROUTES
+// Routes
 // --------------------------------------
 app.use('/api/auth', require('./routes/auth'));
 
+// Admin Auth
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = '1234';
 
 function isAdminAuthenticated(req, res, next) {
-  if (req.session && req.session.admin === true) {
-    return next();
-  } else {
-    return res.redirect('/api/admin/login');
-  }
+  if (req.session && req.session.admin === true) return next();
+  return res.redirect('/api/admin/login');
 }
 
 app.set('view engine', 'ejs');
@@ -142,10 +143,9 @@ app.post('/api/admin/login', (req, res) => {
   const { username, password } = req.body;
   if (username === ADMIN_USER && password === ADMIN_PASS) {
     req.session.admin = true;
-    res.redirect('/api/admin');
-  } else {
-    res.send('<p>Invalid login. <a href="/api/admin/login">Try again</a></p>');
+    return res.redirect('/api/admin');
   }
+  res.send('<p>Invalid login. <a href="/api/admin/login">Try again</a></p>');
 });
 
 app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
@@ -154,10 +154,10 @@ app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
 });
 
 // --------------------------------------
-// STATIC FILES
+// Static Files
 // --------------------------------------
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// ✅ EXPORT FOR VERCEL
+// ✅ Export for Vercel
 module.exports = app;
 module.exports.handler = serverless(app);
