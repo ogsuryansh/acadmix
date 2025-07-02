@@ -19,6 +19,21 @@ const cors = require('cors'); // ✅ Add this
 const User = require('./models/User');
 
 const app = express();
+const helmet = require('helmet');
+
+// Enable Helmet with CSP config
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      fontSrc: ["'self'", 'https://acadmix-opal.vercel.app', 'data:'],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://apis.google.com'], // if needed
+      imgSrc: ["'self'", 'https:', 'data:'],
+      connectSrc: ["'self'", 'https://acadmix-opal.vercel.app', 'https://acadmix.shop']
+    }
+  }
+}));
 
 // ✅ CORS setup (important for cookies + cross-origin auth)
 app.use(cors({
