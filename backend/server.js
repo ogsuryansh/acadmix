@@ -55,7 +55,12 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback-secret',
   resave: false,
   saveUninitialized: false,
+  cookie: {
+    secure: true,           // use HTTPS
+    sameSite: 'none',       // allow cross-site cookies
+  }
 }));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -70,7 +75,7 @@ passport.deserializeUser((id, done) => {
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: '/api/auth/google/callback'
+  callbackURL: 'https://acadmix-opal.vercel.app/api/auth/google/callback'
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     let user = await User.findOne({ googleId: profile.id });
