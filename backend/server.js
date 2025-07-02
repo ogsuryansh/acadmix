@@ -41,9 +41,10 @@ app.use(cors({
   credentials: true
 }));
 app.get('/api/type-font/Colfax-Medium.woff', (req, res) => {
-  // Return empty response instead of 404
-  res.status(204).end();
+  res.setHeader('Content-Type', 'font/woff');
+  res.status(200).send(''); // Empty font response
 });
+
 
 // ✅ Handle missing font gracefully to silence CSP errors
 app.get('/api/type-font/Colfax-Medium.woff', (req, res) => {
