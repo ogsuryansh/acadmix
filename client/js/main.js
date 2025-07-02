@@ -1,5 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Navbar toggle (mobile)
+  // ----------------------------------------
+  // 🔁 Navbar toggle (mobile)
+  // ----------------------------------------
   const toggleButton = document.querySelector(".nav-toggle");
   const navMenu = document.querySelector(".nav-menu");
 
@@ -19,9 +21,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Auth check
+  // ----------------------------------------
+  // 👤 Auth check
+  // ----------------------------------------
   fetch("/api/auth/user", { credentials: "include" })
-    .then((res) => res.json())
+    .then((res) => {
+      if (!res.ok) throw new Error("User fetch failed");
+      return res.json();
+    })
     .then((user) => {
       const joinButtons = document.querySelectorAll(".join-btn");
       const userIcons = document.querySelectorAll(".user-icon");
@@ -45,9 +52,14 @@ document.addEventListener("DOMContentLoaded", () => {
           };
         });
       }
+    })
+    .catch((err) => {
+      console.warn("Auth check failed:", err);
     });
 
-  // Get Started button animation
+  // ----------------------------------------
+  // 🚀 "Get Started" button animation
+  // ----------------------------------------
   const btn = document.querySelector(".btn-get-started");
   if (btn) {
     btn.addEventListener("click", () => {
