@@ -15,12 +15,19 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const session = require('express-session');
 const path = require('path');
 const serverless = require('serverless-http');
+const cors = require('cors'); // ✅ Add this
 const User = require('./models/User');
 
 const app = express();
 
+// ✅ CORS setup (important for cookies + cross-origin auth)
+app.use(cors({
+  origin: 'https://acadmix.shop',
+  credentials: true
+}));
+
 // --------------------------------------
-// DATABASE (fix: reuse cached connection for serverless)
+// DATABASE
 // --------------------------------------
 let isConnected = false;
 
@@ -37,13 +44,13 @@ async function connectToDB() {
     console.error('❌ MongoDB connection error:', err);
   }
 }
-connectToDB(); // call it once when function starts
+connectToDB();
 
 // --------------------------------------
 // MIDDLEWARE
 // --------------------------------------
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json()); // 🔹 for JSON payloads
+app.use(express.json());
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback-secret',
   resave: false,
