@@ -1,7 +1,3 @@
-const express = require("express");
-const passport = require("passport");
-const router = express.Router();
-
 router.get(
   "/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
@@ -24,5 +20,3 @@ router.get("/logout", (req, res) => {
 router.get("/user", (req, res) => {
   res.json(req.user || null);
 });
-
-module.exports = router;
