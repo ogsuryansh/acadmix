@@ -29,7 +29,7 @@ app.use(
   express.static(path.join(__dirname, 'public', 'backend', 'api', 'type-font'))
 );
 
-// ─── Helmet CSP ────────────────────────────────────────────────────────────
+// ─── Security headers via Helmet ───────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -44,8 +44,21 @@ app.use(helmet({
 }));
 
 // ─── CORS ───────────────────────────────────────────────────────────────────
+const allowedOrigins = [
+  'https://acadmix.shop',           // production front-end
+  'http://127.0.0.1:5500',          // local dev server
+  'http://localhost:3000'           // other local setups
+];
+
 app.use(cors({
-  origin:      'https://acadmix.shop',
+  origin: (origin, callback) => {
+    // allow requests with no origin (like mobile apps, curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS policy violation: origin ${origin} not allowed`));
+  },
   credentials: true
 }));
 
@@ -54,9 +67,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // ─── MongoDB Connection Utility (Serverless‑friendly) ───────────────────────
-/** 
- * Uses a global cache to avoid opening new connections on every invocation.
- */
 async function connectToDB() {
   if (global._mongoConn) {
     return global._mongoConn;
@@ -70,8 +80,6 @@ async function connectToDB() {
   global._mongoConn = await global._mongoPromise;
   return global._mongoConn;
 }
-
-// ─── Ensure DB connected on every request ──────────────────────────────────
 app.use(async (req, res, next) => {
   try {
     await connectToDB();
@@ -84,31 +92,31 @@ app.use(async (req, res, next) => {
 
 // ─── Sessions & Passport ───────────────────────────────────────────────────
 app.use(session({
-  secret:            process.env.SESSION_SECRET || 'fallback-secret',
+  secret:            process.env.SESSION_SECRET,
   resave:            false,
   saveUninitialized: false,
   cookie: {
-    secure:   true,
+    secure:   process.env.NODE_ENV === 'production',
     sameSite: 'none',
   }
 }));
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ─── Passport Google Strategy ──────────────────────────────────────────────
 passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser((id, done) =>
+passport.deserializeUser((id, done) => {
+  if (!id) return done(null, null);
   User.findById(id)
-      .then(user => done(null, user))
-      .catch(err => done(err))
-);
+    .then(user => done(null, user))
+    .catch(err => done(err, null));
+});
 
+// ─── Passport Google Strategy ──────────────────────────────────────────────
 passport.use(new GoogleStrategy({
   clientID:     process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL:  'https://acadmix-opal.vercel.app/api/auth/google/callback'
 }, async (accessToken, refreshToken, profile, done) => {
-  console.log('🔔 Google profile:', profile);
   try {
     let user = await User.findOne({ googleId: profile.id });
     if (!user) {
@@ -130,19 +138,31 @@ passport.use(new GoogleStrategy({
 app.use('/api/auth', require('./routes/auth'));
 
 // ─── Admin Panel ───────────────────────────────────────────────────────────
-const ADMIN_USER = 'admin';
-const ADMIN_PASS = '1234';
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASS = process.env.ADMIN_PASS;
 function isAdminAuthenticated(req, res, next) {
   if (req.session?.admin) return next();
   return res.redirect('/api/admin/login');
 }
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-app.get('/api/admin/login', (req, res) => { /* … form HTML … */ });
-app.post('/api/admin/login', (req, res) => { /* unchanged */ });
+app.get('/api/admin/login', (req, res) => { res.render('login'); });
+app.post('/api/admin/login', (req, res) => {
+  const { username, password } = req.body;
+  if (username === ADMIN_USER && password === ADMIN_PASS) {
+    req.session.admin = true;
+    return res.redirect('/api/admin');
+  }
+  return res.redirect('/api/admin/login');
+});
 app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
-  const users = await User.find();
-  res.render('admin', { users });
+  try {
+    const users = await User.find();
+    res.render('admin', { users });
+  } catch (err) {
+    console.error('❌ Admin fetch error:', err);
+    res.status(500).send('Error loading users');
+  }
 });
 
 // ─── Serve Public Static ───────────────────────────────────────────────────
