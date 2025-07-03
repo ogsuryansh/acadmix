@@ -47,18 +47,25 @@ app.use(helmet({
 
 // ─── CORS ───────────────────────────────────────────────────────────────────
 const allowedOrigins = [
-  process.env.FRONTEND_URL  || 'https://acadmix.shop',
+  process.env.FRONTEND_URL || 'https://acadmix.shop',
   'http://127.0.0.1:5500',
   'http://localhost:3000'
 ];
+
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // allow requests with no Origin header or with Origin: 'null'
+    if (!origin || origin === 'null') {
+      return callback(null, true);
+    }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
     callback(new Error(`CORS policy violation: origin ${origin} not allowed`));
   },
   credentials: true
 }));
+
 
 // ─── Body parsers ───────────────────────────────────────────────────────────
 app.use(express.urlencoded({ extended: true }));
