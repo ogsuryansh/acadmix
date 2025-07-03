@@ -261,12 +261,31 @@ html {
   align-items: center;
   justify-content: center;
   padding: 20px;
+  perspective: 1000px; /* Enables 3D perspective */
 }
 
 .image-content img {
-  width: 60%;
+  width: 90%;
   height: auto;
+  animation: spin3d 4s ease-in-out infinite;
+  transform-style: preserve-3d;
 }
+
+@keyframes spin3d {
+  0%, 100% {
+    transform: rotateY(0deg);
+  }
+  25% {
+    transform: rotateY(8deg);
+  }
+  50% {
+    transform: rotateY(0deg);
+  }
+  75% {
+    transform: rotateY(-8deg);
+  }
+}
+
 
 /* jump animation */
 @keyframes jump {
@@ -302,6 +321,11 @@ html {
   .btn-get-started {
     align-self: center;
   }
+  .image-content img {
+  width: 100%;
+ 
+}
+
 }
 
 .lable {
