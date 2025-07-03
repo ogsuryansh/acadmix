@@ -75,20 +75,32 @@ async function connectToDB() {
     global._mongoPromise = mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser:    true,
       useUnifiedTopology: true,
+      // you can bump this timeout if desired:
+      serverSelectionTimeoutMS: 10000,
     });
   }
   global._mongoConn = await global._mongoPromise;
   return global._mongoConn;
 }
+
 app.use(async (req, res, next) => {
   try {
     await connectToDB();
     return next();
   } catch (err) {
+    // Log the full error and stack
     console.error('❌ DB Connection Error:', err);
-    return res.status(500).json({ error: 'Database connection failed' });
+    console.error(err.stack);
+
+    // Return the real error message (and optionally the stack) to the client
+    return res.status(500).json({
+      error:   'Database connection failed',
+      message: err.message,
+      // stack:   err.stack   // uncomment if you want the full stack in the response
+    });
   }
 });
+
 
 // ─── Sessions & Passport ───────────────────────────────────────────────────
 app.use(session({
