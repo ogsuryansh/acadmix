@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Login</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; max-width: 400px; margin: auto; }
+    form { display: flex; flex-direction: column; }
+    label { margin-bottom: 1rem; }
+    input { padding: 0.5rem; font-size: 1rem; }
+    button { padding: 0.5rem; font-size: 1rem; cursor: pointer; }
+    .error { color: red; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Admin Login</h1>
+  <% if (error) { %>
+    <p class="error">Invalid username or password.</p>
+  <% } %>
+  <form action="/api/admin/login" method="POST">
+    <label>
+      Username<br/>
+      <input type="text" name="username" required />
+    </label>
+    <label>
+      Password<br/>
+      <input type="password" name="password" required />
+    </label>
+    <button type="submit">Log In</button>
+  </form>
+</body>
+</html>

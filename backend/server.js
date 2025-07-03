@@ -4,6 +4,8 @@ console.log('🔑 ENV Check:', {
   GOOGLE_CLIENT_SECRET: !!process.env.GOOGLE_CLIENT_SECRET,
   MONGO_URI:            !!process.env.MONGO_URI,
   SESSION_SECRET:       !!process.env.SESSION_SECRET,
+  ADMIN_USER:           !!process.env.ADMIN_USER,
+  ADMIN_PASS:           !!process.env.ADMIN_PASS,
 });
 console.log('🚀 Starting backend...');
 
@@ -45,18 +47,14 @@ app.use(helmet({
 
 // ─── CORS ───────────────────────────────────────────────────────────────────
 const allowedOrigins = [
-  'https://acadmix.shop',           // production front-end
-  'http://127.0.0.1:5500',          // local dev server
-  'http://localhost:3000'           // other local setups
+  process.env.FRONTEND_URL  || 'https://acadmix.shop',
+  'http://127.0.0.1:5500',
+  'http://localhost:3000'
 ];
-
 app.use(cors({
   origin: (origin, callback) => {
-    // allow requests with no origin (like mobile apps, curl)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+    if (allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`CORS policy violation: origin ${origin} not allowed`));
   },
   credentials: true
@@ -75,7 +73,6 @@ async function connectToDB() {
     global._mongoPromise = mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser:    true,
       useUnifiedTopology: true,
-      // you can bump this timeout if desired:
       serverSelectionTimeoutMS: 10000,
     });
   }
@@ -88,23 +85,19 @@ app.use(async (req, res, next) => {
     await connectToDB();
     return next();
   } catch (err) {
-    // Log the full error and stack
     console.error('❌ DB Connection Error:', err);
     console.error(err.stack);
-
-    // Return the real error message (and optionally the stack) to the client
     return res.status(500).json({
       error:   'Database connection failed',
       message: err.message,
-      // stack:   err.stack   // uncomment if you want the full stack in the response
+      // stack:   err.stack, // uncomment to include full stack in response
     });
   }
 });
 
-
 // ─── Sessions & Passport ───────────────────────────────────────────────────
 app.use(session({
-  secret:            process.env.SESSION_SECRET,
+  secret:            process.env.SESSION_SECRET || 'fallback-secret',
   resave:            false,
   saveUninitialized: false,
   cookie: {
@@ -129,6 +122,7 @@ passport.use(new GoogleStrategy({
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL:  'https://acadmix-opal.vercel.app/api/auth/google/callback'
 }, async (accessToken, refreshToken, profile, done) => {
+  console.log('🔔 Google profile ID:', profile.id);
   try {
     let user = await User.findOne({ googleId: profile.id });
     if (!user) {
@@ -152,21 +146,37 @@ app.use('/api/auth', require('./routes/auth'));
 // ─── Admin Panel ───────────────────────────────────────────────────────────
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
+
 function isAdminAuthenticated(req, res, next) {
   if (req.session?.admin) return next();
   return res.redirect('/api/admin/login');
 }
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-app.get('/api/admin/login', (req, res) => { res.render('login'); });
+
+// Render login form (passes error flag if present)
+app.get('/api/admin/login', (req, res) => {
+  res.render('login', { error: req.query.error });
+});
+
+// Process login
 app.post('/api/admin/login', (req, res) => {
   const { username, password } = req.body;
   if (username === ADMIN_USER && password === ADMIN_PASS) {
     req.session.admin = true;
     return res.redirect('/api/admin');
   }
-  return res.redirect('/api/admin/login');
+  return res.redirect('/api/admin/login?error=1');
 });
+
+// Logout admin
+app.post('/api/admin/logout', (req, res) => {
+  req.session.admin = null;
+  res.redirect('/api/admin/login');
+});
+
+// Protected admin dashboard
 app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
   try {
     const users = await User.find();
