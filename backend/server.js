@@ -256,11 +256,18 @@ app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
     res.status(500).send('Error saving book');
   }
 });
+const Card = require('./models/Card'); // Make sure this is imported at the top
 
-// ─── Export for Vercel ─────────────────────────────────────────────────────
-module.exports = app;
-module.exports.handler = serverless(app);
-
+// ─── Public API to Get All Cards ────────────────────────────────────────────
+app.get('/api/cards', async (req, res) => {
+  try {
+    const cards = await Card.find().sort({ createdAt: -1 });
+    res.json(cards);
+  } catch (err) {
+    console.error('❌ Error fetching cards:', err);
+    res.status(500).json({ error: 'Failed to fetch cards' });
+  }
+});
 ///////// multer
 
 
@@ -285,3 +292,8 @@ app.post('/api/admin/cards', isAdminAuthenticated, upload.single('image'), async
   await Card.create({ title, category, image, originalPrice, discountedPrice, badge, demo });
   res.redirect('/api/admin/cards');
 });
+
+// ─── Export for Vercel ─────────────────────────────────────────────────────
+module.exports = app;
+module.exports.handler = serverless(app);
+

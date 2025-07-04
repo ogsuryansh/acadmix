@@ -38,85 +38,69 @@
       </button>
     </div>
   </nav>
+
   <main>
     <section class="mainHead">
-  <div class="content-wrapper">
-    <div class="text-content">
-      <h1>Welcome to ACADEMIX</h1>
-      <p>Study smarter, not harder — get exclusive access to top-notch study materials at StudyLexus. Sign in &amp; get started!</p>
-      <button class="btn-get-started">
-  Get Started
-  <span class="arrow"><i class="fa-solid fa-arrow-right"></i></span>
-</button>
-    </div>
-    <div class="image-content">
-      <img src="assets/imgs/ChatGPT Image Jul 3, 2025, 11_20_27 PM.png" alt="Academix Logo" />
-    </div>
-  </div>
-</section>
-
-    <div class="lable">
-      Main Featured Materials
-    </div>
-    <div class="cards">
-      <!-- Card 1 -->
-      <div class="card">
-        <div class="card-image">
-          <img src="assets/imgs/1746008344732-d3ln67j7g9.webp" alt="NCERT Highlights">
-          <div class="badge">90% OFF</div>
+      <div class="content-wrapper">
+        <div class="text-content">
+          <h1>Welcome to ACADEMIX</h1>
+          <p>Study smarter, not harder — get exclusive access to top-notch study materials at StudyLexus. Sign in &amp; get started!</p>
+          <button class="btn-get-started">
+            Get Started
+            <span class="arrow"><i class="fa-solid fa-arrow-right"></i></span>
+          </button>
         </div>
-        <div class="card-body">
-          <div class="category">NCERT Highlights</div>
-          <h3 class="card-title">Biology NCERT Highlights</h3>
-          <div class="price">
-            <span class="original">₹199</span>
-            <span class="discount">₹19</span>
-          </div>
-          <div class="demo">No Demo</div>
-          <a href="#" class="btn-buy">Buy Now</a>
+        <div class="image-content">
+          <img src="assets/imgs/ChatGPT Image Jul 3, 2025, 11_20_27 PM.png" alt="Academix Logo" />
         </div>
       </div>
+    </section>
 
-      <!-- Card 2 -->
-      <div class="card">
-        <div class="card-image">
-          <img src="assets/imgs/1748926112158-zdkssi7t.webp" alt="Physics Notes">
-          <div class="badge">90% OFF</div>
-        </div>
-        <div class="card-body">
-          <div class="category">Physics</div>
-          <h3 class="card-title">Physics Short Notes by Mr Sir</h3>
-          <div class="price">
-            <span class="original">₹199</span>
-            <span class="discount">₹19</span>
-          </div>
-          <div class="demo">No Demo</div>
-          <a href="#" class="btn-buy">Buy Now</a>
-        </div>
-      </div>
+    <div class="lable">Main Featured Materials</div>
 
-      <!-- Card 3 -->
-      <div class="card">
-        <div class="card-image">
-          <img src="assets/imgs/1750439214700-vnpvslff.webp" alt="NEET Notes">
-          <div class="badge">90% OFF</div>
-        </div>
-        <div class="card-body">
-          <div class="category">Biology</div>
-          <h3 class="card-title">Biology Short Notes by Samapti Mam</h3>
-          <div class="price">
-            <span class="original">₹199</span>
-            <span class="discount">₹19</span>
-          </div>
-          <div class="demo">No Demo</div>
-          <a href="#" class="btn-buy">Buy Now</a>
-        </div>
-      </div>
+    <!-- 📦 Dynamic Card Container -->
+    <div class="cards" id="card-container">
+      <!-- Cards will be injected here from backend -->
     </div>
-
   </main>
-  <script type="module" src="js/main.js"></script>
- 
-</body>
 
+  <script type="module" src="js/main.js"></script>
+  <script>
+    fetch('/api/cards')
+      .then(res => res.json())
+      .then(cards => {
+        const container = document.getElementById('card-container');
+        if (!cards.length) {
+          container.innerHTML = '<p>No cards found</p>';
+          return;
+        }
+
+        cards.forEach(card => {
+          const cardEl = document.createElement('div');
+          cardEl.className = 'card';
+          cardEl.innerHTML = `
+            <div class="card-image">
+              <img src="${card.image}" alt="${card.title}" />
+              <div class="badge">${card.badge || ''}</div>
+            </div>
+            <div class="card-body">
+              <div class="category">${card.category}</div>
+              <h3 class="card-title">${card.title}</h3>
+              <div class="price">
+                <span class="original">₹${card.originalPrice}</span>
+                <span class="discount">₹${card.discountedPrice}</span>
+              </div>
+              <div class="demo">${card.demo || 'No Demo'}</div>
+              <a href="#" class="btn-buy">Buy Now</a>
+            </div>
+          `;
+          container.appendChild(cardEl);
+        });
+      })
+      .catch(err => {
+        console.error('Error fetching cards:', err);
+        document.getElementById('card-container').innerHTML = '<p>Error loading materials</p>';
+      });
+  </script>
+</body>
 </html>
