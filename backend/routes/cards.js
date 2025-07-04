@@ -1,4 +1,10 @@
-app.get('/api/cards', async (req, res) => {
+// public/backend/routes/cards.js
+const express = require('express');
+const router = express.Router();
+const Book = require('../models/Book');
+
+// GET /api/admin/cards
+router.get('/cards', async (req, res) => {
   try {
     const cards = await Book.find().sort({ createdAt: -1 });
     res.json(cards);
@@ -6,3 +12,5 @@ app.get('/api/cards', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch cards' });
   }
 });
+
+module.exports = router;

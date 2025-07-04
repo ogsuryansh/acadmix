@@ -20,6 +20,8 @@ const cors           = require('cors');
 const helmet         = require('helmet');
 const User           = require('./models/User');
 const Book = require('./models/Book');
+const Card = require('./models/Card');
+
 
 // If you add Book.js and Payment.js later, require them here:
 // const Book    = require('./models/Book');
@@ -292,6 +294,18 @@ app.post('/api/admin/cards', isAdminAuthenticated, upload.single('image'), async
   await Card.create({ title, category, image, originalPrice, discountedPrice, badge, demo });
   res.redirect('/api/admin/cards');
 });
+// GET /api/admin/cards
+// GET /api/admin/cards → show all cards in admin panel
+app.get('/api/admin/cards', isAdminAuthenticated, async (req, res) => {
+  try {
+    const cards = await Card.find().sort({ createdAt: -1 });
+    res.render('admin-cards', { cards });
+  } catch (err) {
+    console.error('❌ Error fetching cards:', err);
+    res.status(500).send('Error loading cards');
+  }
+});
+
 
 // ─── Export for Vercel ─────────────────────────────────────────────────────
 module.exports = app;

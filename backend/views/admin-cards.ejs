@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin - All Cards</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    h1 { margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px 12px; border: 1px solid #ccc; }
+    img { height: 50px; }
+  </style>
+</head>
+<body>
+  <h1>All Cards</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Category</th>
+        <th>Image</th>
+        <th>Original Price</th>
+        <th>Discounted Price</th>
+        <th>Badge</th>
+        <th>Demo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% cards.forEach(card => { %>
+        <tr>
+          <td><%= card.title %></td>
+          <td><%= card.category %></td>
+          <td><img src="<%= card.image %>" alt="card image"></td>
+          <td>₹<%= card.originalPrice %></td>
+          <td>₹<%= card.discountedPrice %></td>
+          <td><%= card.badge %></td>
+          <td><a href="<%= card.demo %>" target="_blank">View Demo</a></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</body>
+</html>
