@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add New Book</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 2rem;
+    }
+    h1 { margin-bottom: 1rem; }
+    form { display: flex; flex-direction: column; gap: 1rem; }
+    label { font-weight: bold; }
+    input, textarea, select {
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+    button {
+      padding: 0.6rem;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>📘 Add New Book</h1>
+  <form action="/api/admin/books/new" method="POST">
+    <label>Title
+      <input type="text" name="title" required />
+    </label>
+
+    <label>Category
+      <input type="text" name="category" required />
+    </label>
+
+    <label>Page (Where it appears - like homepage, class10 etc.)
+      <input type="text" name="page" required />
+    </label>
+
+    <label>Original Price ₹
+      <input type="number" name="priceOriginal" required />
+    </label>
+
+    <label>Discounted Price ₹
+      <input type="number" name="priceDiscounted" required />
+    </label>
+
+    <label>Badge Text (like "90% OFF")
+      <input type="text" name="badge" required />
+    </label>
+
+    <label>Image URL
+      <input type="text" name="imageUrl" required />
+    </label>
+
+    <label>Demo (like "No Demo" or link)
+      <input type="text" name="demo" required />
+    </label>
+
+    <button type="submit">Add Book</button>
+  </form>
+</body>
+</html>
