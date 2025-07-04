@@ -19,6 +19,8 @@ const serverless     = require('serverless-http');
 const cors           = require('cors');
 const helmet         = require('helmet');
 const User           = require('./models/User');
+const Book = require('./models/Book');
+
 // If you add Book.js and Payment.js later, require them here:
 // const Book    = require('./models/Book');
 // const Payment = require('./models/Payment');
@@ -146,6 +148,15 @@ function isAdminAuthenticated(req, res, next) {
   if (req.session?.admin) return next();
   res.redirect('/api/admin/login');
 }
+app.get('/api/admin/books', isAdminAuthenticated, async (req, res) => {
+  try {
+    const books = await Book.find().sort({ createdAt: -1 });
+    res.render('admin-books', { books });
+  } catch (err) {
+    console.error('❌ Failed to fetch books:', err);
+    res.status(500).send('Server error');
+  }
+});
 
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
@@ -208,6 +219,42 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use((err, req, res, next) => {
   console.error('💥 Uncaught Error:', err);
   res.status(500).json({ error: 'Internal Server Error', message: err.message });
+});
+// ─── Show Add Book Form ─────────────────────────────────────────────────────
+app.get('/api/admin/books/new', isAdminAuthenticated, (req, res) => {
+  res.render('add-book');
+});
+
+// ─── Handle Add Book Submission ─────────────────────────────────────────────
+app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
+  try {
+    const {
+      title,
+      category,
+      page,
+      priceOriginal,
+      priceDiscounted,
+      badge,
+      imageUrl,
+      demo
+    } = req.body;
+
+    await Book.create({
+      title,
+      category,
+      page,
+      priceOriginal,
+      priceDiscounted,
+      badge,
+      imageUrl,
+      demo
+    });
+
+    res.redirect('/api/admin/books');
+  } catch (err) {
+    console.error('❌ Error adding book:', err);
+    res.status(500).send('Error saving book');
+  }
 });
 
 // ─── Export for Vercel ─────────────────────────────────────────────────────

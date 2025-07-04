@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Book Management</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 0.75rem;
+      text-align: left;
+    }
+    th {
+      background-color: #f5f5f5;
+    }
+    img {
+      height: 40px;
+    }
+    .btn {
+      padding: 0.4rem 0.7rem;
+      font-size: 0.9rem;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .btn-add {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .btn-edit {
+      background-color: #2196F3;
+      color: white;
+    }
+    .btn-delete {
+      background-color: #f44336;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <h1>📚 Book Management</h1>
+    <a href="/api/admin/books/new" class="btn btn-add">+ Add New Book</a>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Image</th>
+        <th>Title</th>
+        <th>Category</th>
+        <th>Page</th>
+        <th>Original ₹</th>
+        <th>Discount ₹</th>
+        <th>Badge</th>
+        <th>Demo</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% books.forEach(book => { %>
+        <tr>
+          <td><img src="<%= book.imageUrl %>" alt=""></td>
+          <td><%= book.title %></td>
+          <td><%= book.category %></td>
+          <td><%= book.page %></td>
+          <td>₹<%= book.priceOriginal %></td>
+          <td>₹<%= book.priceDiscounted %></td>
+          <td><%= book.badge %></td>
+          <td><%= book.demo %></td>
+          <td>
+            <a href="/api/admin/books/edit/<%= book._id %>" class="btn btn-edit">Edit</a>
+            <form action="/api/admin/books/delete/<%= book._id %>" method="POST" style="display:inline;">
+              <button type="submit" class="btn btn-delete" onclick="return confirm('Are you sure?')">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+</body>
+</html>
