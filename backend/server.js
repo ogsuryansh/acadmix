@@ -214,6 +214,7 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // ─── Auth Routes for Normal Users ──────────────────────────────────────────
 app.use('/api/auth', require('./routes/auth'));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
 
 // ─── Serve Public Static Files ─────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
@@ -261,32 +262,22 @@ app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
 });
 
 // ─── Public API to Get All Cards ────────────────────────────────────────────
+// ✅ Correct
 app.get('/api/cards', async (req, res) => {
   try {
-    const cards = await Book.find().sort({ createdAt: -1 });
+    const cards = await Card.find().sort({ createdAt: -1 }); // ✅
     res.json(cards);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch cards' });
   }
 });
+
 ///////// multer
 
 
 
-const multer = require('multer');
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '..', 'public', 'uploads'));
-  },
-  filename: function (req, file, cb) {
-    const uniqueName = Date.now() + '-' + file.originalname;
-    cb(null, uniqueName);
-  }
-});
-
-const upload = multer({ storage });
+const upload = require('./middleware/upload');
 
 app.post('/api/admin/cards', isAdminAuthenticated, upload.single('image'), async (req, res) => {
   const { title, category, originalPrice, discountedPrice, badge, demo } = req.body;
