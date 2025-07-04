@@ -3,15 +3,58 @@
 <head>
   <title>Admin - All Cards</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    h1 { margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 8px 12px; border: 1px solid #ccc; }
-    img { height: 50px; }
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    h1, h2 {
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 40px;
+    }
+    th, td {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+    img {
+      height: 50px;
+    }
+    form {
+      border: 1px solid #ccc;
+      padding: 20px;
+      max-width: 600px;
+    }
+    label {
+      display: block;
+      margin-bottom: 10px;
+    }
+    input[type="text"],
+    input[type="number"],
+    input[type="file"] {
+      width: 100%;
+      padding: 6px;
+      margin-top: 4px;
+    }
+    button {
+      padding: 10px 16px;
+      margin-top: 10px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #218838;
+    }
   </style>
 </head>
 <body>
   <h1>All Cards</h1>
+
   <table>
     <thead>
       <tr>
@@ -38,5 +81,38 @@
       <% }) %>
     </tbody>
   </table>
+
+  <h2>Add New Card</h2>
+  <form action="/api/admin/cards" method="POST" enctype="multipart/form-data">
+    <label>Title:
+      <input type="text" name="title" required />
+    </label>
+
+    <label>Category:
+      <input type="text" name="category" required />
+    </label>
+
+    <label>Original Price:
+      <input type="number" name="originalPrice" required />
+    </label>
+
+    <label>Discounted Price:
+      <input type="number" name="discountedPrice" required />
+    </label>
+
+    <label>Badge:
+      <input type="text" name="badge" />
+    </label>
+
+    <label>Demo Link:
+      <input type="text" name="demo" />
+    </label>
+
+    <label>Image:
+      <input type="file" name="image" accept="image/*" required />
+    </label>
+
+    <button type="submit">Add Card</button>
+  </form>
 </body>
 </html>
