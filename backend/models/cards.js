@@ -1,7 +1,7 @@
 // public/backend/routes/cards.js
 const express = require('express');
 const router = express.Router();
-const Book = require('../models/Book');
+const Book = require('./Book');
 
 // GET /api/admin/cards
 router.get('/cards', async (req, res) => {
