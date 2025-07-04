@@ -19,6 +19,9 @@ const serverless     = require('serverless-http');
 const cors           = require('cors');
 const helmet         = require('helmet');
 const User           = require('./models/User');
+// If you add Book.js and Payment.js later, require them here:
+// const Book    = require('./models/Book');
+// const Payment = require('./models/Payment');
 
 const app = express();
 
@@ -51,21 +54,14 @@ const allowedOrigins = [
   'http://127.0.0.1:5500',
   'http://localhost:3000'
 ];
-
 app.use(cors({
   origin: (origin, callback) => {
-    // allow requests with no Origin header or with Origin: 'null'
-    if (!origin || origin === 'null') {
-      return callback(null, true);
-    }
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+    if (!origin || origin === 'null') return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`CORS policy violation: origin ${origin} not allowed`));
   },
   credentials: true
 }));
-
 
 // ─── Body parsers ───────────────────────────────────────────────────────────
 app.use(express.urlencoded({ extended: true }));
@@ -73,9 +69,7 @@ app.use(express.json());
 
 // ─── MongoDB Connection Utility (Serverless‑friendly) ───────────────────────
 async function connectToDB() {
-  if (global._mongoConn) {
-    return global._mongoConn;
-  }
+  if (global._mongoConn) return global._mongoConn;
   if (!global._mongoPromise) {
     global._mongoPromise = mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser:    true,
@@ -92,12 +86,10 @@ app.use(async (req, res, next) => {
     await connectToDB();
     return next();
   } catch (err) {
-    console.error('❌ DB Connection Error:', err);
-    console.error(err.stack);
+    console.error('❌ DB Connection Error:', err, err.stack);
     return res.status(500).json({
       error:   'Database connection failed',
       message: err.message,
-      // stack:   err.stack, // uncomment to include full stack in response
     });
   }
 });
@@ -129,7 +121,6 @@ passport.use(new GoogleStrategy({
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL:  'https://acadmix-opal.vercel.app/api/auth/google/callback'
 }, async (accessToken, refreshToken, profile, done) => {
-  console.log('🔔 Google profile ID:', profile.id);
   try {
     let user = await User.findOne({ googleId: profile.id });
     if (!user) {
@@ -147,26 +138,49 @@ passport.use(new GoogleStrategy({
   }
 }));
 
-// ─── Auth Routes ───────────────────────────────────────────────────────────
-app.use('/api/auth', require('./routes/auth'));
+// ─── EJS Setup & Admin Auth Middleware ────────────────────────────────────
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
-// ─── Admin Panel ───────────────────────────────────────────────────────────
+function isAdminAuthenticated(req, res, next) {
+  if (req.session?.admin) return next();
+  res.redirect('/api/admin/login');
+}
+
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
 
+// ─── Admin Login Routes ────────────────────────────────────────────────────
+app.get('/api/admin/login', (req, res) => {
+  res.render('login', { error: req.query.error });
+});
+
+app.post('/api/admin/login', (req, res) => {
+  const { username, password } = req.body;
+  if (username === ADMIN_USER && password === ADMIN_PASS) {
+    req.session.admin = true;
+    return res.redirect('/api/admin');
+  }
+  res.redirect('/api/admin/login?error=1');
+});
+
+// ─── Admin Logout ──────────────────────────────────────────────────────────
+app.post('/api/admin/logout', (req, res) => {
+  req.session.admin = null;
+  res.redirect('/api/admin/login');
+});
+
+// ─── Admin Dashboard ──────────────────────────────────────────────────────
 app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
   try {
     const users = await User.find();
+    const totalUsers    = users.length;
+    const totalPayments = 0; // TODO: replace with Payment.countDocuments()
+    const totalBooks    = 0; // TODO: replace with Book.countDocuments()
 
-    // Mocked placeholders (you'll replace with real ones later)
-    const totalUsers = users.length;
-    const totalPayments = 0; // to be connected later
-    const totalBooks = 0;    // to be connected later
-
-    // Attach mock "books" array to each user if missing
-    const usersWithBooks = users.map(user => ({
-      ...user.toObject(),
-      books: user.books || [] // fake or empty array
+    const usersWithBooks = users.map(u => ({
+      ...u.toObject(),
+      books: u.books || []
     }));
 
     res.render('admin', {
@@ -177,47 +191,17 @@ app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Admin fetch error:', err);
-    res.status(500).send('Error loading users');
+    res.status(500).send('Error loading admin dashboard');
   }
 });
 
+// ─── Silence favicon 500 ───────────────────────────────────────────────────
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+// ─── Auth Routes for Normal Users ──────────────────────────────────────────
+app.use('/api/auth', require('./routes/auth'));
 
-// Render login form (passes error flag if present)
-app.get('/api/admin/login', (req, res) => {
-  res.render('login', { error: req.query.error });
-});
-
-// Process login
-app.post('/api/admin/login', (req, res) => {
-  const { username, password } = req.body;
-  if (username === ADMIN_USER && password === ADMIN_PASS) {
-    req.session.admin = true;
-    return res.redirect('/api/admin');
-  }
-  return res.redirect('/api/admin/login?error=1');
-});
-
-// Logout admin
-app.post('/api/admin/logout', (req, res) => {
-  req.session.admin = null;
-  res.redirect('/api/admin/login');
-});
-
-// Protected admin dashboard
-app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
-  try {
-    const users = await User.find();
-    res.render('admin', { users });
-  } catch (err) {
-    console.error('❌ Admin fetch error:', err);
-    res.status(500).send('Error loading users');
-  }
-});
-
-// ─── Serve Public Static ───────────────────────────────────────────────────
+// ─── Serve Public Static Files ─────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ─── Global Error Handler ──────────────────────────────────────────────────
