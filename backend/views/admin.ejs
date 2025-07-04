@@ -1,18 +1,186 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Admin Panel</title>
+  <meta charset="UTF-8" />
+  <title>Acadmix Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --primary: #ff5722;
+      --background: #f5f5f5;
+      --card-bg: #fff;
+      --text: #333;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--background);
+      color: var(--text);
+    }
+
+    .admin-container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 220px;
+      background: var(--primary);
+      color: #fff;
+      padding: 2rem 1rem;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    .sidebar a {
+      display: block;
+      color: #fff;
+      text-decoration: none;
+      margin: 1rem 0;
+      font-weight: bold;
+    }
+
+    .main {
+      flex: 1;
+      padding: 2rem;
+    }
+
+    .dashboard-cards {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      flex: 1;
+      min-width: 200px;
+      text-align: center;
+    }
+
+    .card h3 {
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    table {
+      width: 100%;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background: #fafafa;
+    }
+
+    img.user-img {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-right: 8px;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+    }
+
+    @media(max-width: 768px) {
+      .dashboard-cards {
+        flex-direction: column;
+      }
+      .sidebar {
+        display: none;
+      }
+    }
+  </style>
 </head>
 <body>
-  
-  <h1>All Logged-in Users</h1>
-  <ul>
-    <% users.forEach(user => { %>
-      <li>
-        <img src="<%= user.photo %>" style="width:30px; border-radius:50%;" />
-        <strong><%= user.name %></strong> - <%= user.email %>
-      </li>
-    <% }) %>
-  </ul>
+  <div class="admin-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h2>Admin</h2>
+      <a href="#">Dashboard</a>
+      <a href="#">Users</a>
+      <a href="#">Books</a>
+      <a href="#">Payments</a>
+      <a href="/admin/logout">Logout</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+      <h1>Dashboard</h1>
+
+      <!-- Summary Cards -->
+      <div class="dashboard-cards">
+        <div class="card">
+          <h3>Total Users</h3>
+          <p><%= totalUsers %></p>
+        </div>
+        <div class="card">
+          <h3>Total Payments</h3>
+          <p><%= totalPayments %></p>
+        </div>
+        <div class="card">
+          <h3>Total Books</h3>
+          <p><%= totalBooks %></p>
+        </div>
+      </div>
+
+      <!-- Users Table -->
+      <h2>All Users</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Books</th>
+            <th>Joined</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% users.forEach(user => { %>
+            <tr>
+              <td class="user-info">
+                <img src="<%= user.photo %>" alt="user" class="user-img" />
+                <%= user.name %>
+              </td>
+              <td><%= user.email %></td>
+              <td>
+                <% if (user.books && user.books.length > 0) { %>
+                  <%= user.books.join(", ") %>
+                <% } else { %>
+                  None
+                <% } %>
+              </td>
+              <td><%= new Date(user.createdAt).toLocaleDateString() %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </body>
 </html>

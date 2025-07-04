@@ -154,10 +154,33 @@ app.use('/api/auth', require('./routes/auth'));
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
 
-function isAdminAuthenticated(req, res, next) {
-  if (req.session?.admin) return next();
-  return res.redirect('/api/admin/login');
-}
+app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
+  try {
+    const users = await User.find();
+
+    // Mocked placeholders (you'll replace with real ones later)
+    const totalUsers = users.length;
+    const totalPayments = 0; // to be connected later
+    const totalBooks = 0;    // to be connected later
+
+    // Attach mock "books" array to each user if missing
+    const usersWithBooks = users.map(user => ({
+      ...user.toObject(),
+      books: user.books || [] // fake or empty array
+    }));
+
+    res.render('admin', {
+      users: usersWithBooks,
+      totalUsers,
+      totalPayments,
+      totalBooks
+    });
+  } catch (err) {
+    console.error('❌ Admin fetch error:', err);
+    res.status(500).send('Error loading users');
+  }
+});
+
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
