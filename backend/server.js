@@ -22,6 +22,7 @@ const User           = require('./models/User');
 const Book = require('./models/Book');
 const Card = require('./models/card');
 
+const upload = require('./middleware/upload');
 
 // If you add Book.js and Payment.js later, require them here:
 // const Book    = require('./models/Book');
@@ -298,7 +299,6 @@ app.get('/api/cards', async (req, res) => {
 
 
 
-const upload = require('./middleware/upload');
 
 app.post('/api/admin/cards', isAdminAuthenticated, upload.single('image'), async (req, res) => {
   const { title, category, originalPrice, discountedPrice, badge, demo } = req.body;
