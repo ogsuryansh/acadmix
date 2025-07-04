@@ -18,44 +18,29 @@ const path           = require('path');
 const serverless     = require('serverless-http');
 const cors           = require('cors');
 const helmet         = require('helmet');
+
 const User           = require('./models/User');
-const Book = require('./models/Book');
-const Card = require('./models/card');
-
-const upload = require('./middleware/upload');
-
-// If you add Book.js and Payment.js later, require them here:
-// const Book    = require('./models/Book');
-// const Payment = require('./models/Payment');
+const Book           = require('./models/Book');
+const Card           = require('./models/card');
 
 const app = express();
 
 // ─── Trust Vercel proxy so secure cookies work ─────────────────────────────
 app.set('trust proxy', 1);
 
-// ─── Serve fonts before CSP so 'self' truly covers them ────────────────────
-app.use(
-  '/api/type-font',
-  express.static(path.join(__dirname, 'public', 'backend', 'api', 'type-font'))
-);
-
-// ─── Security headers via Helmet ───────────────────────────────────────────
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", 'https://apis.google.com'],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com'],
-        fontSrc: ["'self'", 'https://acadmix-opal.vercel.app', 'https://cdnjs.cloudflare.com', 'https://fonts.googleapis.com', 'data:'],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'https://acadmix.shop', 'https://acadmix-opal.vercel.app'],
-      }
+// ─── CSP & Security Headers ────────────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc:  ["'self'", "'unsafe-inline'", 'https://apis.google.com'],
+      styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com','https://cdnjs.cloudflare.com'],
+      fontSrc:    ["'self'", 'data:', 'https://fonts.googleapis.com','https://cdnjs.cloudflare.com','https://acadmix-opal.vercel.app'],
+      imgSrc:     ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'https://acadmix.shop','https://acadmix-opal.vercel.app'],
     }
-  })
-);
-
-
+  }
+}));
 
 // ─── CORS ───────────────────────────────────────────────────────────────────
 const allowedOrigins = [
@@ -72,11 +57,11 @@ app.use(cors({
   credentials: true
 }));
 
-// ─── Body parsers ───────────────────────────────────────────────────────────
+// ─── Body Parsers ───────────────────────────────────────────────────────────
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// ─── MongoDB Connection Utility (Serverless‑friendly) ───────────────────────
+// ─── MongoDB Connection (Serverless‑friendly) ───────────────────────────────
 async function connectToDB() {
   if (global._mongoConn) return global._mongoConn;
   if (!global._mongoPromise) {
@@ -89,17 +74,13 @@ async function connectToDB() {
   global._mongoConn = await global._mongoPromise;
   return global._mongoConn;
 }
-
 app.use(async (req, res, next) => {
   try {
     await connectToDB();
-    return next();
+    next();
   } catch (err) {
-    console.error('❌ DB Connection Error:', err, err.stack);
-    return res.status(500).json({
-      error:   'Database connection failed',
-      message: err.message,
-    });
+    console.error('❌ DB Connection Error:', err);
+    res.status(500).json({ error: 'Database connection failed', message: err.message });
   }
 });
 
@@ -116,15 +97,11 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// ─── Passport Google Strategy ──────────────────────────────────────────────
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser((id, done) => {
-  if (!id) return done(null, null);
-  User.findById(id)
-    .then(user => done(null, user))
-    .catch(err => done(err, null));
+  User.findById(id).then(u => done(null, u)).catch(e => done(e));
 });
-
-// ─── Passport Google Strategy ──────────────────────────────────────────────
 passport.use(new GoogleStrategy({
   clientID:     process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -140,32 +117,30 @@ passport.use(new GoogleStrategy({
         photo:    profile.photos?.[0]?.value,
       });
     }
-    return done(null, user);
+    done(null, user);
   } catch (err) {
     console.error('🚨 GoogleStrategy error:', err);
-    return done(err, null);
+    done(err, null);
   }
 }));
-app.post('/api/admin/cards', isAdminAuthenticated, async (req, res) => {
-  const { title, category, originalPrice, discountedPrice, badge, demo, imageUrl } = req.body;
-  await Card.create({ title, category, image: imageUrl, originalPrice, discountedPrice, badge, demo });
-  res.redirect('/api/admin/cards');
-});
-// ─── EJS Setup & Admin Auth Middleware ────────────────────────────────────
+
+// ─── EJS & Views Setup ─────────────────────────────────────────────────────
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+// ─── Admin Auth Middleware ─────────────────────────────────────────────────
+function isAdminAuthenticated(req, res, next) {
+  if (req.session?.admin) return next();
+  res.redirect('/api/admin/login');
+}
 
-
-
+// ─── Admin Login / Logout ───────────────────────────────────────────────────
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
 
-// ─── Admin Login Routes ────────────────────────────────────────────────────
 app.get('/api/admin/login', (req, res) => {
   res.render('login', { error: req.query.error });
 });
-
 app.post('/api/admin/login', (req, res) => {
   const { username, password } = req.body;
   if (username === ADMIN_USER && password === ADMIN_PASS) {
@@ -174,127 +149,59 @@ app.post('/api/admin/login', (req, res) => {
   }
   res.redirect('/api/admin/login?error=1');
 });
-
-// ─── Admin Logout ──────────────────────────────────────────────────────────
 app.post('/api/admin/logout', (req, res) => {
   req.session.admin = null;
   res.redirect('/api/admin/login');
 });
 
-// ─── Admin Dashboard ──────────────────────────────────────────────────────
-app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
-  try {
-    const users = await User.find();
-    const totalUsers    = users.length;
-    const totalPayments = 0; // TODO: replace with Payment.countDocuments()
-    const totalBooks    = 0; // TODO: replace with Book.countDocuments()
-
-    const usersWithBooks = users.map(u => ({
-      ...u.toObject(),
-      books: u.books || []
-    }));
-
-    res.render('admin', {
-      users: usersWithBooks,
-      totalUsers,
-      totalPayments,
-      totalBooks
-    });
-  } catch (err) {
-    console.error('❌ Admin fetch error:', err);
-    res.status(500).send('Error loading admin dashboard');
-  }
+// ─── Admin Dashboard & Books ────────────────────────────────────────────────
+app.get('/api/admin',          isAdminAuthenticated, async (req, res) => {
+  const users = await User.find();
+  res.render('admin', { 
+    users, 
+    totalUsers: users.length,
+    totalPayments: 0,
+    totalBooks: 0
+  });
+});
+app.get('/api/admin/books',    isAdminAuthenticated, async (req, res) => {
+  const books = await Book.find().sort({ createdAt: -1 });
+  res.render('admin-books', { books });
+});
+app.get('/api/admin/books/new',isAdminAuthenticated, (req, res) => {
+  res.render('add-book');
+});
+app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
+  const { title, category, page, priceOriginal, priceDiscounted, badge, imageUrl, demo } = req.body;
+  await Book.create({ title, category, page, priceOriginal, priceDiscounted, badge, imageUrl, demo });
+  res.redirect('/api/admin/books');
 });
 
-// ─── Silence favicon 500 ───────────────────────────────────────────────────
-app.get('/favicon.ico', (req, res) => res.status(204).end());
+// ─── Admin Cards (uses imageUrl instead of file upload) ───────────────────
+app.get('/api/admin/cards', isAdminAuthenticated, async (req, res) => {
+  const cards = await Card.find().sort({ createdAt: -1 });
+  res.render('admin-cards', { cards });
+});
+app.post('/api/admin/cards', isAdminAuthenticated, async (req, res) => {
+  const { title, category, originalPrice, discountedPrice, badge, demo, imageUrl } = req.body;
+  await Card.create({ title, category, image: imageUrl, originalPrice, discountedPrice, badge, demo });
+  res.redirect('/api/admin/cards');
+});
 
-// ─── Auth Routes for Normal Users ──────────────────────────────────────────
+// ─── Public APIs & Static Assets ───────────────────────────────────────────
+app.get('/api/cards', async (req, res) => {
+  const cards = await Card.find().sort({ createdAt: -1 });
+  res.json(cards);
+});
 app.use('/api/auth', require('./routes/auth'));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
-
-// ─── Serve Public Static Files ─────────────────────────────────────────────
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// ─── Global Error Handler ──────────────────────────────────────────────────
+// ─── Error Handler & Vercel Export ────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('💥 Uncaught Error:', err);
   res.status(500).json({ error: 'Internal Server Error', message: err.message });
 });
-// ─── Show Add Book Form ─────────────────────────────────────────────────────
-app.get('/api/admin/books/new', isAdminAuthenticated, (req, res) => {
-  res.render('add-book');
-});
-
-// ─── Handle Add Book Submission ─────────────────────────────────────────────
-app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
-  try {
-    const {
-      title,
-      category,
-      page,
-      priceOriginal,
-      priceDiscounted,
-      badge,
-      imageUrl,
-      demo
-    } = req.body;
-
-    await Book.create({
-      title,
-      category,
-      page,
-      priceOriginal,
-      priceDiscounted,
-      badge,
-      imageUrl,
-      demo
-    });
-
-    res.redirect('/api/admin/books');
-  } catch (err) {
-    console.error('❌ Error adding book:', err);
-    res.status(500).send('Error saving book');
-  }
-});
-
-// ─── Public API to Get All Cards ────────────────────────────────────────────
-// ✅ Correct
-app.get('/api/cards', async (req, res) => {
-  try {
-    const cards = await Card.find().sort({ createdAt: -1 }); // ✅
-    res.json(cards);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch cards' });
-  }
-});
-
-///////// multer
-
-
-
-
-app.post('/api/admin/cards', isAdminAuthenticated, upload.single('image'), async (req, res) => {
-  const { title, category, originalPrice, discountedPrice, badge, demo } = req.body;
-  const image = `/uploads/${req.file.filename}`;
-  await Card.create({ title, category, image, originalPrice, discountedPrice, badge, demo });
-  res.redirect('/api/admin/cards');
-});
-// GET /api/admin/cards
-// GET /api/admin/cards → show all cards in admin panel
-app.get('/api/admin/cards', isAdminAuthenticated, async (req, res) => {
-  try {
-    const cards = await Card.find().sort({ createdAt: -1 });
-    res.render('admin-cards', { cards });
-  } catch (err) {
-    console.error('❌ Error fetching cards:', err);
-    res.status(500).send('Error loading cards');
-  }
-});
-
-
-// ─── Export for Vercel ─────────────────────────────────────────────────────
 module.exports = app;
 module.exports.handler = serverless(app);
-
