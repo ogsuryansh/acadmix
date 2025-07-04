@@ -1,8 +1,11 @@
 <h2>Add New Home Card</h2>
-<form action="/api/admin/cards" method="POST" enctype="multipart/form-data">
+<form action="/api/admin/cards" method="POST">
   <input name="title" placeholder="Title" required><br>
   <input name="category" placeholder="Category"><br>
-  <input name="image" type="file" required><br>
+
+  <!-- ⬇️ Replace file input with URL input -->
+  <input name="imageUrl" placeholder="Paste Image URL" required><br>
+
   <input name="originalPrice" placeholder="Original Price" type="number" required><br>
   <input name="discountedPrice" placeholder="Discounted Price" type="number" required><br>
   <input name="badge" placeholder="Badge text (e.g. 90% OFF)"><br>

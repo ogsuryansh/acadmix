@@ -150,37 +150,12 @@ passport.use(new GoogleStrategy({
 // ─── EJS Setup & Admin Auth Middleware ────────────────────────────────────
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-
-function isAdminAuthenticated(req, res, next) {
-  if (req.session?.admin) return next();
-  res.redirect('/api/admin/login');
-}
-app.post('/api/admin/cards', isAdminAuthenticated, upload.single('image'), async (req, res) => {
-  try {
-    const { title, category, originalPrice, discountedPrice, badge, demo } = req.body;
-
-    if (!req.file) {
-      throw new Error("No image file uploaded");
-    }
-
-    const image = `/uploads/${req.file.filename}`;
-
-    await Card.create({
-      title,
-      category,
-      image,
-      originalPrice,
-      discountedPrice,
-      badge,
-      demo
-    });
-
-    res.redirect('/api/admin/cards');
-  } catch (err) {
-    console.error("❌ Error adding card:", err.message);
-    res.status(500).send('Internal Server Error: ' + err.message);
-  }
+app.post('/api/admin/cards', isAdminAuthenticated, async (req, res) => {
+  const { title, category, originalPrice, discountedPrice, badge, demo, imageUrl } = req.body;
+  await Card.create({ title, category, image: imageUrl, originalPrice, discountedPrice, badge, demo });
+  res.redirect('/api/admin/cards');
 });
+
 
 
 const ADMIN_USER = process.env.ADMIN_USER;
