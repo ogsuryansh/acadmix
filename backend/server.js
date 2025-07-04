@@ -20,7 +20,7 @@ const cors           = require('cors');
 const helmet         = require('helmet');
 const User           = require('./models/User');
 const Book = require('./models/Book');
-const Card = require('./models/Card');
+const Card = require('./models/card');
 
 
 // If you add Book.js and Payment.js later, require them here:
