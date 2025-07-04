@@ -39,18 +39,21 @@ app.use(
 );
 
 // ─── Security headers via Helmet ───────────────────────────────────────────
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc:  ["'self'", "'unsafe-inline'", 'https://apis.google.com'],
-      styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com'],
-      fontSrc:    ["'self'", 'data:', 'https://cdnjs.cloudflare.com', 'https://acadmix-opal.vercel.app'],
-      imgSrc:     ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'", 'https://acadmix.shop', 'https://acadmix-opal.vercel.app'],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://apis.google.com'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com'],
+        fontSrc: ["'self'", 'https://acadmix-opal.vercel.app', 'https://cdnjs.cloudflare.com', 'https://fonts.googleapis.com', 'data:'],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", 'https://acadmix.shop', 'https://acadmix-opal.vercel.app'],
+      }
     }
-  }
-}));
+  })
+);
+
 
 
 // ─── CORS ───────────────────────────────────────────────────────────────────
@@ -151,15 +154,33 @@ function isAdminAuthenticated(req, res, next) {
   if (req.session?.admin) return next();
   res.redirect('/api/admin/login');
 }
-app.get('/api/admin/books', isAdminAuthenticated, async (req, res) => {
+app.post('/api/admin/cards', isAdminAuthenticated, upload.single('image'), async (req, res) => {
   try {
-    const books = await Book.find().sort({ createdAt: -1 });
-    res.render('admin-books', { books });
+    const { title, category, originalPrice, discountedPrice, badge, demo } = req.body;
+
+    if (!req.file) {
+      throw new Error("No image file uploaded");
+    }
+
+    const image = `/uploads/${req.file.filename}`;
+
+    await Card.create({
+      title,
+      category,
+      image,
+      originalPrice,
+      discountedPrice,
+      badge,
+      demo
+    });
+
+    res.redirect('/api/admin/cards');
   } catch (err) {
-    console.error('❌ Failed to fetch books:', err);
-    res.status(500).send('Server error');
+    console.error("❌ Error adding card:", err.message);
+    res.status(500).send('Internal Server Error: ' + err.message);
   }
 });
+
 
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
