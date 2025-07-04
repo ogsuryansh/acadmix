@@ -1,16 +1,15 @@
-// public/backend/routes/cards.js
-const express = require('express');
-const router = express.Router();
-const Book = require('./Book');
+const mongoose = require('mongoose');
 
-// GET /api/admin/cards
-router.get('/cards', async (req, res) => {
-  try {
-    const cards = await Book.find().sort({ createdAt: -1 });
-    res.json(cards);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch cards' });
-  }
+const cardSchema = new mongoose.Schema({
+  title:           { type: String, required: true },
+  category:        { type: String, required: true },
+  image:           { type: String, required: true },
+  originalPrice:   { type: Number, required: true },
+  discountedPrice: { type: Number, required: true },
+  badge:           { type: String },
+  demo:            { type: String },
+}, {
+  timestamps: true
 });
 
-module.exports = router;
+module.exports = mongoose.model('Card', cardSchema);
