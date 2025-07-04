@@ -6,7 +6,7 @@ const cardSchema = new mongoose.Schema({
   image:           { type: String, required: true },
   originalPrice:   { type: Number, required: true },
   discountedPrice: { type: Number, required: true },
-  badge:           { type: String },
+  badge:           { type: String }, 
   demo:            { type: String },
 }, {
   timestamps: true
