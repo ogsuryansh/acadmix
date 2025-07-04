@@ -214,4 +214,27 @@ app.use((err, req, res, next) => {
 module.exports = app;
 module.exports.handler = serverless(app);
 
+///////// multer
 
+
+
+const multer = require('multer');
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, '..', 'public', 'uploads'));
+  },
+  filename: function (req, file, cb) {
+    const uniqueName = Date.now() + '-' + file.originalname;
+    cb(null, uniqueName);
+  }
+});
+
+const upload = multer({ storage });
+
+app.post('/api/admin/cards', isAdminAuthenticated, upload.single('image'), async (req, res) => {
+  const { title, category, originalPrice, discountedPrice, badge, demo } = req.body;
+  const image = `/uploads/${req.file.filename}`;
+  await Card.create({ title, category, image, originalPrice, discountedPrice, badge, demo });
+  res.redirect('/api/admin/cards');
+});
