@@ -146,15 +146,15 @@ passport.use(new GoogleStrategy({
     return done(err, null);
   }
 }));
-
-// ─── EJS Setup & Admin Auth Middleware ────────────────────────────────────
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
 app.post('/api/admin/cards', isAdminAuthenticated, async (req, res) => {
   const { title, category, originalPrice, discountedPrice, badge, demo, imageUrl } = req.body;
   await Card.create({ title, category, image: imageUrl, originalPrice, discountedPrice, badge, demo });
   res.redirect('/api/admin/cards');
 });
+// ─── EJS Setup & Admin Auth Middleware ────────────────────────────────────
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
 
 
 
