@@ -43,12 +43,13 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc:  ["'self'", "'unsafe-inline'", 'https://apis.google.com'],
       styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com'],
-      fontSrc:    ["'self'", 'data:', 'https://cdnjs.cloudflare.com'],
+      fontSrc:    ["'self'", 'data:', 'https://cdnjs.cloudflare.com', 'https://acadmix-opal.vercel.app'],
       imgSrc:     ["'self'", 'data:', 'https:'],
       connectSrc: ["'self'", 'https://acadmix.shop', 'https://acadmix-opal.vercel.app'],
     }
   }
 }));
+
 
 // ─── CORS ───────────────────────────────────────────────────────────────────
 const allowedOrigins = [
@@ -260,10 +261,10 @@ app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
 // ─── Public API to Get All Cards ────────────────────────────────────────────
 app.get('/api/cards', async (req, res) => {
   try {
-    const cards = await Card.find().sort({ createdAt: -1 });
+    const cards = await Book.find().sort({ createdAt: -1 });
     res.json(cards);
   } catch (err) {
-    console.error('❌ Error fetching cards:', err);
+    console.error(err);
     res.status(500).json({ error: 'Failed to fetch cards' });
   }
 });

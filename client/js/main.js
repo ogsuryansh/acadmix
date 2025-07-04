@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ----------------------------------------
   // 🔁 Navbar toggle (for mobile)
   // ----------------------------------------
-  
+
   const toggleButton = document.querySelector(".nav-toggle");
   const navMenu = document.querySelector(".nav-menu");
 
@@ -61,7 +61,9 @@ document.addEventListener("DOMContentLoaded", () => {
         console.warn("Auth check failed:", err);
       });
   } else {
-    console.error("❌ VITE_API_URL is not defined. Set it in Netlify environment variables.");
+    console.error(
+      "❌ VITE_API_URL is not defined. Set it in Netlify environment variables."
+    );
   }
 
   // ----------------------------------------
@@ -74,3 +76,39 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+fetch("/api/cards")
+  .then((res) => res.json())
+  .then((cards) => {
+    const container = document.getElementById("card-container");
+    if (!cards.length) {
+      container.innerHTML = "<p>No cards found</p>";
+      return;
+    }
+
+    cards.forEach((card) => {
+      const cardEl = document.createElement("div");
+      cardEl.className = "card";
+      cardEl.innerHTML = `
+            <div class="card-image">
+              <img src="${card.image}" alt="${card.title}" />
+              <div class="badge">${card.badge || ""}</div>
+            </div>
+            <div class="card-body">
+              <div class="category">${card.category}</div>
+              <h3 class="card-title">${card.title}</h3>
+              <div class="price">
+                <span class="original">₹${card.originalPrice}</span>
+                <span class="discount">₹${card.discountedPrice}</span>
+              </div>
+              <div class="demo">${card.demo || "No Demo"}</div>
+              <a href="#" class="btn-buy">Buy Now</a>
+            </div>
+          `;
+      container.appendChild(cardEl);
+    });
+  })
+  .catch((err) => {
+    console.error("Error fetching cards:", err);
+    document.getElementById("card-container").innerHTML =
+      "<p>Error loading materials</p>";
+  });
