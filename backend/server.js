@@ -256,7 +256,6 @@ app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
     res.status(500).send('Error saving book');
   }
 });
-const Card = require('./models/Card'); // Make sure this is imported at the top
 
 // ─── Public API to Get All Cards ────────────────────────────────────────────
 app.get('/api/cards', async (req, res) => {
