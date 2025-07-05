@@ -151,6 +151,17 @@ app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
     totalBooks: 0
   });
 });
+// ─── Public API to Fetch All Books ─────────────────────────────────────────
+app.get('/api/books', async (req, res) => {
+  try {
+    const books = await Book.find().sort({ createdAt: -1 });
+    res.json(books);
+  } catch (err) {
+    console.error('❌ Error fetching books:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 app.get('/api/admin/books', isAdminAuthenticated, async (req, res) => {
   const books = await Book.find().sort({ createdAt: -1 });
   res.render('admin-books', { books });
