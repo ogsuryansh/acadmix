@@ -185,24 +185,23 @@ const BOOK_SECTIONS = [
 ];
 
 // ─── Render “Add Book” Form ───────────────────────────────────────────────
-app.get('/api/admin/books/new', isAdminAuthenticated, (req, res) => {
-  res.render('add-book', {
-    categories: BOOK_CATEGORIES,
-    sections: BOOK_SECTIONS,
-    error: null,
-    title: '',
-    category: '',
-    section: '',
-    pageCount: '',
-    priceOriginal: '',
-    priceDiscounted: '',
-    badge: '',
-    imageUrl: '',
-    demo: '',
-    editMode: false, 
-    bookId: null
-  });
+res.render('add-book', {
+  categories: BOOK_CATEGORIES,
+  sections: BOOK_SECTIONS,
+  error: null,
+  title: '',
+  category: '',
+  section: '',
+  pageCount: '',
+  priceOriginal: '',
+  priceDiscounted: '',
+  badge: '',
+  imageUrl: '',
+  demo: '',
+  editMode: false, 
+  bookId: null
 });
+
 
 
 // ─── Handle “Add Book” Submission ────────────────────────────────────────
