@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Class 11 | Acadmix</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
       margin: 0;
@@ -23,11 +23,11 @@
       display: flex;
       justify-content: center;
       margin: 2rem 0;
+      gap: 1rem;
     }
 
     .tab-button {
       padding: 0.75rem 1.5rem;
-      margin: 0 0.5rem;
       border: none;
       background-color: #ddd;
       color: #333;
@@ -42,27 +42,37 @@
       color: #fff;
     }
 
-    .tab-content {
-      display: none;
-      padding: 1rem 2rem;
-    }
-
-    .tab-content.active {
-      display: block;
+    #card-container {
+      padding: 1rem;
     }
 
     .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 1.5rem;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      padding: 2rem;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    @media (max-width: 768px) {
+      .cards {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+      }
     }
 
     .card {
-      background: #fff;
+      background: #f9ebea;
+      border: 1px solid #f2d7d5;
       border-radius: 12px;
-      padding: 1rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(230, 176, 170, 0.4);
+      transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+      transform-origin: center center;
+      color: black;
       text-align: center;
+      padding: 1rem;
     }
 
     .card img {
@@ -95,83 +105,68 @@
   </header>
 
   <div class="tabs">
-    <button class="tab-button active" data-target="neet">NEET</button>
-    <button class="tab-button" data-target="jee">JEE</button>
+    <button class="tab-button active" data-target="NEET">NEET</button>
+    <button class="tab-button" data-target="JEE">JEE</button>
   </div>
 
-  <div id="neet" class="tab-content active">
-    <div id="card-container-neet" class="cards">
-      <div class="coming-soon">📚 Loading NEET materials...</div>
-    </div>
-  </div>
-
-  <div id="jee" class="tab-content">
-    <div id="card-container-jee" class="cards">
-      <div class="coming-soon">📘 Loading JEE materials...</div>
-    </div>
+  <div id="card-container">
+    <!-- Cards will be injected here -->
+    <div class="coming-soon">📚 Loading content...</div>
   </div>
 
   <script>
-    const API_BASE = 'https://acadmix-opal.vercel.app';
-    const PAGE_SECTION = 'class11';
+    let PAGE_SECTION = "class11";
+    let currentTrack = "NEET";
 
-    function createCard(card) {
-      const cardEl = document.createElement("div");
-      cardEl.className = "card";
-      cardEl.innerHTML = `
-        <div class="card-image">
-          <img src="${card.imageUrl}" alt="${card.title}" />
-          <div class="badge">${card.badge || ""}</div>
-        </div>
-        <div class="card-body">
-          <div class="category">${card.category}</div>
-          <h3 class="card-title">${card.title}</h3>
-          <div class="price">
-            <span class="original">₹${card.priceOriginal}</span>
-            <span class="discount">₹${card.priceDiscounted}</span>
-          </div>
-          <div class="demo">${card.demo || "No Demo"}</div>
-          <a href="#" class="btn-buy">Buy Now</a>
-        </div>
-      `;
-      return cardEl;
-    }
+    const API_BASE = 'https://acadmix-opal.vercel.app';
 
     function fetchAndRenderCards() {
       fetch(`${API_BASE}/api/books`)
         .then(res => res.json())
         .then(cards => {
-          const filtered = cards.filter(card => card.section === PAGE_SECTION);
+          const container = document.getElementById("card-container");
+          container.innerHTML = "";
 
-          const neetCards = filtered.filter(card => card.track === "NEET");
-          const jeeCards = filtered.filter(card => card.track === "JEE");
+          const filteredCards = cards.filter(card =>
+            card.section === PAGE_SECTION && card.track === currentTrack
+          );
 
-          const neetContainer = document.getElementById("card-container-neet");
-          const jeeContainer = document.getElementById("card-container-jee");
-
-          neetContainer.innerHTML = "";
-          jeeContainer.innerHTML = "";
-
-          if (neetCards.length === 0) {
-            neetContainer.innerHTML = "<div class='coming-soon'>📚 NEET Content Coming Soon</div>";
-          } else {
-            neetCards.forEach(card => {
-              neetContainer.appendChild(createCard(card));
-            });
+          if (filteredCards.length === 0) {
+            container.innerHTML = `<div class="coming-soon">📚 ${currentTrack} Content Coming Soon</div>`;
+            return;
           }
 
-          if (jeeCards.length === 0) {
-            jeeContainer.innerHTML = "<div class='coming-soon'>📘 JEE Content Coming Soon</div>";
-          } else {
-            jeeCards.forEach(card => {
-              jeeContainer.appendChild(createCard(card));
-            });
-          }
+          const cardsWrapper = document.createElement("div");
+          cardsWrapper.className = "cards";
+
+          filteredCards.forEach(card => {
+            const cardEl = document.createElement("div");
+            cardEl.className = "card";
+            cardEl.innerHTML = `
+              <div class="card-image">
+                <img src="${card.imageUrl}" alt="${card.title}" />
+                <div class="badge">${card.badge || ""}</div>
+              </div>
+              <div class="card-body">
+                <div class="category">${card.category}</div>
+                <h3 class="card-title">${card.title}</h3>
+                <div class="price">
+                  <span class="original">₹${card.priceOriginal}</span>
+                  <span class="discount">₹${card.priceDiscounted}</span>
+                </div>
+                <div class="demo">${card.demo || "No Demo"}</div>
+                <a href="#" class="btn-buy">Buy Now</a>
+              </div>
+            `;
+            cardsWrapper.appendChild(cardEl);
+          });
+
+          container.appendChild(cardsWrapper);
         })
         .catch(err => {
-          console.error("Error loading cards:", err);
-          document.getElementById("card-container-neet").innerHTML = "<p>Error loading NEET materials</p>";
-          document.getElementById("card-container-jee").innerHTML = "<p>Error loading JEE materials</p>";
+          console.error("Error fetching cards:", err);
+          document.getElementById("card-container").innerHTML =
+            "<p>Error loading materials</p>";
         });
     }
 
@@ -181,17 +176,12 @@
     // Tab switching
     document.addEventListener('DOMContentLoaded', () => {
       const buttons = document.querySelectorAll('.tab-button');
-      const contents = document.querySelectorAll('.tab-content');
-
       buttons.forEach(button => {
         button.addEventListener('click', () => {
-          const target = button.getAttribute('data-target');
-
           buttons.forEach(btn => btn.classList.remove('active'));
-          contents.forEach(c => c.classList.remove('active'));
-
           button.classList.add('active');
-          document.getElementById(target).classList.add('active');
+          currentTrack = button.dataset.target;
+          fetchAndRenderCards();
         });
       });
     });
