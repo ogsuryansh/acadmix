@@ -399,9 +399,9 @@ html {
 }
 
 .category {
-  font-size: 0.75rem;
+  font-size: 1.8rem;
   font-weight: 600;
-  color: #776dff;
+  color: #776dff; 
   text-transform: uppercase;
   margin-bottom: 0.25rem;
 }
