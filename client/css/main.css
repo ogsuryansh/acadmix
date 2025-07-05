@@ -395,6 +395,7 @@ html {
 
 .card-body {
   padding: 1rem;
+
 }
 
 .category {
@@ -413,9 +414,10 @@ html {
 
 .price {
   display: flex;
+  flex-direction: column;
   align-items: baseline;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
+ margin: 10px 0;
 }
 
 .price .original {
