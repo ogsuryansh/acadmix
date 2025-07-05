@@ -255,6 +255,91 @@ app.get('/api/books', async (req, res) => {
   const books = await Book.find().sort({ createdAt: -1 });
   res.json(books);
 });
+res.render('add-book', {
+  editMode: true,
+  bookId: book._id,
+  categories: BOOK_CATEGORIES,
+  sections: BOOK_SECTIONS,
+  error: null,
+  title: book.title,
+  category: book.category,
+  section: book.section,
+  pageCount: book.pageCount,
+  priceOriginal: book.priceOriginal,
+  priceDiscounted: book.priceDiscounted,
+  badge: book.badge,
+  imageUrl: book.imageUrl,
+  demo: book.demo
+});
+
+// ─── Render “Edit Book” Form ───────────────────────────────────────────────
+app.get('/api/admin/books/:id/edit', isAdminAuthenticated, async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+    if (!book) return res.status(404).send("Book not found");
+
+    res.render('add-book', {
+      categories: BOOK_CATEGORIES,
+      sections: BOOK_SECTIONS,
+      error: null,
+      title: book.title,
+      category: book.category,
+      section: book.section,
+      pageCount: book.pageCount,
+      priceOriginal: book.priceOriginal,
+      priceDiscounted: book.priceDiscounted,
+      badge: book.badge,
+      imageUrl: book.imageUrl,
+      demo: book.demo,
+      editMode: true,
+      bookId: book._id
+    });
+  } catch (err) {
+    console.error("❌ Error rendering edit form:", err);
+    res.status(500).send("Server Error");
+  }
+});
+
+// ─── Handle “Edit Book” Submission ─────────────────────────────────────────
+app.post('/api/admin/books/:id/edit', isAdminAuthenticated, async (req, res) => {
+  const {
+    title, category, section, pageCount,
+    priceOriginal, priceDiscounted, badge,
+    imageUrl, demo
+  } = req.body;
+
+  try {
+    const book = await Book.findById(req.params.id);
+    if (!book) return res.status(404).send("Book not found");
+
+    book.title = title;
+    book.category = category;
+    book.section = section;
+    book.pageCount = Number(pageCount);
+    book.priceOriginal = Number(priceOriginal);
+    book.priceDiscounted = Number(priceDiscounted);
+    book.badge = badge;
+    book.imageUrl = imageUrl;
+    book.demo = demo;
+
+    await book.save();
+    res.redirect('/api/admin/books');
+  } catch (err) {
+    console.error("❌ Error updating book:", err);
+    res.status(500).send("Server Error");
+  }
+});
+
+// ─── Handle “Delete Book” Submission ───────────────────────────────────────
+app.post('/api/admin/books/:id/delete', isAdminAuthenticated, async (req, res) => {
+  try {
+    await Book.findByIdAndDelete(req.params.id);
+    res.redirect('/api/admin/books');
+  } catch (err) {
+    console.error("❌ Error deleting book:", err);
+    res.status(500).send("Server Error");
+  }
+});
 
 // ─── Public APIs & Static Assets ───────────────────────────────────────────
 app.use('/api/auth', require('./routes/auth'));

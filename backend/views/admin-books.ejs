@@ -1,54 +1,108 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Book Management</title>
-  <style>
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
-    th { background: #f4f4f4; }
-    img { width: 60px; border-radius: 8px; }
-    .actions form { display: inline; }
-  </style>
-</head>
-<body>
-  <h1>Books Management</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Book Management</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 2rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: center;
+      }
+      th {
+        background: #f4f4f4;
+      }
+      img {
+        width: 60px;
+        border-radius: 8px;
+      }
+      .actions form {
+        display: inline;
+      }
+      .btn-add {
+        display: inline-block;
+        margin-bottom: 20px;
+        padding: 10px 16px;
+        background: #ff5722;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 6px;
+      }
+      .btn-edit,
+      .btn-delete {
+        padding: 6px 10px;
+        text-decoration: none;
+        border-radius: 4px;
+        margin: 2px;
+        display: inline-block;
+      }
+      .btn-edit {
+        background: #2196f3;
+        color: #fff;
+      }
+      .btn-delete {
+        background: #f44336;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Books Management</h1>
 
-  <a href="/api/admin/books/new" class="btn btn-add">+ Add New Book</a>
+    <a href="/api/admin/books/new" class="btn-add">+ Add New Book</a>
 
-
-  <table>
-    <thead>
-      <tr>
-        <th>Image</th>
-        <th>Title</th>
-        <th>Category</th>
-        <th>Price</th>
-        <th>Discount</th>
-        <th>Badge</th>
-        <th>Demo</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% books.forEach(book => { %>
+    <table>
+      <thead>
         <tr>
-          <td><img src="<%= book.image %>" alt="book" /></td>
+          <th>Image</th>
+          <th>Title</th>
+          <th>Category</th>
+          <th>Section</th>
+          <th>Price</th>
+          <th>Discount</th>
+          <th>Badge</th>
+          <th>Demo</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% books.forEach(book => { %>
+        <tr>
+          <td><img src="<%= book.imageUrl %>" alt="book" /></td>
           <td><%= book.title %></td>
           <td><%= book.category %></td>
-          <td>₹<%= book.originalPrice %></td>
-          <td>₹<%= book.discountedPrice %></td>
+          <td><%= book.section %></td>
+          <td>₹<%= book.priceOriginal %></td>
+          <td>₹<%= book.priceDiscounted %></td>
           <td><%= book.badge %></td>
-          <td><%= book.demo %></td>
+          <td><%= book.demo || "No" %></td>
           <td class="actions">
-            <form action="/api/admin/cards/<%= book._id %>?_method=DELETE" method="POST">
-              <button type="submit">🗑️ Delete</button>
+            <a href="/api/admin/books/<%= book._id %>/edit" class="btn-edit"
+              >✏️ Edit</a
+            >
+            <form
+              action="/api/admin/books/<%= book._id %>/delete"
+              method="POST"
+              onsubmit="return confirm('Are you sure you want to delete this book?');"
+            >
+              <button type="submit" class="btn-delete">🗑️ Delete</button>
             </form>
-            <a href="/api/admin/cards/<%= book._id %>/edit">✏️ Edit</a>
           </td>
         </tr>
-      <% }) %>
-    </tbody>
-  </table>
-</body>
+        <% }) %>
+      </tbody>
+    </table>
+  </body>
 </html>

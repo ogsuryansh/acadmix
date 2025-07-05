@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Add New Book</title>
+  <title><%= editMode ? 'Edit Book' : 'Add New Book' %></title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -65,13 +65,13 @@
 </head>
 <body>
   <div class="container">
-    <h1>Add New Book</h1>
+    <h1><%= editMode ? 'Edit Book' : 'Add New Book' %></h1>
 
     <% if (error) { %>
       <p class="error"><%= error %></p>
     <% } %>
 
-    <form action="/api/admin/books/new" method="POST">
+    <form action="<%= editMode ? '/api/admin/books/' + bookId + '/edit' : '/api/admin/books/new' %>" method="POST">
       <label>
         Title
         <input type="text" name="title" required value="<%= title || '' %>">
@@ -81,10 +81,7 @@
         Category
         <select name="category" required>
           <% categories.forEach(cat => { %>
-            <option
-              value="<%= cat %>"
-              <%= category === cat ? 'selected' : '' %>
-            ><%= cat %></option>
+            <option value="<%= cat %>" <%= category === cat ? 'selected' : '' %>><%= cat %></option>
           <% }) %>
         </select>
       </label>
@@ -93,10 +90,7 @@
         Section (where to display)
         <select name="section" required>
           <% sections.forEach(sec => { %>
-            <option
-              value="<%= sec %>"
-              <%= section === sec ? 'selected' : '' %>
-            ><%= sec.charAt(0).toUpperCase() + sec.slice(1) %></option>
+            <option value="<%= sec %>" <%= section === sec ? 'selected' : '' %>><%= sec.charAt(0).toUpperCase() + sec.slice(1) %></option>
           <% }) %>
         </select>
       </label>
@@ -121,21 +115,20 @@
         <input type="text" name="badge" required value="<%= badge || '' %>">
       </label>
 
- <label>
-  Demo Available?
-  <select name="demo" required>
-    <option value="Yes">Yes</option>
-    <option value="No" selected>No</option>
-  </select>
-</label>
-
+      <label>
+        Demo Available?
+        <select name="demo" required>
+          <option value="Yes" <%= demo === 'Yes' ? 'selected' : '' %>>Yes</option>
+          <option value="No"  <%= demo === 'No'  ? 'selected' : '' %>>No</option>
+        </select>
+      </label>
 
       <label>
         Image URL
         <input type="text" name="imageUrl" placeholder="https://example.com/book.jpg" required value="<%= imageUrl || '' %>">
       </label>
 
-      <button type="submit">Add Book</button>
+      <button type="submit"><%= editMode ? 'Update Book' : 'Add Book' %></button>
     </form>
   </div>
 </body>
