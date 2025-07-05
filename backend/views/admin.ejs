@@ -41,17 +41,29 @@
       text-align: center;
     }
 
-    .sidebar a {
+    .sidebar button {
       display: block;
+      background: none;
+      border: none;
       color: #fff;
-      text-decoration: none;
-      margin: 1rem 0;
       font-weight: bold;
+      margin: 1rem 0;
+      text-align: left;
+      cursor: pointer;
+      font-size: 1rem;
     }
 
     .main {
       flex: 1;
       padding: 2rem;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
     }
 
     .dashboard-cards {
@@ -107,6 +119,27 @@
       align-items: center;
     }
 
+    .books-buttons {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .books-buttons a {
+      padding: 0.75rem 1.25rem;
+      background: var(--primary);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: bold;
+      transition: background 0.2s ease;
+    }
+
+    .books-buttons a:hover {
+      background: #d94c1c;
+    }
+
     @media(max-width: 768px) {
       .dashboard-cards {
         flex-direction: column;
@@ -122,65 +155,93 @@
     <!-- Sidebar -->
     <div class="sidebar">
       <h2>Admin</h2>
-      <a href="#">Dashboard</a>
-      <a href="#">Users</a>
-      <a href="#">Books</a>
-      <a href="#">Payments</a>
-      <a href="/admin/logout">Logout</a>
+      <button onclick="switchTab('dashboard')">Dashboard</button>
+      <button onclick="switchTab('books')">Books</button>
+      <button onclick="switchTab('payments')">Payments</button>
+      <form action="/api/admin/logout" method="POST" style="margin-top: 2rem;">
+        <button type="submit" style="color:#fff;">Logout</button>
+      </form>
     </div>
 
     <!-- Main Content -->
     <div class="main">
-      <h1>Dashboard</h1>
+      <!-- DASHBOARD TAB -->
+      <div id="dashboard" class="tab-content active">
+        <h1>Dashboard</h1>
+        <div class="dashboard-cards">
+          <div class="card">
+            <h3>Total Users</h3>
+            <p><%= totalUsers %></p>
+          </div>
+          <div class="card">
+            <h3>Total Payments</h3>
+            <p><%= totalPayments %></p>
+          </div>
+          <div class="card">
+            <h3>Total Books</h3>
+            <p><%= totalBooks %></p>
+          </div>
+        </div>
 
-      <!-- Summary Cards -->
-      <div class="dashboard-cards">
-        <div class="card">
-          <h3>Total Users</h3>
-          <p><%= totalUsers %></p>
-        </div>
-        <div class="card">
-          <h3>Total Payments</h3>
-          <p><%= totalPayments %></p>
-        </div>
-        <div class="card">
-          <h3>Total Books</h3>
-          <p><%= totalBooks %></p>
-        </div>
+        <h2>All Users</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Email</th>
+              <th>Books</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% users.forEach(user => { %>
+              <tr>
+                <td class="user-info">
+                  <img src="<%= user.photo %>" alt="user" class="user-img" />
+                  <%= user.name %>
+                </td>
+                <td><%= user.email %></td>
+                <td>
+                  <% if (user.books && user.books.length > 0) { %>
+                    <%= user.books.join(", ") %>
+                  <% } else { %>
+                    None
+                  <% } %>
+                </td>
+                <td><%= new Date(user.createdAt).toLocaleDateString() %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
       </div>
 
-      <!-- Users Table -->
-      <h2>All Users</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Email</th>
-            <th>Books</th>
-            <th>Joined</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% users.forEach(user => { %>
-            <tr>
-              <td class="user-info">
-                <img src="<%= user.photo %>" alt="user" class="user-img" />
-                <%= user.name %>
-              </td>
-              <td><%= user.email %></td>
-              <td>
-                <% if (user.books && user.books.length > 0) { %>
-                  <%= user.books.join(", ") %>
-                <% } else { %>
-                  None
-                <% } %>
-              </td>
-              <td><%= new Date(user.createdAt).toLocaleDateString() %></td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
+      <!-- BOOKS TAB -->
+      <div id="books" class="tab-content">
+        <h1>Books Dashboard</h1>
+        <div class="books-buttons">
+          <a href="/api/admin/books">Show Books</a>
+          <a href="/api/admin/books/new">Add New Book</a>
+          <a href="/api/admin/books">Edit Book</a>
+          <a href="/api/admin/books">Delete Book</a>
+        </div>
+        <p>Select one of the above actions to manage books.</p>
+      </div>
+
+      <!-- PAYMENTS TAB -->
+      <div id="payments" class="tab-content">
+        <h1>Payments Dashboard</h1>
+        <p>Payments stats and actions coming soon.</p>
+      </div>
     </div>
   </div>
+
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.getElementById(tabId).classList.add('active');
+    }
+  </script>
 </body>
 </html>
