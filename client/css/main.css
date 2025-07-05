@@ -576,3 +576,15 @@ header {
 .nav-toggle.open .bar:nth-child(3) {
   transform: translateY(-9px) rotate(-45deg);
 }
+
+.card {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.5s forwards;
+}
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
