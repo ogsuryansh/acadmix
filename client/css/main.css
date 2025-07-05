@@ -449,6 +449,7 @@ html {
   padding: 0.5rem 1rem;
   border-radius: 6px;
   transition: background 0.3s ease;
+  align-self: flex-end !important;
 }
 
 .btn-buy:hover {

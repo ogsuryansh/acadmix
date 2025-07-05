@@ -151,7 +151,7 @@ function createCard(card) {
       <div class="badge">${card.badge || ""}</div>
     </div>
     <div class="card-body">
-      <div class="category">${card.category}</div>
+      <h1 class="category">${card.category}</h1>
       <h3 class="card-title">${card.title}</h3>
       <div class="price">
         <p class="original">₹${card.priceOriginal}</p>
