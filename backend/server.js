@@ -187,9 +187,20 @@ const BOOK_SECTIONS = [
 app.get('/api/admin/books/new', isAdminAuthenticated, (req, res) => {
   res.render('add-book', {
     categories: BOOK_CATEGORIES,
-    sections: BOOK_SECTIONS
+    sections: BOOK_SECTIONS,
+    error: null,
+    title: '',
+    category: '',
+    section: '',
+    pageCount: '',
+    priceOriginal: '',
+    priceDiscounted: '',
+    badge: '',
+    imageUrl: '',
+    demo: ''
   });
 });
+
 
 // ─── Handle “Add Book” Submission ────────────────────────────────────────
 app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
