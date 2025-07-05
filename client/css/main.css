@@ -448,6 +448,53 @@ html {
   background: #e6b800;
 }
 
+header {
+  background-color: #ff5722;
+  padding: 1rem 2rem;
+  color: #fff;
+  text-align: center;
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0;
+  gap: 1rem;
+}
+
+.tab-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background-color: #ddd;
+  color: #333;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.3s ease;
+}
+
+.tab-button.active {
+  background-color: #ff5722;
+  color: #fff;
+}
+
+#card-container {
+  padding: 1rem;
+}
+
+.lable {
+  padding: 10px;
+  font-size: 2rem;
+  font-weight: 800;
+  width: 100%;
+  color: #fff;
+}
+
+.coming-soon {
+  text-align: center;
+  padding: 2rem;
+  color: #777;
+}
 @media (max-width: 1080px) {
   .nav-toggle {
     display: flex;
