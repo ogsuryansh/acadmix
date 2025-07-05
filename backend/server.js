@@ -184,22 +184,24 @@ const BOOK_SECTIONS = [
   'test'
 ];
 
-// ─── Render “Add Book” Form ───────────────────────────────────────────────
-res.render('add-book', {
-  categories: BOOK_CATEGORIES,
-  sections: BOOK_SECTIONS,
-  error: null,
-  title: '',
-  category: '',
-  section: '',
-  pageCount: '',
-  priceOriginal: '',
-  priceDiscounted: '',
-  badge: '',
-  imageUrl: '',
-  demo: '',
-  editMode: false, 
-  bookId: null
+app.get('/api/admin/books/new', isAdminAuthenticated, (req, res) => {
+  res.render('add-book', {
+    categories: BOOK_CATEGORIES,
+    sections: BOOK_SECTIONS,
+    error: null,
+    title: '',
+    category: '',
+    section: '',
+    pageCount: '',
+    priceOriginal: '',
+    priceDiscounted: '',
+    badge: '',
+    imageUrl: '',
+    demo: '',
+    track: '',          
+    editMode: false, 
+    bookId: null
+  });
 });
 
 
