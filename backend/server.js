@@ -21,7 +21,6 @@ const helmet         = require('helmet');
 
 const User           = require('./models/User');
 const Book           = require('./models/Book');
-const Card           = require('./models/card');
 
 const app = express();
 
@@ -177,22 +176,9 @@ app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
   res.redirect('/api/admin/books');
 });
 
-// ─── Admin Cards (uses imageUrl instead of file upload) ───────────────────
-app.get('/api/admin/cards', isAdminAuthenticated, async (req, res) => {
-  const cards = await Card.find().sort({ createdAt: -1 });
-  res.render('admin-cards', { cards });
-});
-app.post('/api/admin/cards', isAdminAuthenticated, async (req, res) => {
-  const { title, category, originalPrice, discountedPrice, badge, demo, imageUrl } = req.body;
-  await Card.create({ title, category, image: imageUrl, originalPrice, discountedPrice, badge, demo });
-  res.redirect('/api/admin/cards');
-});
 
 // ─── Public APIs & Static Assets ───────────────────────────────────────────
-app.get('/api/cards', async (req, res) => {
-  const cards = await Card.find().sort({ createdAt: -1 });
-  res.json(cards);
-});
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
