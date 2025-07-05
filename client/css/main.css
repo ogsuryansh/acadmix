@@ -469,7 +469,6 @@ header {
   display: flex;
   align-items: center;   /* Vertical center */
   justify-content: center; /* Horizontal center */
-  background: rgba(255, 87, 34, 0.95); /* Optional solid color for contrast */
   color: white;
 }
 
@@ -497,7 +496,7 @@ header h1 {
 }
 
 .tab-button.active {
-  background-color: #ff5722;
+   background-color: #2196f3
   color: #fff;
 }
 
