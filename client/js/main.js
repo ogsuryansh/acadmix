@@ -80,21 +80,21 @@ let PAGE_SECTION;
 if (window.location.pathname.includes("class11")) PAGE_SECTION = "class11";
 else if (window.location.pathname.includes("class12")) PAGE_SECTION = "class12";
 else if (window.location.pathname.includes("test")) PAGE_SECTION = "test";
-else PAGE_SECTION = "home";  // homepage fallback
+else PAGE_SECTION = "home"; // homepage fallback
 
-const API_BASE = 'https://acadmix-opal.vercel.app';
+const API_BASE = "https://acadmix-opal.vercel.app";
 
 fetch(`${API_BASE}/api/books`)
-  .then(res => res.json())
-  .then(cards => {
-    const filtered = cards.filter(card => card.section === PAGE_SECTION);
+  .then((res) => res.json())
+  .then((cards) => {
+    const filtered = cards.filter((card) => card.section === PAGE_SECTION);
 
     if (PAGE_SECTION === "home") {
       // No NEET/JEE split on homepage
       const container = document.getElementById("card-container");
       container.innerHTML = "";
 
-      filtered.forEach(card => {
+      filtered.forEach((card) => {
         container.appendChild(createCard(card));
       });
 
@@ -103,15 +103,17 @@ fetch(`${API_BASE}/api/books`)
       }
     } else {
       // Split by NEET and JEE on class11/class12/test pages
-      const neetCards = filtered.filter(card => card.track === "NEET");
-      const jeeCards  = filtered.filter(card => card.track === "JEE");
+      const neetCards = filtered.filter((card) => card.track === "NEET");
+      const jeeCards = filtered.filter((card) => card.track === "JEE");
 
       const neetContainer = document.getElementById("card-container-neet");
-      const jeeContainer  = document.getElementById("card-container-jee");
+      const jeeContainer = document.getElementById("card-container-jee");
 
       if (neetContainer) {
         neetContainer.innerHTML = "";
-        neetCards.forEach(card => neetContainer.appendChild(createCard(card)));
+        neetCards.forEach((card) =>
+          neetContainer.appendChild(createCard(card))
+        );
         if (neetCards.length === 0) {
           neetContainer.innerHTML = "<p>📚 NEET Content Coming Soon</p>";
         }
@@ -119,22 +121,25 @@ fetch(`${API_BASE}/api/books`)
 
       if (jeeContainer) {
         jeeContainer.innerHTML = "";
-        jeeCards.forEach(card => jeeContainer.appendChild(createCard(card)));
+        jeeCards.forEach((card) => jeeContainer.appendChild(createCard(card)));
         if (jeeCards.length === 0) {
           jeeContainer.innerHTML = "<p>📘 JEE Content Coming Soon</p>";
         }
       }
     }
   })
-  .catch(err => {
+  .catch((err) => {
     console.error("Error fetching cards:", err);
     const homeContainer = document.getElementById("card-container");
     const neetContainer = document.getElementById("card-container-neet");
-    const jeeContainer  = document.getElementById("card-container-jee");
+    const jeeContainer = document.getElementById("card-container-jee");
 
-    if (homeContainer) homeContainer.innerHTML = "<p>Error loading materials.</p>";
-    if (neetContainer) neetContainer.innerHTML = "<p>Error loading NEET materials.</p>";
-    if (jeeContainer)  jeeContainer.innerHTML = "<p>Error loading JEE materials.</p>";
+    if (homeContainer)
+      homeContainer.innerHTML = "<p>Error loading materials.</p>";
+    if (neetContainer)
+      neetContainer.innerHTML = "<p>Error loading NEET materials.</p>";
+    if (jeeContainer)
+      jeeContainer.innerHTML = "<p>Error loading JEE materials.</p>";
   });
 
 function createCard(card) {
@@ -152,7 +157,7 @@ function createCard(card) {
         <span class="original">₹${card.priceOriginal}</span>
         <span class="discount">₹${card.priceDiscounted}</span>
       </div>
-      <div class="demo">${card.demo || "No Demo"}</div>
+      <div class="demo">Demo Available: ${card.demo ? "Yes" : "No"}</div>
       <a href="#" class="btn-buy">Buy Now</a>
     </div>
   `;
