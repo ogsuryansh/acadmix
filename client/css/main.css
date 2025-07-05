@@ -346,23 +346,23 @@ html {
 }
 
 .card {
-  background: #f9ebea;             /* lightest */
-  border: 1px solid #f2d7d5;       /* light */
+  background: #f9ebea;
+  border: 1px solid #f2d7d5;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(230, 176, 170, 0.4); /* medium tint */
+  box-shadow: 0 4px 12px rgba(230, 176, 170, 0.4);
   transition: 
-    background 0.3s ease, 
-    transform  0.3s ease, 
-    box-shadow 0.3s ease;
+    background 0.4s ease, 
+    transform 0.5s ease, 
+    box-shadow 0.5s ease;
   transform-origin: center center;
-  color: black ;
+  color: black;
 }
 
 
 .card:hover {
-  transform: scale(1.05);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  transform: scale(1.02) !important;
+    box-shadow: 0 8px 20px rgba(255, 208, 208, 0.5); /* optional deeper shadow */
 }
 
 .card-image {
@@ -380,7 +380,6 @@ html {
   height: 100%;
   object-fit: cover;
 }
-
 .badge {
   position: absolute;
   top: 0.75rem;
@@ -399,11 +398,11 @@ html {
 }
 
 .category {
-  font-size: 1.8rem;
+  font-size: 1.5rem !important;
   font-weight: 600;
   color: #776dff; 
   text-transform: uppercase;
-  margin-bottom: 0.25rem;
+  margin: 0.25rem 0;
 }
 
 .card-title {
@@ -428,11 +427,13 @@ html {
 .price .original {
   font-size: 0.9rem;
   text-decoration: line-through;
+  color: red;
 }
 
 .price .discount {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 900;
+  color: green;
 }
 
 .demo {
