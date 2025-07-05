@@ -179,8 +179,9 @@ const BOOK_CATEGORIES = [
 ];
 const BOOK_SECTIONS = [
   'home',
-  'class10',
-  'neet'
+  'class11',
+  'class12',
+  'test'
 ];
 
 // ─── Render “Add Book” Form ───────────────────────────────────────────────
@@ -336,18 +337,41 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 
 // ─── Course Pages ──────────────────────────────────────────────────────────
+app.get('/courses/class11', async (req, res) => {
+  try {
+    const neetBooks = await Book.find({ section: 'class11', category: 'NEET' }).sort({ createdAt: -1 });
+    const jeeBooks  = await Book.find({ section: 'class11', category: 'JEE' }).sort({ createdAt: -1 });
 
-app.get('/courses/class11', (req, res) => {
-  res.render('courses/class11');
+    res.render('courses/class11', { neetBooks, jeeBooks });
+  } catch (err) {
+    console.error('❌ Class 11 route error:', err);
+    res.status(500).send('Internal Server Error');
+  }
+});
+app.get('/courses/class12', async (req, res) => {
+  try {
+    const neetBooks = await Book.find({ section: 'class12', category: 'NEET' }).sort({ createdAt: -1 });
+    const jeeBooks  = await Book.find({ section: 'class12', category: 'JEE' }).sort({ createdAt: -1 });
+
+    res.render('courses/class12', { neetBooks, jeeBooks });
+  } catch (err) {
+    console.error('❌ Class 12 route error:', err);
+    res.status(500).send('Internal Server Error');
+  }
 });
 
-app.get('/courses/class12', (req, res) => {
-  res.render('courses/class12');
+app.get('/courses/test', async (req, res) => {
+  try {
+    const neetBooks = await Book.find({ section: 'test', category: 'NEET' }).sort({ createdAt: -1 });
+    const jeeBooks  = await Book.find({ section: 'test', category: 'JEE' }).sort({ createdAt: -1 });
+
+    res.render('courses/test', { neetBooks, jeeBooks });
+  } catch (err) {
+    console.error('❌ Test route error:', err);
+    res.status(500).send('Internal Server Error');
+  }
 });
 
-app.get('/courses/tests', (req, res) => {
-  res.render('courses/tests');
-});
 
 // ─── Error Handler & Vercel Export ────────────────────────────────────────
 app.use((err, req, res, next) => {

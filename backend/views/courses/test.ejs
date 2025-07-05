@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Class 11 | Acadmix</title>
+  <title>Tests | Acadmix</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
@@ -54,44 +54,41 @@
     .cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 1.5rem;
+      gap: 2rem;
+      padding: 2rem;
     }
 
     .card {
       background: #fff;
-      border-radius: 12px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
       padding: 1rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
       text-align: center;
     }
 
     .card img {
-      width: 100%;
-      height: 180px;
+      max-width: 100%;
+      height: 200px;
       object-fit: cover;
-      border-radius: 8px;
-      margin-bottom: 1rem;
+      border-radius: 6px;
     }
 
     .card h3 {
-      font-size: 1.1rem;
       margin: 0.5rem 0;
-    }
-
-    .card p {
-      margin: 0.25rem 0;
     }
 
     .coming-soon {
       text-align: center;
-      padding: 2rem;
+      font-size: 1.2rem;
       color: #777;
+      margin-top: 2rem;
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>Class 11 Courses</h1>
+    <h1>Tests and Practice</h1>
   </header>
 
   <div class="tabs">
@@ -100,52 +97,51 @@
   </div>
 
   <div id="neet" class="tab-content active">
-    <% if (neetBooks.length === 0) { %>
-      <div class="coming-soon">📚 NEET Content Coming Soon</div>
-    <% } else { %>
+    <% if (neetBooks.length > 0) { %>
       <div class="cards">
         <% neetBooks.forEach(book => { %>
           <div class="card">
-            <img src="<%= book.imageUrl %>" alt="Book Cover" />
+            <img src="<%= book.imageUrl %>" alt="<%= book.title %>">
             <h3><%= book.title %></h3>
-            <p>₹<s><%= book.priceOriginal %></s> <strong>₹<%= book.priceDiscounted %></strong></p>
-            <p><%= book.badge %></p>
+            <p><strong>₹<%= book.priceDiscounted %></strong> <s>₹<%= book.priceOriginal %></s></p>
+            <% if (book.badge) { %><p><em><%= book.badge %></em></p><% } %>
           </div>
         <% }) %>
       </div>
+    <% } else { %>
+      <div class="coming-soon">NEET test content coming soon.</div>
     <% } %>
   </div>
 
   <div id="jee" class="tab-content">
-    <% if (jeeBooks.length === 0) { %>
-      <div class="coming-soon">📘 JEE Content Coming Soon</div>
-    <% } else { %>
+    <% if (jeeBooks.length > 0) { %>
       <div class="cards">
         <% jeeBooks.forEach(book => { %>
           <div class="card">
-            <img src="<%= book.imageUrl %>" alt="Book Cover" />
+            <img src="<%= book.imageUrl %>" alt="<%= book.title %>">
             <h3><%= book.title %></h3>
-            <p>₹<s><%= book.priceOriginal %></s> <strong>₹<%= book.priceDiscounted %></strong></p>
-            <p><%= book.badge %></p>
+            <p><strong>₹<%= book.priceDiscounted %></strong> <s>₹<%= book.priceOriginal %></s></p>
+            <% if (book.badge) { %><p><em><%= book.badge %></em></p><% } %>
           </div>
         <% }) %>
       </div>
+    <% } else { %>
+      <div class="coming-soon">JEE test content coming soon.</div>
     <% } %>
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', () => {
       const buttons = document.querySelectorAll('.tab-button');
       const contents = document.querySelectorAll('.tab-content');
 
       buttons.forEach(button => {
         button.addEventListener('click', () => {
-          const target = button.getAttribute('data-target');
           buttons.forEach(btn => btn.classList.remove('active'));
-          contents.forEach(c => c.classList.remove('active'));
+          contents.forEach(section => section.classList.remove('active'));
 
           button.classList.add('active');
-          document.getElementById(target).classList.add('active');
+          document.getElementById(button.dataset.target).classList.add('active');
         });
       });
     });

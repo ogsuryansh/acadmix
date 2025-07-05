@@ -94,6 +94,14 @@
           <% }) %>
         </select>
       </label>
+<label>
+  Track (NEET or JEE)
+  <select name="track" required>
+    <option value="">-- Select Track --</option>
+    <option value="NEET" <%= track === 'NEET' ? 'selected' : '' %>>NEET</option>
+    <option value="JEE" <%= track === 'JEE' ? 'selected' : '' %>>JEE</option>
+  </select>
+</label>
 
       <label>
         Page Count
