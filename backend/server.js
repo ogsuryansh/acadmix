@@ -255,22 +255,7 @@ app.get('/api/books', async (req, res) => {
   const books = await Book.find().sort({ createdAt: -1 });
   res.json(books);
 });
-res.render('add-book', {
-  editMode: true,
-  bookId: book._id,
-  categories: BOOK_CATEGORIES,
-  sections: BOOK_SECTIONS,
-  error: null,
-  title: book.title,
-  category: book.category,
-  section: book.section,
-  pageCount: book.pageCount,
-  priceOriginal: book.priceOriginal,
-  priceDiscounted: book.priceDiscounted,
-  badge: book.badge,
-  imageUrl: book.imageUrl,
-  demo: book.demo
-});
+
 
 // ─── Render “Edit Book” Form ───────────────────────────────────────────────
 app.get('/api/admin/books/:id/edit', isAdminAuthenticated, async (req, res) => {
