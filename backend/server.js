@@ -334,6 +334,21 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+
+// ─── Course Pages ──────────────────────────────────────────────────────────
+
+app.get('/courses/class11', (req, res) => {
+  res.render('courses/class11');
+});
+
+app.get('/courses/class12', (req, res) => {
+  res.render('courses/class12');
+});
+
+app.get('/courses/tests', (req, res) => {
+  res.render('courses/tests');
+});
+
 // ─── Error Handler & Vercel Export ────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('💥 Uncaught Error:', err);
