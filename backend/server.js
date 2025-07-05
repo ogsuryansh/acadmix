@@ -197,7 +197,9 @@ app.get('/api/admin/books/new', isAdminAuthenticated, (req, res) => {
     priceDiscounted: '',
     badge: '',
     imageUrl: '',
-    demo: ''
+    demo: '',
+    editMode: false, 
+    bookId: null
   });
 });
 
