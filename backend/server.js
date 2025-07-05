@@ -23,11 +23,8 @@ const User           = require('./models/User');
 const Book           = require('./models/Book');
 
 const app = express();
-
-// ─── Trust Vercel proxy so secure cookies work ─────────────────────────────
 app.set('trust proxy', 1);
 
-// ─── CSP & Security Headers ────────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -41,7 +38,6 @@ app.use(helmet({
   }
 }));
 
-// ─── CORS ───────────────────────────────────────────────────────────────────
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'https://acadmix.shop',
   'http://127.0.0.1:5500',
@@ -56,11 +52,9 @@ app.use(cors({
   credentials: true
 }));
 
-// ─── Body Parsers ───────────────────────────────────────────────────────────
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// ─── MongoDB Connection (Serverless‑friendly) ───────────────────────────────
 async function connectToDB() {
   if (global._mongoConn) return global._mongoConn;
   if (!global._mongoPromise) {
@@ -83,7 +77,6 @@ app.use(async (req, res, next) => {
   }
 });
 
-// ─── Sessions & Passport ───────────────────────────────────────────────────
 app.use(session({
   secret:            process.env.SESSION_SECRET || 'fallback-secret',
   resave:            false,
@@ -96,7 +89,6 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ─── Passport Google Strategy ──────────────────────────────────────────────
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser((id, done) => {
   User.findById(id).then(u => done(null, u)).catch(e => done(e));
@@ -123,17 +115,14 @@ passport.use(new GoogleStrategy({
   }
 }));
 
-// ─── EJS & Views Setup ─────────────────────────────────────────────────────
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// ─── Admin Auth Middleware ─────────────────────────────────────────────────
 function isAdminAuthenticated(req, res, next) {
   if (req.session?.admin) return next();
   res.redirect('/api/admin/login');
 }
 
-// ─── Admin Login / Logout ───────────────────────────────────────────────────
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
 
@@ -153,11 +142,10 @@ app.post('/api/admin/logout', (req, res) => {
   res.redirect('/api/admin/login');
 });
 
-// ─── Admin Dashboard & Books ────────────────────────────────────────────────
 app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
   const users = await User.find();
-  res.render('admin', { 
-    users, 
+  res.render('admin', {
+    users,
     totalUsers: users.length,
     totalPayments: 0,
     totalBooks: 0
@@ -168,7 +156,6 @@ app.get('/api/admin/books', isAdminAuthenticated, async (req, res) => {
   res.render('admin-books', { books });
 });
 
-// ─── Book Form Helpers ──────────────────────────────────────────────────────
 const BOOK_CATEGORIES = [
   'NCERT Highlights',
   'Physics',
@@ -186,32 +173,30 @@ const BOOK_SECTIONS = [
 
 app.get('/api/admin/books/new', isAdminAuthenticated, (req, res) => {
   res.render('add-book', {
-    categories: BOOK_CATEGORIES,
-    sections: BOOK_SECTIONS,
-    error: null,
-    title: '',
-    category: '',
-    section: '',
-    pageCount: '',
-    priceOriginal: '',
-    priceDiscounted: '',
-    badge: '',
-    imageUrl: '',
-    demo: '',
-    track: '',          
-    editMode: false, 
-    bookId: null
+    categories:       BOOK_CATEGORIES,
+    sections:         BOOK_SECTIONS,
+    error:            null,
+    title:            '',
+    category:         '',
+    section:          '',
+    track:            '',        // ← new
+    pageCount:        '',
+    priceOriginal:    '',
+    priceDiscounted:  '',
+    badge:            '',
+    imageUrl:         '',
+    demo:             '',
+    editMode:         false,
+    bookId:           null
   });
 });
 
-
-
-// ─── Handle “Add Book” Submission ────────────────────────────────────────
 app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
   const {
     title,
     category,
     section,
+    track,             // ← new
     pageCount,
     priceOriginal,
     priceDiscounted,
@@ -220,14 +205,14 @@ app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
     demo
   } = req.body;
 
-  // Validate image URL
   if (!/^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i.test(imageUrl)) {
     return res.status(400).render('add-book', {
-      categories: BOOK_CATEGORIES,
-      sections: BOOK_SECTIONS,
-      error: 'Please enter a valid image URL ending with .jpg/.png/.gif',
-      title, category, section, pageCount,
-      priceOriginal, priceDiscounted, badge, imageUrl, demo
+      categories:       BOOK_CATEGORIES,
+      sections:         BOOK_SECTIONS,
+      error:            'Please enter a valid image URL ending with .jpg/.png/.gif',
+      title, category, section, track,
+      pageCount, priceOriginal, priceDiscounted,
+      badge, imageUrl, demo
     });
   }
 
@@ -236,8 +221,9 @@ app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
       title,
       category,
       section,
-      pageCount: Number(pageCount),
-      priceOriginal: Number(priceOriginal),
+      track,            // ← new
+      pageCount:       Number(pageCount),
+      priceOriginal:   Number(priceOriginal),
       priceDiscounted: Number(priceDiscounted),
       badge,
       imageUrl,
@@ -247,41 +233,37 @@ app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
   } catch (err) {
     console.error('❌ Book creation error:', err);
     res.status(500).render('add-book', {
-      categories: BOOK_CATEGORIES,
-      sections: BOOK_SECTIONS,
-      error: 'An error occurred while adding the book. Please try again.',
-      title, category, section, pageCount,
-      priceOriginal, priceDiscounted, badge, imageUrl, demo
+      categories:       BOOK_CATEGORIES,
+      sections:         BOOK_SECTIONS,
+      error:            'An error occurred while adding the book. Please try again.',
+      title, category, section, track,
+      pageCount, priceOriginal, priceDiscounted,
+      badge, imageUrl, demo
     });
   }
 });
-app.get('/api/books', async (req, res) => {
-  const books = await Book.find().sort({ createdAt: -1 });
-  res.json(books);
-});
 
-
-// ─── Render “Edit Book” Form ───────────────────────────────────────────────
 app.get('/api/admin/books/:id/edit', isAdminAuthenticated, async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
     if (!book) return res.status(404).send("Book not found");
 
     res.render('add-book', {
-      categories: BOOK_CATEGORIES,
-      sections: BOOK_SECTIONS,
-      error: null,
-      title: book.title,
-      category: book.category,
-      section: book.section,
-      pageCount: book.pageCount,
-      priceOriginal: book.priceOriginal,
-      priceDiscounted: book.priceDiscounted,
-      badge: book.badge,
-      imageUrl: book.imageUrl,
-      demo: book.demo,
-      editMode: true,
-      bookId: book._id
+      categories:       BOOK_CATEGORIES,
+      sections:         BOOK_SECTIONS,
+      error:            null,
+      title:            book.title,
+      category:         book.category,
+      section:          book.section,
+      track:            book.track,   // ← new
+      pageCount:        book.pageCount,
+      priceOriginal:    book.priceOriginal,
+      priceDiscounted:  book.priceDiscounted,
+      badge:            book.badge,
+      imageUrl:         book.imageUrl,
+      demo:             book.demo,
+      editMode:         true,
+      bookId:           book._id
     });
   } catch (err) {
     console.error("❌ Error rendering edit form:", err);
@@ -289,10 +271,9 @@ app.get('/api/admin/books/:id/edit', isAdminAuthenticated, async (req, res) => {
   }
 });
 
-// ─── Handle “Edit Book” Submission ─────────────────────────────────────────
 app.post('/api/admin/books/:id/edit', isAdminAuthenticated, async (req, res) => {
   const {
-    title, category, section, pageCount,
+    title, category, section, track, pageCount,
     priceOriginal, priceDiscounted, badge,
     imageUrl, demo
   } = req.body;
@@ -301,16 +282,18 @@ app.post('/api/admin/books/:id/edit', isAdminAuthenticated, async (req, res) => 
     const book = await Book.findById(req.params.id);
     if (!book) return res.status(404).send("Book not found");
 
-    book.title = title;
-    book.category = category;
-    book.section = section;
-    book.pageCount = Number(pageCount);
-    book.priceOriginal = Number(priceOriginal);
-    book.priceDiscounted = Number(priceDiscounted);
-    book.badge = badge;
-    book.imageUrl = imageUrl;
-    book.demo = demo;
-
+    Object.assign(book, {
+      title,
+      category,
+      section,
+      track,          // ← new
+      pageCount:      Number(pageCount),
+      priceOriginal:  Number(priceOriginal),
+      priceDiscounted:Number(priceDiscounted),
+      badge,
+      imageUrl,
+      demo
+    });
     await book.save();
     res.redirect('/api/admin/books');
   } catch (err) {
@@ -319,7 +302,6 @@ app.post('/api/admin/books/:id/edit', isAdminAuthenticated, async (req, res) => 
   }
 });
 
-// ─── Handle “Delete Book” Submission ───────────────────────────────────────
 app.post('/api/admin/books/:id/delete', isAdminAuthenticated, async (req, res) => {
   try {
     await Book.findByIdAndDelete(req.params.id);
@@ -330,19 +312,15 @@ app.post('/api/admin/books/:id/delete', isAdminAuthenticated, async (req, res) =
   }
 });
 
-// ─── Public APIs & Static Assets ───────────────────────────────────────────
 app.use('/api/auth', require('./routes/auth'));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-
-// ─── Course Pages ──────────────────────────────────────────────────────────
 app.get('/courses/class11', async (req, res) => {
   try {
-    const neetBooks = await Book.find({ section: 'class11', category: 'NEET' }).sort({ createdAt: -1 });
-    const jeeBooks  = await Book.find({ section: 'class11', category: 'JEE' }).sort({ createdAt: -1 });
-
+    const neetBooks = await Book.find({ section: 'class11', category: 'NEET', track: 'NEET' });
+    const jeeBooks  = await Book.find({ section: 'class11', category: 'JEE', track: 'JEE' });
     res.render('courses/class11', { neetBooks, jeeBooks });
   } catch (err) {
     console.error('❌ Class 11 route error:', err);
@@ -351,21 +329,18 @@ app.get('/courses/class11', async (req, res) => {
 });
 app.get('/courses/class12', async (req, res) => {
   try {
-    const neetBooks = await Book.find({ section: 'class12', category: 'NEET' }).sort({ createdAt: -1 });
-    const jeeBooks  = await Book.find({ section: 'class12', category: 'JEE' }).sort({ createdAt: -1 });
-
+    const neetBooks = await Book.find({ section: 'class12', category: 'NEET', track: 'NEET' });
+    const jeeBooks  = await Book.find({ section: 'class12', category: 'JEE', track: 'JEE' });
     res.render('courses/class12', { neetBooks, jeeBooks });
   } catch (err) {
     console.error('❌ Class 12 route error:', err);
     res.status(500).send('Internal Server Error');
   }
 });
-
 app.get('/courses/test', async (req, res) => {
   try {
-    const neetBooks = await Book.find({ section: 'test', category: 'NEET' }).sort({ createdAt: -1 });
-    const jeeBooks  = await Book.find({ section: 'test', category: 'JEE' }).sort({ createdAt: -1 });
-
+    const neetBooks = await Book.find({ section: 'test', category: 'NEET', track: 'NEET' });
+    const jeeBooks  = await Book.find({ section: 'test', category: 'JEE', track: 'JEE' });
     res.render('courses/test', { neetBooks, jeeBooks });
   } catch (err) {
     console.error('❌ Test route error:', err);
@@ -373,8 +348,6 @@ app.get('/courses/test', async (req, res) => {
   }
 });
 
-
-// ─── Error Handler & Vercel Export ────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('💥 Uncaught Error:', err);
   res.status(500).json({ error: 'Internal Server Error', message: err.message });
