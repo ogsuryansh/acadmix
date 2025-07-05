@@ -76,8 +76,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
-
-// Determine which section this page belongs to
 let PAGE_SECTION;
 if (window.location.pathname.includes("class11")) PAGE_SECTION = "class11";
 else if (window.location.pathname.includes("class12")) PAGE_SECTION = "class12";
@@ -89,41 +87,74 @@ const API_BASE = 'https://acadmix-opal.vercel.app';
 fetch(`${API_BASE}/api/books`)
   .then(res => res.json())
   .then(cards => {
-    const container = document.getElementById("card-container");
-    container.innerHTML = "";  // Clear existing content
+    const filtered = cards.filter(card => card.section === PAGE_SECTION);
 
-    // Filter cards based on current page section
-    const filteredCards = cards.filter(card => card.section === PAGE_SECTION);
+    if (PAGE_SECTION === "home") {
+      // No NEET/JEE split on homepage
+      const container = document.getElementById("card-container");
+      container.innerHTML = "";
 
-    // Render only filtered cards
-    filteredCards.forEach(card => {
-      const cardEl = document.createElement("div");
-      cardEl.className = "card";
-      cardEl.innerHTML = `
-        <div class="card-image">
-          <img src="${card.imageUrl}" alt="${card.title}" />
-          <div class="badge">${card.badge || ""}</div>
-        </div>
-        <div class="card-body">
-          <div class="category">${card.category}</div>
-          <h3 class="card-title">${card.title}</h3>
-          <div class="price">
-            <span class="original">₹${card.priceOriginal}</span>
-            <span class="discount">₹${card.priceDiscounted}</span>
-          </div>
-          <div class="demo">${card.demo || "No Demo"}</div>
-          <a href="#" class="btn-buy">Buy Now</a>
-        </div>
-      `;
-      container.appendChild(cardEl);
-    });
+      filtered.forEach(card => {
+        container.appendChild(createCard(card));
+      });
 
-    if (filteredCards.length === 0) {
-      container.innerHTML = "<p>No books found for this section.</p>";
+      if (filtered.length === 0) {
+        container.innerHTML = "<p>No books found for homepage.</p>";
+      }
+    } else {
+      // Split by NEET and JEE on class11/class12/test pages
+      const neetCards = filtered.filter(card => card.track === "NEET");
+      const jeeCards  = filtered.filter(card => card.track === "JEE");
+
+      const neetContainer = document.getElementById("card-container-neet");
+      const jeeContainer  = document.getElementById("card-container-jee");
+
+      if (neetContainer) {
+        neetContainer.innerHTML = "";
+        neetCards.forEach(card => neetContainer.appendChild(createCard(card)));
+        if (neetCards.length === 0) {
+          neetContainer.innerHTML = "<p>📚 NEET Content Coming Soon</p>";
+        }
+      }
+
+      if (jeeContainer) {
+        jeeContainer.innerHTML = "";
+        jeeCards.forEach(card => jeeContainer.appendChild(createCard(card)));
+        if (jeeCards.length === 0) {
+          jeeContainer.innerHTML = "<p>📘 JEE Content Coming Soon</p>";
+        }
+      }
     }
   })
   .catch(err => {
     console.error("Error fetching cards:", err);
-    document.getElementById("card-container").innerHTML =
-      "<p>Error loading materials</p>";
+    const homeContainer = document.getElementById("card-container");
+    const neetContainer = document.getElementById("card-container-neet");
+    const jeeContainer  = document.getElementById("card-container-jee");
+
+    if (homeContainer) homeContainer.innerHTML = "<p>Error loading materials.</p>";
+    if (neetContainer) neetContainer.innerHTML = "<p>Error loading NEET materials.</p>";
+    if (jeeContainer)  jeeContainer.innerHTML = "<p>Error loading JEE materials.</p>";
   });
+
+function createCard(card) {
+  const cardEl = document.createElement("div");
+  cardEl.className = "card";
+  cardEl.innerHTML = `
+    <div class="card-image">
+      <img src="${card.imageUrl}" alt="${card.title}" />
+      <div class="badge">${card.badge || ""}</div>
+    </div>
+    <div class="card-body">
+      <div class="category">${card.category}</div>
+      <h3 class="card-title">${card.title}</h3>
+      <div class="price">
+        <span class="original">₹${card.priceOriginal}</span>
+        <span class="discount">₹${card.priceDiscounted}</span>
+      </div>
+      <div class="demo">${card.demo || "No Demo"}</div>
+      <a href="#" class="btn-buy">Buy Now</a>
+    </div>
+  `;
+  return cardEl;
+}
