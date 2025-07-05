@@ -76,15 +76,27 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+// Determine which section this page belongs to
+let PAGE_SECTION;
+if (window.location.pathname.includes("class11")) PAGE_SECTION = "class11";
+else if (window.location.pathname.includes("class12")) PAGE_SECTION = "class12";
+else if (window.location.pathname.includes("test")) PAGE_SECTION = "test";
+else PAGE_SECTION = "home";  // homepage fallback
+
 const API_BASE = 'https://acadmix-opal.vercel.app';
 
 fetch(`${API_BASE}/api/books`)
   .then(res => res.json())
   .then(cards => {
     const container = document.getElementById("card-container");
-    container.innerHTML = "";      // clear any loaders/errors
+    container.innerHTML = "";  // Clear existing content
 
-    cards.forEach(card => {
+    // Filter cards based on current page section
+    const filteredCards = cards.filter(card => card.section === PAGE_SECTION);
+
+    // Render only filtered cards
+    filteredCards.forEach(card => {
       const cardEl = document.createElement("div");
       cardEl.className = "card";
       cardEl.innerHTML = `
@@ -105,6 +117,10 @@ fetch(`${API_BASE}/api/books`)
       `;
       container.appendChild(cardEl);
     });
+
+    if (filteredCards.length === 0) {
+      container.innerHTML = "<p>No books found for this section.</p>";
+    }
   })
   .catch(err => {
     console.error("Error fetching cards:", err);
