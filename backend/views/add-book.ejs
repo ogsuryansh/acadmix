@@ -121,10 +121,14 @@
         <input type="text" name="badge" required value="<%= badge || '' %>">
       </label>
 
-      <label>
-        Demo Available?
-        <input type="text" name="demo" placeholder="Yes / No" value="<%= demo || '' %>">
-      </label>
+ <label>
+  Demo Available?
+  <select name="demo" required>
+    <option value="Yes">Yes</option>
+    <option value="No" selected>No</option>
+  </select>
+</label>
+
 
       <label>
         Image URL
