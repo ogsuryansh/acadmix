@@ -157,8 +157,9 @@ function createCard(card) {
         <p class="original">₹${card.priceOriginal}</p>
         <p class="discount">₹${card.priceDiscounted}</p>
       </div>
+      <div class = "pay-button-cont" >
       <div class="demo">Demo Available: ${card.demo ? "Yes" : "No"}</div>
-      <a href="#" class="btn-buy">Buy Now</a>
+      <a href="#" class="btn-buy">Buy Now</a></div>
     </div>
   `;
   return cardEl;

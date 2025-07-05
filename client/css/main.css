@@ -419,6 +419,11 @@ html {
   gap: 0.5rem;
  margin: 10px 0;
 }
+.pay-button-cont {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
 .price .original {
   font-size: 0.9rem;
