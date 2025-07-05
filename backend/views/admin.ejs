@@ -34,6 +34,7 @@
       background: var(--primary);
       color: #fff;
       padding: 2rem 1rem;
+      transition: transform 0.3s ease;
     }
 
     .sidebar h2 {
@@ -41,16 +42,28 @@
       text-align: center;
     }
 
-    .sidebar button {
+    .sidebar a {
       display: block;
-      background: none;
-      border: none;
       color: #fff;
-      font-weight: bold;
+      text-decoration: none;
       margin: 1rem 0;
-      text-align: left;
+      font-weight: bold;
       cursor: pointer;
-      font-size: 1rem;
+    }
+
+    .hamburger {
+      display: none;
+      font-size: 1.8rem;
+      cursor: pointer;
+      margin: 1rem;
+    }
+
+    .close-btn {
+      display: none;
+      font-size: 1.5rem;
+      color: #fff;
+      text-align: right;
+      cursor: pointer;
     }
 
     .main {
@@ -58,11 +71,11 @@
       padding: 2rem;
     }
 
-    .tab-content {
+    .tab {
       display: none;
     }
 
-    .tab-content.active {
+    .tab.active {
       display: block;
     }
 
@@ -119,70 +132,69 @@
       align-items: center;
     }
 
-    .books-buttons {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 2rem;
-      flex-wrap: wrap;
-    }
-
-    .books-buttons a {
-      padding: 0.75rem 1.25rem;
-      background: var(--primary);
-      color: #fff;
-      text-decoration: none;
-      border-radius: 6px;
-      font-weight: bold;
-      transition: background 0.2s ease;
-    }
-
-    .books-buttons a:hover {
-      background: #d94c1c;
-    }
-
+    /* Responsive */
     @media(max-width: 768px) {
-      .dashboard-cards {
-        flex-direction: column;
+      .hamburger {
+        display: block;
       }
       .sidebar {
-        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        transform: translateX(-100%);
+        z-index: 999;
       }
+      .sidebar.show {
+        transform: translateX(0);
+      }
+      .close-btn {
+        display: block;
+        margin-bottom: 1rem;
+      }
+    }
+
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .btn-group a {
+      padding: 0.5rem 1rem;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 5px;
+      text-decoration: none;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
   <div class="admin-container">
     <!-- Sidebar -->
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
+      <div class="close-btn" id="closeSidebar">✖</div>
       <h2>Admin</h2>
-      <button onclick="switchTab('dashboard')">Dashboard</button>
-      <button onclick="switchTab('books')">Books</button>
-      <button onclick="switchTab('payments')">Payments</button>
-      <form action="/api/admin/logout" method="POST" style="margin-top: 2rem;">
-        <button type="submit" style="color:#fff;">Logout</button>
-      </form>
+      <a data-tab="dashboard-tab">Dashboard</a>
+      <a data-tab="books-tab">Books</a>
+      <a href="#">Payments</a>
+      <a href="/admin/logout">Logout</a>
     </div>
 
     <!-- Main Content -->
     <div class="main">
-      <!-- DASHBOARD TAB -->
-      <div id="dashboard" class="tab-content active">
+      <div class="hamburger" id="openSidebar">☰</div>
+
+      <!-- Dashboard Tab -->
+      <div class="tab active" id="dashboard-tab">
         <h1>Dashboard</h1>
         <div class="dashboard-cards">
-          <div class="card">
-            <h3>Total Users</h3>
-            <p><%= totalUsers %></p>
-          </div>
-          <div class="card">
-            <h3>Total Payments</h3>
-            <p><%= totalPayments %></p>
-          </div>
-          <div class="card">
-            <h3>Total Books</h3>
-            <p><%= totalBooks %></p>
-          </div>
+          <div class="card"><h3>Total Users</h3><p><%= totalUsers %></p></div>
+          <div class="card"><h3>Total Payments</h3><p><%= totalPayments %></p></div>
+          <div class="card"><h3>Total Books</h3><p><%= totalBooks %></p></div>
         </div>
-
         <h2>All Users</h2>
         <table>
           <thead>
@@ -201,13 +213,7 @@
                   <%= user.name %>
                 </td>
                 <td><%= user.email %></td>
-                <td>
-                  <% if (user.books && user.books.length > 0) { %>
-                    <%= user.books.join(", ") %>
-                  <% } else { %>
-                    None
-                  <% } %>
-                </td>
+                <td><%= user.books?.join(", ") || "None" %></td>
                 <td><%= new Date(user.createdAt).toLocaleDateString() %></td>
               </tr>
             <% }) %>
@@ -215,33 +221,40 @@
         </table>
       </div>
 
-      <!-- BOOKS TAB -->
-      <div id="books" class="tab-content">
+      <!-- Books Tab -->
+      <div class="tab" id="books-tab">
         <h1>Books Dashboard</h1>
-        <div class="books-buttons">
-          <a href="/api/admin/books">Show Books</a>
+        <div class="btn-group">
+          <a href="/api/admin/books">Show All Books</a>
           <a href="/api/admin/books/new">Add New Book</a>
-          <a href="/api/admin/books">Edit Book</a>
-          <a href="/api/admin/books">Delete Book</a>
+          <a href="/api/admin/books/edit">Edit Book</a>
+          <a href="/api/admin/books/delete">Delete Book</a>
         </div>
-        <p>Select one of the above actions to manage books.</p>
-      </div>
-
-      <!-- PAYMENTS TAB -->
-      <div id="payments" class="tab-content">
-        <h1>Payments Dashboard</h1>
-        <p>Payments stats and actions coming soon.</p>
       </div>
     </div>
   </div>
 
   <script>
-    function switchTab(tabId) {
-      document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
+    document.addEventListener("DOMContentLoaded", () => {
+      const sidebarLinks = document.querySelectorAll(".sidebar a[data-tab]");
+      const tabs = document.querySelectorAll(".tab");
+
+      sidebarLinks.forEach(link => {
+        link.addEventListener("click", () => {
+          const tabId = link.getAttribute("data-tab");
+          tabs.forEach(tab => tab.classList.remove("active"));
+          document.getElementById(tabId).classList.add("active");
+        });
       });
-      document.getElementById(tabId).classList.add('active');
-    }
+
+      const sidebar = document.getElementById("sidebar");
+      document.getElementById("openSidebar").addEventListener("click", () => {
+        sidebar.classList.add("show");
+      });
+      document.getElementById("closeSidebar").addEventListener("click", () => {
+        sidebar.classList.remove("show");
+      });
+    });
   </script>
 </body>
 </html>
