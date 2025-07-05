@@ -42,13 +42,8 @@
       color: #fff;
     }
 
-    .tab-content {
-      display: none;
+    #card-container {
       padding: 1rem 2rem;
-    }
-
-    .tab-content.active {
-      display: block;
     }
 
     .cards {
@@ -95,57 +90,85 @@
   </header>
 
   <div class="tabs">
-    <button class="tab-button active" data-target="neet">NEET</button>
-    <button class="tab-button" data-target="jee">JEE</button>
+    <button class="tab-button active" data-target="NEET">NEET</button>
+    <button class="tab-button" data-target="JEE">JEE</button>
   </div>
 
-  <div id="neet" class="tab-content active">
-    <% if (neetBooks.length === 0) { %>
-      <div class="coming-soon">📚 NEET Content Coming Soon</div>
-    <% } else { %>
-      <div class="cards">
-        <% neetBooks.forEach(book => { %>
-          <div class="card">
-            <img src="<%= book.imageUrl %>" alt="Book Cover" />
-            <h3><%= book.title %></h3>
-            <p>₹<s><%= book.priceOriginal %></s> <strong>₹<%= book.priceDiscounted %></strong></p>
-            <p><%= book.badge %></p>
-          </div>
-        <% }) %>
-      </div>
-    <% } %>
-  </div>
-
-  <div id="jee" class="tab-content">
-    <% if (jeeBooks.length === 0) { %>
-      <div class="coming-soon">📘 JEE Content Coming Soon</div>
-    <% } else { %>
-      <div class="cards">
-        <% jeeBooks.forEach(book => { %>
-          <div class="card">
-            <img src="<%= book.imageUrl %>" alt="Book Cover" />
-            <h3><%= book.title %></h3>
-            <p>₹<s><%= book.priceOriginal %></s> <strong>₹<%= book.priceDiscounted %></strong></p>
-            <p><%= book.badge %></p>
-          </div>
-        <% }) %>
-      </div>
-    <% } %>
+  <div id="card-container">
+    <!-- Cards will be injected here dynamically -->
+    <div class="coming-soon">📚 Loading content...</div>
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    let PAGE_SECTION = "class11";
+    let currentTrack = "NEET";
+
+    const API_BASE = 'https://acadmix-opal.vercel.app';
+
+    function fetchAndRenderCards() {
+      fetch(`${API_BASE}/api/books`)
+        .then(res => res.json())
+        .then(cards => {
+          const container = document.getElementById("card-container");
+          container.innerHTML = "";
+
+          const filteredCards = cards.filter(card =>
+            card.section === PAGE_SECTION && card.track === currentTrack
+          );
+
+          if (filteredCards.length === 0) {
+            container.innerHTML = `<div class="coming-soon">📚 ${currentTrack} Content Coming Soon</div>`;
+            return;
+          }
+
+          const cardsWrapper = document.createElement("div");
+          cardsWrapper.className = "cards";
+
+          filteredCards.forEach(card => {
+            const cardEl = document.createElement("div");
+            cardEl.className = "card";
+            cardEl.innerHTML = `
+              <div class="card-image">
+                <img src="${card.imageUrl}" alt="${card.title}" />
+                <div class="badge">${card.badge || ""}</div>
+              </div>
+              <div class="card-body">
+                <div class="category">${card.category}</div>
+                <h3 class="card-title">${card.title}</h3>
+                <div class="price">
+                  <span class="original">₹${card.priceOriginal}</span>
+                  <span class="discount">₹${card.priceDiscounted}</span>
+                </div>
+                <div class="demo">${card.demo || "No Demo"}</div>
+                <a href="#" class="btn-buy">Buy Now</a>
+              </div>
+            `;
+            cardsWrapper.appendChild(cardEl);
+          });
+
+          container.appendChild(cardsWrapper);
+        })
+        .catch(err => {
+          console.error("Error fetching cards:", err);
+          document.getElementById("card-container").innerHTML =
+            "<p>Error loading materials</p>";
+        });
+    }
+
+    // Initial fetch
+    fetchAndRenderCards();
+
+    // Tab switching
+    document.addEventListener('DOMContentLoaded', () => {
       const buttons = document.querySelectorAll('.tab-button');
-      const contents = document.querySelectorAll('.tab-content');
 
       buttons.forEach(button => {
         button.addEventListener('click', () => {
-          const target = button.getAttribute('data-target');
           buttons.forEach(btn => btn.classList.remove('active'));
-          contents.forEach(c => c.classList.remove('active'));
-
           button.classList.add('active');
-          document.getElementById(target).classList.add('active');
+
+          currentTrack = button.dataset.target;
+          fetchAndRenderCards();
         });
       });
     });
