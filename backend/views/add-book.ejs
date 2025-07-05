@@ -2,49 +2,137 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Add Book</title>
+  <title>Add New Book</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      background: #fff;
+      width: 420px;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      color: #333;
+    }
+    form label {
+      display: block;
+      margin-bottom: 1rem;
+      color: #555;
+    }
+    form input[type="text"],
+    form input[type="number"],
+    form select {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.25rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    form button {
+      width: 100%;
+      padding: 0.75rem;
+      background: #0070f3;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 1.25rem;
+    }
+    form button:hover {
+      background: #005bb5;
+    }
+    .error {
+      color: #c00;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-  <h1>Add New Book</h1>
+  <div class="container">
+    <h1>Add New Book</h1>
 
-  <form action="/api/admin/books/new" method="POST" enctype="multipart/form-data">
-    <label>Title:
-      <input type="text" name="title" required>
-    </label><br/>
+    <% if (error) { %>
+      <p class="error"><%= error %></p>
+    <% } %>
 
-    <label>Category:
-      <select name="category" required>
-        <option value="NCERT Highlights">NCERT Highlights</option>
-        <option value="Physics">Physics</option>
-        <option value="Biology">Biology</option>
-        <option value="Chemistry">Chemistry</option>
-        <option value="JEE">JEE</option>
-        <option value="NEET">NEET</option>
-        <!-- Add more if needed -->
-      </select>
-    </label><br/>
+    <form action="/api/admin/books/new" method="POST">
+      <label>
+        Title
+        <input type="text" name="title" required value="<%= title || '' %>">
+      </label>
 
-    <label>Original Price:
-      <input type="number" name="originalPrice" required>
-    </label><br/>
+      <label>
+        Category
+        <select name="category" required>
+          <% categories.forEach(cat => { %>
+            <option
+              value="<%= cat %>"
+              <%= category === cat ? 'selected' : '' %>
+            ><%= cat %></option>
+          <% }) %>
+        </select>
+      </label>
 
-    <label>Discounted Price:
-      <input type="number" name="discountedPrice" required>
-    </label><br/>
+      <label>
+        Section (where to display)
+        <select name="section" required>
+          <% sections.forEach(sec => { %>
+            <option
+              value="<%= sec %>"
+              <%= section === sec ? 'selected' : '' %>
+            ><%= sec.charAt(0).toUpperCase() + sec.slice(1) %></option>
+          <% }) %>
+        </select>
+      </label>
 
-    <label>Badge Text (like "90% OFF"):
-      <input type="text" name="badge" required>
-    </label><br/>
+      <label>
+        Page Count
+        <input type="number" name="pageCount" min="1" required value="<%= pageCount || '' %>">
+      </label>
 
-    <label>Demo:
-      <input type="text" name="demo" placeholder="Yes / No">
-    </label><br/>
+      <label>
+        Original Price
+        <input type="number" name="priceOriginal" min="0" required value="<%= priceOriginal || '' %>">
+      </label>
 
-    <label>Image:
-      <input type="file" name="image" accept="image/*" required>
-    </label><br/>
+      <label>
+        Discounted Price
+        <input type="number" name="priceDiscounted" min="0" required value="<%= priceDiscounted || '' %>">
+      </label>
 
-    <button type="submit">Add Book</button>
-  </form>
+      <label>
+        Badge Text (e.g. “90% OFF”)
+        <input type="text" name="badge" required value="<%= badge || '' %>">
+      </label>
+
+      <label>
+        Demo Available?
+        <input type="text" name="demo" placeholder="Yes / No" value="<%= demo || '' %>">
+      </label>
+
+      <label>
+        Image URL
+        <input type="text" name="imageUrl" placeholder="https://example.com/book.jpg" required value="<%= imageUrl || '' %>">
+      </label>
+
+      <button type="submit">Add Book</button>
+    </form>
+  </div>
 </body>
 </html>

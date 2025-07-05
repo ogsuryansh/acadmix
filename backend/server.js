@@ -154,7 +154,7 @@ app.post('/api/admin/logout', (req, res) => {
 });
 
 // ─── Admin Dashboard & Books ────────────────────────────────────────────────
-app.get('/api/admin',          isAdminAuthenticated, async (req, res) => {
+app.get('/api/admin', isAdminAuthenticated, async (req, res) => {
   const users = await User.find();
   res.render('admin', { 
     users, 
@@ -163,22 +163,85 @@ app.get('/api/admin',          isAdminAuthenticated, async (req, res) => {
     totalBooks: 0
   });
 });
-app.get('/api/admin/books',    isAdminAuthenticated, async (req, res) => {
+app.get('/api/admin/books', isAdminAuthenticated, async (req, res) => {
   const books = await Book.find().sort({ createdAt: -1 });
   res.render('admin-books', { books });
 });
-app.get('/api/admin/books/new',isAdminAuthenticated, (req, res) => {
-  res.render('add-book');
-});
-app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
-  const { title, category, page, priceOriginal, priceDiscounted, badge, imageUrl, demo } = req.body;
-  await Book.create({ title, category, page, priceOriginal, priceDiscounted, badge, imageUrl, demo });
-  res.redirect('/api/admin/books');
+
+// ─── Book Form Helpers ──────────────────────────────────────────────────────
+const BOOK_CATEGORIES = [
+  'NCERT Highlights',
+  'Physics',
+  'Biology',
+  'Chemistry',
+  'JEE',
+  'NEET'
+];
+const BOOK_SECTIONS = [
+  'home',
+  'class10',
+  'neet'
+];
+
+// ─── Render “Add Book” Form ───────────────────────────────────────────────
+app.get('/api/admin/books/new', isAdminAuthenticated, (req, res) => {
+  res.render('add-book', {
+    categories: BOOK_CATEGORIES,
+    sections: BOOK_SECTIONS
+  });
 });
 
+// ─── Handle “Add Book” Submission ────────────────────────────────────────
+app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
+  const {
+    title,
+    category,
+    section,
+    pageCount,
+    priceOriginal,
+    priceDiscounted,
+    badge,
+    imageUrl,
+    demo
+  } = req.body;
+
+  // Validate image URL
+  if (!/^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i.test(imageUrl)) {
+    return res.status(400).render('add-book', {
+      categories: BOOK_CATEGORIES,
+      sections: BOOK_SECTIONS,
+      error: 'Please enter a valid image URL ending with .jpg/.png/.gif',
+      title, category, section, pageCount,
+      priceOriginal, priceDiscounted, badge, imageUrl, demo
+    });
+  }
+
+  try {
+    await Book.create({
+      title,
+      category,
+      section,
+      pageCount: Number(pageCount),
+      priceOriginal: Number(priceOriginal),
+      priceDiscounted: Number(priceDiscounted),
+      badge,
+      imageUrl,
+      demo
+    });
+    res.redirect('/api/admin/books');
+  } catch (err) {
+    console.error('❌ Book creation error:', err);
+    res.status(500).render('add-book', {
+      categories: BOOK_CATEGORIES,
+      sections: BOOK_SECTIONS,
+      error: 'An error occurred while adding the book. Please try again.',
+      title, category, section, pageCount,
+      priceOriginal, priceDiscounted, badge, imageUrl, demo
+    });
+  }
+});
 
 // ─── Public APIs & Static Assets ───────────────────────────────────────────
-
 app.use('/api/auth', require('./routes/auth'));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
@@ -189,5 +252,6 @@ app.use((err, req, res, next) => {
   console.error('💥 Uncaught Error:', err);
   res.status(500).json({ error: 'Internal Server Error', message: err.message });
 });
+
 module.exports = app;
 module.exports.handler = serverless(app);
