@@ -363,6 +363,9 @@ app.use((err, req, res, next) => {
   console.error('💥 Uncaught Error:', err);
   res.status(500).json({ error: 'Internal Server Error', message: err.message });
 });
-
+app.use(
+  '/client',
+  express.static(path.join(__dirname, '..', 'client'))
+);
 module.exports = app;
 module.exports.handler = serverless(app);
