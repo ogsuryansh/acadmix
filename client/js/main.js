@@ -154,8 +154,8 @@ function createCard(card) {
       <div class="category">${card.category}</div>
       <h3 class="card-title">${card.title}</h3>
       <div class="price">
-        <span class="original">₹${card.priceOriginal}</span>
-        <span class="discount">₹${card.priceDiscounted}</span>
+        <p class="original">₹${card.priceOriginal}</p>
+        <p class="discount">₹${card.priceDiscounted}</p>
       </div>
       <div class="demo">Demo Available: ${card.demo ? "Yes" : "No"}</div>
       <a href="#" class="btn-buy">Buy Now</a>
