@@ -76,7 +76,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
-fetch('/api/books')               // or whatever your JSON endpoint is
+const API_BASE = 'https://acadmix-opal.vercel.app';
+
+fetch(`${API_BASE}/api/books`)
   .then(res => res.json())
   .then(cards => {
     const container = document.getElementById("card-container");

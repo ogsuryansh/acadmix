@@ -9,3 +9,9 @@
       img-src     'self' data: https:;
       connect-src 'self' https://acadmix.shop https://acadmix-opal.vercel.app;
     """
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://acadmix-opal.vercel.app/api/:splat"
+  status = 200
+  force = true
