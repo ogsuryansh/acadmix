@@ -126,7 +126,7 @@
       <label>
         Demo Available?
         <select name="demo" required>
-  <option value="Yes" <%= demo === 'Yes' ?  : '' %>>Yes</option>
+  <option value="Yes" <%= demo === 'Yes' ? 'selected' : '' %>>Yes</option>
   <option value="No" <%= !demo || demo === 'No' ? 'selected' : '' %>>No</option>
 </select>
 
