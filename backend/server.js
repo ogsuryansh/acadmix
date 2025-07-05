@@ -251,6 +251,10 @@ app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
     });
   }
 });
+app.get('/api/books', async (req, res) => {
+  const books = await Book.find().sort({ createdAt: -1 });
+  res.json(books);
+});
 
 // ─── Public APIs & Static Assets ───────────────────────────────────────────
 app.use('/api/auth', require('./routes/auth'));

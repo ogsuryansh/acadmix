@@ -16,7 +16,12 @@ const bookSchema = new mongoose.Schema({
   priceOriginal:   { type: Number, required: true },
   priceDiscounted: { type: Number, required: true },
   badge:           { type: String },
-  demo:            { type: String },
+  demo: {
+  type: String,
+  enum: ['Yes', 'No'],
+  default: 'No'
+}
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('Book', bookSchema);
