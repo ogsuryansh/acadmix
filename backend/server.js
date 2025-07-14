@@ -16,7 +16,7 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const session = require("express-session");
 const serverless = require("serverless-http");
 const cors = require("cors");
-const helmet = require("helmet");
+const { contentSecurityPolicy } = require("helmet");
 const QRCode = require("qrcode");
 
 const User = require("./models/User");
@@ -48,44 +48,32 @@ app.get("/api/book/:id/secure-pdf", async (req, res) => {
   }
 });
 app.use(
-  helmet({
-    contentSecurityPolicy: {
-      useDefaults: true, // ✅ This is critical
-      directives: {
-        connectSrc: [
-          "'self'",
-          "https://acadmix.shop",
-          "https://api.acadmix.shop", // ✅ Required for frontend JS
-        ],
-        formAction: [
-          "'self'",
-          "https://acadmix.shop",
-          "https://api.acadmix.shop",
-        ],
-        scriptSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          "https://apis.google.com",
-        ],
-        styleSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          "https://fonts.googleapis.com",
-          "https://cdnjs.cloudflare.com",
-        ],
-        fontSrc: [
-          "'self'",
-          "data:",
-          "https://fonts.gstatic.com",
-          "https://cdnjs.cloudflare.com",
-          "https://api.acadmix.shop",
-        ],
-        imgSrc: ["'self'", "data:", "https:"],
-      },
+  contentSecurityPolicy({
+    useDefaults: true,
+    directives: {
+      // start from the defaults…
+      defaultSrc: ["'self'"],
+      // …then explicitly add your API host
+      connectSrc: ["'self'", "https://acadmix.shop", "https://api.acadmix.shop"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://apis.google.com"],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://fonts.googleapis.com",
+        "https://cdnjs.cloudflare.com",
+      ],
+      fontSrc: [
+        "'self'",
+        "data:",
+        "https://fonts.gstatic.com",
+        "https://cdnjs.cloudflare.com",
+        "https://api.acadmix.shop",
+      ],
+      imgSrc: ["'self'", "data:", "https:"],
+      formAction: ["'self'", "https://acadmix.shop", "https://api.acadmix.shop"],
     },
   })
 );
-
 const allowedOrigins = [
   "https://acadmix.shop", // ✅ Always allow frontend domain
   "https://www.acadmix.shop", // ✅ In case of www subdomain
