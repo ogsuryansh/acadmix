@@ -27,35 +27,41 @@ document.addEventListener("DOMContentLoaded", () => {
   // 👤 Render user UI
   // ----------------------------------------
   function renderUserUI(user) {
-    if (user && user.photo) {
-      userIcons.forEach((icon) => {
-        icon.innerHTML = `<img src="${user.photo}" style="width: 35px; height: 35px; border-radius: 50%;" />`;
-      });
+    const isLoggedIn = user && user.photo;
 
-      joinButtons.forEach((btn) => {
+    userIcons.forEach((icon) => {
+      icon.innerHTML = isLoggedIn
+        ? `<img src="${user.photo}" style="width: 35px; height: 35px; border-radius: 50%;" />`
+        : `<i class="fa fa-user-circle"></i>`;
+    });
+
+    joinButtons.forEach((btn) => {
+      if (isLoggedIn) {
         btn.textContent = "Logout";
         btn.onclick = () => {
           localStorage.removeItem("acadmix-user");
           window.location.href = `${BASE_API}/api/auth/logout`;
         };
-      });
-    } else {
-      localStorage.removeItem("acadmix-user");
-
-      joinButtons.forEach((btn) => {
+      } else {
         btn.textContent = "Join";
         btn.onclick = () => {
           window.location.href = `${BASE_API}/api/auth/google`;
         };
-      });
-    }
+      }
+    });
   }
 
   // ----------------------------------------
   // 🚀 1. Try from localStorage (instant UX)
   // ----------------------------------------
-  const storedUser = JSON.parse(localStorage.getItem("acadmix-user"));
-  if (storedUser) renderUserUI(storedUser);
+  try {
+    const storedUser = JSON.parse(localStorage.getItem("acadmix-user"));
+    if (storedUser && storedUser.photo) {
+      renderUserUI(storedUser);
+    }
+  } catch (err) {
+    localStorage.removeItem("acadmix-user"); // cleanup if corrupt
+  }
 
   // ----------------------------------------
   // 🔁 2. Check live session from backend
@@ -66,14 +72,18 @@ document.addEventListener("DOMContentLoaded", () => {
       return res.json();
     })
     .then((user) => {
-      localStorage.setItem("acadmix-user", JSON.stringify(user));
-      renderUserUI(user);
+      if (user && user.photo) {
+        localStorage.setItem("acadmix-user", JSON.stringify(user));
+        renderUserUI(user);
+      } else {
+        localStorage.removeItem("acadmix-user");
+        renderUserUI(null);
+      }
     })
     .catch((err) => {
-      console.warn("Auth check failed:", err);
+      console.warn("⚠️ Auth check failed:", err);
     });
 });
-
 
   // ----------------------------------------
   // 🚀 "Get Started" Button Animation
