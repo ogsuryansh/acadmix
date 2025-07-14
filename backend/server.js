@@ -52,6 +52,7 @@ app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
+        formAction: ["'self'", "https://acadmix.shop"],
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'", "https://apis.google.com"],
         styleSrc: [

@@ -4,7 +4,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // ----------------------------------------
   // 🔁 Navbar toggle (for mobile)
   // ----------------------------------------
-
   const toggleButton = document.querySelector(".nav-toggle");
   const navMenu = document.querySelector(".nav-menu");
 
@@ -25,7 +24,28 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ----------------------------------------
-  // 👤 Auth Check: Show Join/Logout and Photo
+  // 👤 Load from localStorage (faster paint)
+  // ----------------------------------------
+  const storedUser = JSON.parse(localStorage.getItem("acadmix-user"));
+  const joinButtons = document.querySelectorAll(".join-btn");
+  const userIcons = document.querySelectorAll(".user-icon");
+
+  if (storedUser && storedUser.photo) {
+    userIcons.forEach((icon) => {
+      icon.innerHTML = `<img src="${storedUser.photo}" style="width: 35px; height: 35px; border-radius: 50%;" />`;
+    });
+
+    joinButtons.forEach((btn) => {
+      btn.textContent = "Logout";
+      btn.onclick = () => {
+        localStorage.removeItem("acadmix-user");
+        window.location.href = `${BASE_API}/api/auth/logout`;
+      };
+    });
+  }
+
+  // ----------------------------------------
+  // 👤 Auth Check from Server
   // ----------------------------------------
   if (BASE_API) {
     fetch(`${BASE_API}/api/auth/user`, { credentials: "include" })
@@ -34,8 +54,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return res.json();
       })
       .then((user) => {
-        const joinButtons = document.querySelectorAll(".join-btn");
-        const userIcons = document.querySelectorAll(".user-icon");
+        // ✅ Update stored user
+        localStorage.setItem("acadmix-user", JSON.stringify(user));
 
         if (user && user.photo) {
           userIcons.forEach((icon) => {
@@ -45,6 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
           joinButtons.forEach((btn) => {
             btn.textContent = "Logout";
             btn.onclick = () => {
+              localStorage.removeItem("acadmix-user");
               window.location.href = `${BASE_API}/api/auth/logout`;
             };
           });
@@ -62,9 +83,11 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   } else {
     console.error(
-      "❌ VITE_API_URL is not defined. Set it in Netlify environment variables."
+      "❌ BASE_API is not defined. Check environment config or hardcoded value."
     );
   }
+});
+
 
   // ----------------------------------------
   // 🚀 "Get Started" Button Animation
