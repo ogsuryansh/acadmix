@@ -45,7 +45,6 @@ app.use(
         "https://acadmix.shop",
         "https://www.acadmix.shop",
         "https://api.acadmix.shop",
-        "https://acadmix-opal.vercel.app",
       ],
       scriptSrc: [
         "'self'",
