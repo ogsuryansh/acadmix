@@ -123,18 +123,19 @@ app.use(async (req, res, next) => {
       .json({ error: "Database connection failed", message: err.message });
   }
 });
-
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "fallback-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "none",
+      secure: true,               // 🔐 Required for HTTPS
+      sameSite: "none",           // 🌍 Allow cross-site cookies
+      domain: ".acadmix.shop",    // ✅ Shared between frontend + backend
     },
   })
 );
+
 app.use(passport.initialize());
 app.use(passport.session());
 

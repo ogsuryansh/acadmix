@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
           window.location.href = `${BASE_API}/api/auth/logout`;
         };
       } else {
-        btn.textContent = "Join";
+        btn.textContent = "Join Now";
         btn.onclick = () => {
           window.location.href = `${BASE_API}/api/auth/google`;
         };
