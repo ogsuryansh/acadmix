@@ -81,22 +81,26 @@ app.use(
 );
 
 const allowedOrigins = [
-  process.env.FRONTEND_URL || "https://acadmix.shop",
-  "http://127.0.0.1:5500",
-  "http://localhost:3000",
+  "https://acadmix.shop",               // ✅ Always allow frontend domain
+  "https://www.acadmix.shop",           // ✅ In case of www subdomain
+  "http://127.0.0.1:5500",              // ✅ Dev testing
+  "http://localhost:3000",              // ✅ Dev testing
 ];
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || origin === "null") return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      callback(
-        new Error(`CORS policy violation: origin ${origin} not allowed`)
-      );
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn("❌ CORS blocked:", origin);
+        callback(new Error(`CORS blocked for origin: ${origin}`));
+      }
     },
-    credentials: true,
+    credentials: true, // 🔐 Required for session cookies
   })
 );
+
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
