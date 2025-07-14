@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 
 const SECTIONS = ['home', 'class11', 'class12', 'test'];
-const TRACKS = ['NEET', 'JEE']; // Add this enum
+const TRACKS = ['NEET', 'JEE'];
 
 const bookSchema = new mongoose.Schema({
   title:           { type: String, required: true },
   imageUrl:        { type: String, required: true },
   category:        { type: String, required: true },
-  section:         { 
+  section: {
     type: String,
     enum: SECTIONS,
     required: true,
@@ -27,7 +27,14 @@ const bookSchema = new mongoose.Schema({
     type: String,
     enum: ['Yes', 'No'],
     default: 'No'
+  },
+
+  // ✅ Add this field to store path of uploaded PDF
+  pdfPath: {
+    type: String,
+    required: false  // Optional in case some books don't have PDFs
   }
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('Book', bookSchema);

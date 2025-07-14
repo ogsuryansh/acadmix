@@ -39,7 +39,8 @@
         border-radius: 6px;
       }
       .btn-edit,
-      .btn-delete {
+      .btn-delete,
+      .btn-preview {
         padding: 6px 10px;
         text-decoration: none;
         border-radius: 4px;
@@ -55,6 +56,10 @@
         color: #fff;
         border: none;
         cursor: pointer;
+      }
+      .btn-preview {
+        background: #4caf50;
+        color: #fff;
       }
     </style>
   </head>
@@ -74,6 +79,7 @@
           <th>Discount</th>
           <th>Badge</th>
           <th>Demo</th>
+          <th>PDF</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -88,10 +94,16 @@
           <td>₹<%= book.priceDiscounted %></td>
           <td><%= book.badge %></td>
           <td><%= book.demo || "No" %></td>
+          <td>
+            <% if (book.pdfUrl) { %>
+              <a href="<%= book.pdfUrl %>" target="_blank">View PDF</a>
+            <% } else { %>
+              <span style="color: gray">No PDF</span>
+            <% } %>
+          </td>
           <td class="actions">
-            <a href="/api/admin/books/<%= book._id %>/edit" class="btn-edit"
-              >✏️ Edit</a
-            >
+            <a href="/api/admin/books/<%= book._id %>/edit" class="btn-edit">✏️ Edit</a>
+            <a href="/reader?id=<%= book._id %>" class="btn-preview" target="_blank">👁️ Preview</a>
             <form
               action="/api/admin/books/<%= book._id %>/delete"
               method="POST"

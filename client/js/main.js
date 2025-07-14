@@ -157,8 +157,22 @@ function createCard(card) {
         <p class="original">₹${card.priceOriginal}</p>
         <p class="discount">₹${card.priceDiscounted}</p>
       </div>
-      <div class="demo">Demo Available: ${card.demo === "Yes" ? "Yes" : "No"}</div>
-      <a href="#" class="btn-buy">Buy Now</a>
+      <div class="demo">Demo Available: ${
+        card.demo === "Yes" ? "Yes" : "No"
+      }</div>
+
+${
+  card.pdfPath
+    ? `
+  <a href="/client/ebook-reader/index.html?pdf=${encodeURIComponent(
+    card.pdfPath
+  )}" class="btn-buy" target="_blank">📖 Read</a>
+`
+    : `
+  <a href="#" class="btn-buy">Buy Now</a>
+`
+}
+
     </div>
   `;
   return cardEl;

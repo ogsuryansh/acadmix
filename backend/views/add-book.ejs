@@ -136,6 +136,11 @@
         Image URL
         <input type="text" name="imageUrl" placeholder="https://example.com/book.jpg" required value="<%= imageUrl || '' %>">
       </label>
+      <label>
+  PDF URL (hosted externally)
+  <input type="text" name="pdfPath" placeholder="https://yourhost.com/book.pdf" value="<%= pdfPath || '' %>">
+</label>
+
 
       <button type="submit"><%= editMode ? 'Update Book' : 'Add Book' %></button>
     </form>
