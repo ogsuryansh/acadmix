@@ -26,10 +26,8 @@ app.set("trust proxy", 1);
 const path = require("path");
 
 app.get('/reader', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'ebook-reader', 'index.html'));
+  res.sendFile(path.join(__dirname, 'ebook-reader', 'index.html'));
 });
-
-
 
 app.use(
   helmet({
