@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const BASE_API = "https://acadmix-opal.vercel.app";
+  const BASE_API = "https://api.acadmix.shop";
 
   const toggleButton = document.querySelector(".nav-toggle");
   const navMenu = document.querySelector(".nav-menu");
@@ -85,15 +85,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-  // ----------------------------------------
-  // 🚀 "Get Started" Button Animation
-  // ----------------------------------------
-  const btn = document.querySelector(".btn-get-started");
-  if (btn) {
-    btn.addEventListener("click", () => {
-      btn.classList.toggle("open");
-    });
-  }
+// ----------------------------------------
+// 🚀 "Get Started" Button Animation
+// ----------------------------------------
+const btn = document.querySelector(".btn-get-started");
+if (btn) {
+  btn.addEventListener("click", () => {
+    btn.classList.toggle("open");
+  });
+}
 let PAGE_SECTION;
 if (window.location.pathname.includes("class11")) PAGE_SECTION = "class11";
 else if (window.location.pathname.includes("class12")) PAGE_SECTION = "class12";

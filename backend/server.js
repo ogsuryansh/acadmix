@@ -80,10 +80,11 @@ app.use(
 );
 
 const allowedOrigins = [
-  "https://acadmix.shop",               // ✅ Always allow frontend domain
-  "https://www.acadmix.shop",           // ✅ In case of www subdomain
-  "http://127.0.0.1:5500",              // ✅ Dev testing
-  "http://localhost:3000",              // ✅ Dev testing
+  "https://acadmix.shop", // ✅ Always allow frontend domain
+  "https://www.acadmix.shop", // ✅ In case of www subdomain
+  "http://127.0.0.1:5500", // ✅ Dev testing
+  "https://api.acadmix.shop",
+  "http://localhost:3000", // ✅ Dev testing
 ];
 
 app.use(
@@ -99,7 +100,6 @@ app.use(
     credentials: true, // 🔐 Required for session cookies
   })
 );
-
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -128,7 +128,6 @@ app.use(async (req, res, next) => {
   }
 });
 
-
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "fallback-secret",
@@ -139,13 +138,12 @@ app.use(
       ttl: 14 * 24 * 60 * 60, // 14 days
     }),
     cookie: {
-      secure: true,               // Required for HTTPS
-      sameSite: "none",           // Cross-site cookie allowed
-      domain: ".acadmix.shop",    // Shared across subdomains (frontend + backend)
+      secure: true, // Required for HTTPS
+      sameSite: "none", // Cross-site cookie allowed
+      domain: ".acadmix.shop", // Shared across subdomains (frontend + backend)
     },
   })
 );
-
 
 app.use(passport.initialize());
 app.use(passport.session());
