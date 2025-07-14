@@ -21,7 +21,8 @@ const QRCode = require('qrcode');
 
 const User = require("./models/User");
 const Book = require("./models/Book");
-const isLoggedIn = require("../middleware/isLoggedIn"); 
+const Payment     = require('./models/Payment');  
+const isLoggedIn  = require('./middleware/isLoggedIn'); 
 
 const app = express();
 app.set("trust proxy", 1);
@@ -564,11 +565,7 @@ app.get("/api/payment/:bookId", isLoggedIn, async (req, res, next) => {
     next(err);
   }
 });
-const Payment = require("./models/Payment");
-const isLoggedIn = (req, res, next) => {
-  if (req.isAuthenticated()) return next();
-  res.redirect("/login"); // or a better login page
-};
+
 
 app.post("/api/payment/submit", isLoggedIn, async (req, res) => {
   const { utr, bookId } = req.body;
