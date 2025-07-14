@@ -2,11 +2,14 @@ const express = require("express");
 const passport = require("passport");
 const router = express.Router();
 
-router.get(
-  "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+// 🔐 Step 1: Start Google OAuth and store redirect path
+router.get("/google", (req, res, next) => {
+  const returnTo = req.get("Referer") || "https://acadmix.shop";
+  req.session.redirectAfterLogin = returnTo;
+  passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
+});
 
+// 🔁 Step 2: Google OAuth callback + redirect back
 router.get(
   "/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
@@ -17,12 +20,17 @@ router.get(
   }
 );
 
+// 🚪 Logout and clear session cookie
 router.get("/logout", (req, res) => {
   req.logout(() => {
-    res.redirect("https://acadmix.shop");
+    req.session.destroy(() => {
+      res.clearCookie("connect.sid");
+      res.redirect("https://acadmix.shop");
+    });
   });
 });
 
+// 🧑 Authenticated user fetch (for frontend)
 router.get("/user", (req, res) => {
   res.json(req.user || null);
 });
