@@ -24,7 +24,7 @@ const Book = require("./models/Book");
 const app = express();
 app.set("trust proxy", 1);
 const path = require("path");
-
+app.use('/reader-assets', express.static(path.join(__dirname, 'ebook-reader')));
 app.get('/reader', (req, res) => {
   res.sendFile(path.join(__dirname, 'ebook-reader', 'index.html'));
 });
