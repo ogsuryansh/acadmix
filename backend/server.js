@@ -28,6 +28,22 @@ app.use('/reader-assets', express.static(path.join(__dirname, 'ebook-reader')));
 app.get('/reader', (req, res) => {
   res.sendFile(path.join(__dirname, 'ebook-reader', 'index.html'));
 });
+app.get("/api/book/:id/secure-pdf", async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+    if (!book || !book.pdfUrl) {
+      return res.status(404).json({ error: "Book or PDF not found" });
+    }
+
+    // Optionally add auth check here if needed
+
+    // Proxy the PDF URL
+    res.redirect(book.pdfUrl); // ✅ OR use res.sendFile() if stored locally
+  } catch (err) {
+    console.error("❌ Secure PDF Fetch Error:", err);
+    res.status(500).json({ error: "Failed to fetch secure PDF" });
+  }
+});
 
 app.use(
   helmet({
