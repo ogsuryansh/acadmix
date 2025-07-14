@@ -22,7 +22,8 @@ const QRCode = require("qrcode");
 const User = require("./models/User");
 const Book = require("./models/Book");
 const Payment = require("./models/Payment");
-const isLoggedIn = require("./middleware/isLoggedIn");
+const session = require("express-session");
+const MongoStore = require("connect-mongo");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -123,18 +124,25 @@ app.use(async (req, res, next) => {
       .json({ error: "Database connection failed", message: err.message });
   }
 });
+
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "fallback-secret",
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI,
+      ttl: 14 * 24 * 60 * 60, // 14 days
+    }),
     cookie: {
-      secure: true,               // 🔐 Required for HTTPS
-      sameSite: "none",           // 🌍 Allow cross-site cookies
-      domain: ".acadmix.shop",    // ✅ Shared between frontend + backend
+      secure: true,               // Required for HTTPS
+      sameSite: "none",           // Cross-site cookie allowed
+      domain: ".acadmix.shop",    // Shared across subdomains (frontend + backend)
     },
   })
 );
+
 
 app.use(passport.initialize());
 app.use(passport.session());
