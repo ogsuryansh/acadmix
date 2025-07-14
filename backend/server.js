@@ -47,12 +47,11 @@ app.get("/api/book/:id/secure-pdf", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch secure PDF" });
   }
 });
-
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
-        formAction: ["'self'", "https://acadmix.shop"],
+        formAction: ["'self'", "https://acadmix.shop", "https://api.acadmix.shop"],
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'", "https://apis.google.com"],
         styleSrc: [
@@ -72,8 +71,8 @@ app.use(
         connectSrc: [
           "'self'",
           "https://acadmix.shop",
-          "https://api.acadmix.shop", // ✅ Add this line
-          "https://acadmix-opal.vercel.app", // (optional: only needed if you still use this)
+          "https://acadmix-opal.vercel.app",
+          "https://api.acadmix.shop" // ✅ ADD THIS LINE
         ],
       },
     },

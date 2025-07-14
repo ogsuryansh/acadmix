@@ -100,7 +100,7 @@ else if (window.location.pathname.includes("class12")) PAGE_SECTION = "class12";
 else if (window.location.pathname.includes("test")) PAGE_SECTION = "test";
 else PAGE_SECTION = "home"; // homepage fallback
 
-const API_BASE = "https://acadmix-opal.vercel.app";
+const API_BASE = BASE_API;
 
 fetch(`${API_BASE}/api/books`)
   .then((res) => res.json())
