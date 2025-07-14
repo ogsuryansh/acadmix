@@ -24,7 +24,10 @@ const Book = require("./models/Book");
 const app = express();
 app.set("trust proxy", 1);
 const path = require("path");
+// Serve static files (JS, CSS, PDF.js files)
 app.use('/reader-assets', express.static(path.join(__dirname, 'ebook-reader')));
+
+// Serve the main reader HTML
 app.get('/reader', (req, res) => {
   res.sendFile(path.join(__dirname, 'ebook-reader', 'index.html'));
 });
