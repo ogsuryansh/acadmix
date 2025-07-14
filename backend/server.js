@@ -93,19 +93,15 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
+      // 🟢 Allow null (used by redirects, sandboxed requests, some mobile browsers)
+      if (!origin || origin === "null" || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn("❌ CORS blocked:", origin);
+        callback(new Error(`CORS not allowed from ${origin}`));
       }
-
-      if (origin === "null") {
-        console.warn("⚠️ CORS blocked for origin: 'null' (string)");
-        return callback(new Error("CORS not allowed from null origin"));
-      }
-
-      console.warn("❌ CORS blocked:", origin);
-      callback(new Error(`CORS blocked for origin: ${origin}`));
     },
-    credentials: true,
+    credentials: true, // Needed to support cookies/session
   })
 );
 
