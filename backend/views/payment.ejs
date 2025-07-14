@@ -126,7 +126,7 @@
   <div class="content">
     <p class="amount">Amount: ₹<%= book.priceDiscounted %></p>
 
-    <% if (user) { %>
+    <% if (typeof user !== 'undefined' && user) { %>
       <p style="text-align:center; font-size: 0.95rem; color: #555;">
         Logged in as <strong><%= user.name %></strong>
       </p>

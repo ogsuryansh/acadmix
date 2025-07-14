@@ -569,7 +569,7 @@ app.get("/api/payment/:bookId", isLoggedIn, async (req, res, next) => {
       book,
       upiLink,
       qrDataUrl,
-      user: req.user, // pass user to the template (optional)
+      user: req.user || null,
     });
   } catch (err) {
     console.error("❌ Payment route error:", err);
