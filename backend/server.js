@@ -25,6 +25,7 @@ const User = require("./models/User");
 const Book = require("./models/Book");
 const Payment = require("./models/Payment");
 const MongoStore = require("connect-mongo");
+const isProd = process.env.NODE_ENV === "production";
 
 // ─── EXPRESS APP ─────────────────────────────────────────────────────────────
 const app = express();
@@ -131,12 +132,14 @@ app.use(
       ttl: 14 * 24 * 60 * 60, // 14 days
     }),
     cookie: {
-      secure: true,
-      sameSite: "none",
-      domain: ".acadmix.shop",
+      httpOnly: true,
+      secure: isProd,                         // only over HTTPS in prod
+      sameSite: isProd ? "none" : "lax",      // none for cross‑site in prod
+      ...(isProd && { domain: ".acadmix.shop" }), // only set domain in prod
     },
   })
 );
+
 app.use(passport.initialize());
 app.use(passport.session());
 
