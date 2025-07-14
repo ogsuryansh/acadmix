@@ -1,4 +1,5 @@
-const BASE_API = "https://api.acadmix.shop";
+// Use same‑origin for all API calls
+const BASE_API = ""; // or window.location.origin
 
 document.addEventListener("DOMContentLoaded", () => {
   const toggleButton = document.querySelector(".nav-toggle");
@@ -29,18 +30,29 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderUserUI(user) {
     const isLoggedIn = user && user.photo;
 
+    // update avatar icons
     userIcons.forEach((icon) => {
       icon.innerHTML = isLoggedIn
         ? `<img src="${user.photo}" style="width: 35px; height: 35px; border-radius: 50%;" />`
         : `<i class="fa fa-user-circle"></i>`;
     });
 
+    // update join/logout buttons
     joinButtons.forEach((btn) => {
       if (isLoggedIn) {
         btn.textContent = "Logout";
-        btn.onclick = () => {
+        btn.onclick = async () => {
+          // call POST /api/auth/logout
+          try {
+            await fetch(`${BASE_API}/api/auth/logout`, {
+              method: "POST",
+              credentials: "include",
+            });
+          } catch (e) {
+            console.error("Logout failed:", e);
+          }
           localStorage.removeItem("acadmix-user");
-          window.location.href = `${BASE_API}/api/auth/logout`;
+          window.location.reload();
         };
       } else {
         btn.textContent = "Join Now";
@@ -60,7 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
       renderUserUI(storedUser);
     }
   } catch (err) {
-    localStorage.removeItem("acadmix-user"); // cleanup if corrupt
+    localStorage.removeItem("acadmix-user");
   }
 
   // ----------------------------------------
@@ -68,14 +80,26 @@ document.addEventListener("DOMContentLoaded", () => {
   // ----------------------------------------
   fetch(`${BASE_API}/api/auth/user`, { credentials: "include" })
     .then((res) => {
-      if (!res.ok) throw new Error("User fetch failed");
+      if (res.status === 401) {
+        // not authenticated
+        return null;
+      }
+      if (!res.ok) {
+        throw new Error("User fetch failed");
+      }
       return res.json();
     })
     .then((user) => {
-      // …
+      if (user && user.photo) {
+        localStorage.setItem("acadmix-user", JSON.stringify(user));
+        renderUserUI(user);
+      } else {
+        localStorage.removeItem("acadmix-user");
+        renderUserUI(null);
+      }
     })
     .catch((err) => {
-      console.warn("⚠️ Auth check failed:", err);
+      console.warn("⚠️ Auth check unexpected error:", err);
     });
 });
 
@@ -88,33 +112,32 @@ if (btn) {
     btn.classList.toggle("open");
   });
 }
+
+// Determine which section we’re on
 let PAGE_SECTION;
 if (window.location.pathname.includes("class11")) PAGE_SECTION = "class11";
 else if (window.location.pathname.includes("class12")) PAGE_SECTION = "class12";
 else if (window.location.pathname.includes("test")) PAGE_SECTION = "test";
-else PAGE_SECTION = "home"; // homepage fallback
+else PAGE_SECTION = "home";
 
-const API_BASE = BASE_API;
-
-fetch(`${API_BASE}/api/books`)
-  .then((res) => res.json())
+fetch(`${BASE_API}/api/books`)
+  .then((res) => {
+    if (!res.ok) throw new Error("Books fetch failed");
+    return res.json();
+  })
   .then((cards) => {
     const filtered = cards.filter((card) => card.section === PAGE_SECTION);
 
     if (PAGE_SECTION === "home") {
-      // No NEET/JEE split on homepage
       const container = document.getElementById("card-container");
       container.innerHTML = "";
-
       filtered.forEach((card) => {
         container.appendChild(createCard(card));
       });
-
       if (filtered.length === 0) {
         container.innerHTML = "<p>No books found for homepage.</p>";
       }
     } else {
-      // Split by NEET and JEE on class11/class12/test pages
       const neetCards = filtered.filter((card) => card.track === "NEET");
       const jeeCards = filtered.filter((card) => card.track === "JEE");
 
@@ -130,10 +153,11 @@ fetch(`${API_BASE}/api/books`)
           neetContainer.innerHTML = "<p>📚 NEET Content Coming Soon</p>";
         }
       }
-
       if (jeeContainer) {
         jeeContainer.innerHTML = "";
-        jeeCards.forEach((card) => jeeContainer.appendChild(createCard(card)));
+        jeeCards.forEach((card) =>
+          jeeContainer.appendChild(createCard(card))
+        );
         if (jeeCards.length === 0) {
           jeeContainer.innerHTML = "<p>📘 JEE Content Coming Soon</p>";
         }
@@ -145,15 +169,14 @@ fetch(`${API_BASE}/api/books`)
     const homeContainer = document.getElementById("card-container");
     const neetContainer = document.getElementById("card-container-neet");
     const jeeContainer = document.getElementById("card-container-jee");
-
-    if (homeContainer)
-      homeContainer.innerHTML = "<p>Error loading materials.</p>";
+    if (homeContainer) homeContainer.innerHTML = "<p>Error loading materials.</p>";
     if (neetContainer)
       neetContainer.innerHTML = "<p>Error loading NEET materials.</p>";
     if (jeeContainer)
       jeeContainer.innerHTML = "<p>Error loading JEE materials.</p>";
   });
 
+// Card creation helper
 function createCard(card) {
   const cardEl = document.createElement("div");
   cardEl.className = "card";
@@ -172,19 +195,13 @@ function createCard(card) {
       <div class="demo">Demo Available: ${
         card.demo === "Yes" ? "Yes" : "No"
       }</div>
-
-${
-  card.pdfPath
-    ? `
-  <a href="/client/ebook-reader/index.html?pdf=${encodeURIComponent(
-    card.pdfPath
-  )}" class="btn-buy" target="_blank">📖 Read</a>
-`
-    : `
-  <a href="/api/payment/${card._id}" class="btn-buy">Buy Now</a>
-`
-}
-
+      ${
+        card.pdfPath
+          ? `<a href="/client/ebook-reader/index.html?pdf=${encodeURIComponent(
+              card.pdfPath
+            )}" class="btn-buy" target="_blank">📖 Read</a>`
+          : `<a href="/api/payment/${card._id}" class="btn-buy">Buy Now</a>`
+      }
     </div>
   `;
   return cardEl;
