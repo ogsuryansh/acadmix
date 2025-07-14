@@ -98,7 +98,6 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.classList.toggle("open");
     });
   }
-});
 let PAGE_SECTION;
 if (window.location.pathname.includes("class11")) PAGE_SECTION = "class11";
 else if (window.location.pathname.includes("class12")) PAGE_SECTION = "class12";
