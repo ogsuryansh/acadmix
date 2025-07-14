@@ -90,20 +90,25 @@ const allowedOrigins = [
   "https://api.acadmix.shop",
   "http://localhost:3000", // ✅ Dev testing
 ];
-
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.warn("❌ CORS blocked:", origin);
-        callback(new Error(`CORS blocked for origin: ${origin}`));
+        return callback(null, true);
       }
+
+      if (origin === "null") {
+        console.warn("⚠️ CORS blocked for origin: 'null' (string)");
+        return callback(new Error("CORS not allowed from null origin"));
+      }
+
+      console.warn("❌ CORS blocked:", origin);
+      callback(new Error(`CORS blocked for origin: ${origin}`));
     },
-    credentials: true, // 🔐 Required for session cookies
+    credentials: true,
   })
 );
+
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
