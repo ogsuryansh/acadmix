@@ -7,11 +7,11 @@
       style-src   'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
       font-src    'self' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com data:;
       img-src     'self' data: https:;
-      connect-src 'self' https://acadmix.shop https://acadmix-opal.vercel.app;
+      connect-src 'self' https://acadmix.shop https://api.acadmix.shop;
     """
 
 [[redirects]]
   from = "/api/*"
-  to = "https://acadmix-opal.vercel.app/api/:splat"
+  to = "https://api.acadmix.shop/api/:splat"
   status = 200
   force = true
