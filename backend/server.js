@@ -181,7 +181,6 @@ const BOOK_SECTIONS = [
   'class12',
   'test'
 ];
-
 app.get('/api/admin/books/new', isAdminAuthenticated, (req, res) => {
   res.render('add-book', {
     categories:       BOOK_CATEGORIES,
@@ -190,32 +189,34 @@ app.get('/api/admin/books/new', isAdminAuthenticated, (req, res) => {
     title:            '',
     category:         '',
     section:          '',
-    track:            '',        // ← new
+    track:            '',
     pageCount:        '',
     priceOriginal:    '',
     priceDiscounted:  '',
     badge:            '',
     imageUrl:         '',
     demo:             '',
+    pdfPath:          '',     // ✅ Add this line
     editMode:         false,
     bookId:           null
   });
 });
-
 app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
   const {
     title,
     category,
     section,
-    track,             // ← new
+    track,
     pageCount,
     priceOriginal,
     priceDiscounted,
     badge,
     imageUrl,
-    demo
+    demo,
+    pdfPath // ✅ Newly added input from the form
   } = req.body;
 
+  // ✅ Image URL validation
   if (!/^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i.test(imageUrl)) {
     return res.status(400).render('add-book', {
       categories:       BOOK_CATEGORIES,
@@ -223,7 +224,23 @@ app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
       error:            'Please enter a valid image URL ending with .jpg/.png/.gif',
       title, category, section, track,
       pageCount, priceOriginal, priceDiscounted,
-      badge, imageUrl, demo
+      badge, imageUrl, demo, pdfPath,
+      editMode: false,
+      bookId: null
+    });
+  }
+
+  // ✅ (Optional) Basic PDF URL validation
+  if (pdfPath && !/^https?:\/\/.+\.pdf$/i.test(pdfPath)) {
+    return res.status(400).render('add-book', {
+      categories:       BOOK_CATEGORIES,
+      sections:         BOOK_SECTIONS,
+      error:            'Please enter a valid PDF URL ending with .pdf',
+      title, category, section, track,
+      pageCount, priceOriginal, priceDiscounted,
+      badge, imageUrl, demo, pdfPath,
+      editMode: false,
+      bookId: null
     });
   }
 
@@ -232,14 +249,16 @@ app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
       title,
       category,
       section,
-      track,            // ← new
+      track,
       pageCount:       Number(pageCount),
       priceOriginal:   Number(priceOriginal),
       priceDiscounted: Number(priceDiscounted),
       badge,
       imageUrl,
-      demo
+      demo,
+      pdfUrl: pdfPath // ✅ Store pdfPath as pdfUrl in MongoDB
     });
+
     res.redirect('/api/admin/books');
   } catch (err) {
     console.error('❌ Book creation error:', err);
@@ -249,10 +268,13 @@ app.post('/api/admin/books/new', isAdminAuthenticated, async (req, res) => {
       error:            'An error occurred while adding the book. Please try again.',
       title, category, section, track,
       pageCount, priceOriginal, priceDiscounted,
-      badge, imageUrl, demo
+      badge, imageUrl, demo, pdfPath,
+      editMode: false,
+      bookId: null
     });
   }
 });
+
 
 app.get('/api/admin/books/:id/edit', isAdminAuthenticated, async (req, res) => {
   try {
@@ -266,13 +288,14 @@ app.get('/api/admin/books/:id/edit', isAdminAuthenticated, async (req, res) => {
       title:            book.title,
       category:         book.category,
       section:          book.section,
-      track:            book.track,   // ← new
+      track:            book.track,
       pageCount:        book.pageCount,
       priceOriginal:    book.priceOriginal,
       priceDiscounted:  book.priceDiscounted,
       badge:            book.badge,
       imageUrl:         book.imageUrl,
       demo:             book.demo,
+      pdfPath:          book.pdfUrl || "", // ✅ Add this line
       editMode:         true,
       bookId:           book._id
     });
@@ -286,7 +309,7 @@ app.post('/api/admin/books/:id/edit', isAdminAuthenticated, async (req, res) => 
   const {
     title, category, section, track, pageCount,
     priceOriginal, priceDiscounted, badge,
-    imageUrl, demo
+    imageUrl, demo, pdfPath // ✅ Add pdfPath
   } = req.body;
 
   try {
@@ -297,14 +320,16 @@ app.post('/api/admin/books/:id/edit', isAdminAuthenticated, async (req, res) => 
       title,
       category,
       section,
-      track,          // ← new
-      pageCount:      Number(pageCount),
-      priceOriginal:  Number(priceOriginal),
-      priceDiscounted:Number(priceDiscounted),
+      track,
+      pageCount:       Number(pageCount),
+      priceOriginal:   Number(priceOriginal),
+      priceDiscounted: Number(priceDiscounted),
       badge,
       imageUrl,
-      demo
+      demo,
+      pdfUrl: pdfPath // ✅ Save PDF link
     });
+
     await book.save();
     res.redirect('/api/admin/books');
   } catch (err) {
