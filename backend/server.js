@@ -22,7 +22,6 @@ const QRCode = require("qrcode");
 const User = require("./models/User");
 const Book = require("./models/Book");
 const Payment = require("./models/Payment");
-const session = require("express-session");
 const MongoStore = require("connect-mongo");
 
 const app = express();
