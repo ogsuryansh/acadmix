@@ -1,6 +1,6 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const BASE_API = "https://api.acadmix.shop";
+const BASE_API = "https://api.acadmix.shop";
 
+document.addEventListener("DOMContentLoaded", () => {
   const toggleButton = document.querySelector(".nav-toggle");
   const navMenu = document.querySelector(".nav-menu");
   const joinButtons = document.querySelectorAll(".join-btn");
