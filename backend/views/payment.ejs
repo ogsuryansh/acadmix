@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Payment for <%= book.title %></title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    .container {
+      width: 100%;
+      max-width: 480px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    header {
+      background: #0070f3;
+      color: #fff;
+      padding: 1rem;
+      text-align: center;
+    }
+    header h2 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+    .content {
+      padding: 1.5rem;
+    }
+    .amount {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      color: #333;
+      text-align: center;
+    }
+    .qr, .upi {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .qr img {
+      width: 200px;
+      max-width: 80%;
+      border: 2px solid #0070f3;
+      border-radius: 8px;
+    }
+    .upi-link {
+      display: inline-block;
+      padding: 0.6rem 1.2rem;
+      background: #0070f3;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    form {
+      margin-top: 1.5rem;
+    }
+    form label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: #555;
+      font-weight: 500;
+    }
+    form input[type="text"] {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    form button {
+      width: 100%;
+      padding: 0.75rem;
+      background: #28a745;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    form button:hover {
+      background: #218838;
+    }
+    .support {
+      margin-top: 1.5rem;
+      font-size: 0.9rem;
+      color: #666;
+      text-align: center;
+    }
+    @media (max-width: 400px) {
+      .qr img { width: 160px; }
+      .amount { font-size: 1rem; }
+      header h2 { font-size: 1.1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h2>Payment for: <%= book.title %></h2>
+    </header>
+    <div class="content">
+      <p class="amount">Amount: ₹<%= book.priceDiscounted %></p>
+
+      <% 
+        const upiLink = `upi://pay?pa=students4396@okhdfcbank&pn=Acadmix&am=${book.priceDiscounted}&cu=INR`;
+        const qrUrl = `https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=${encodeURIComponent(upiLink)}`;
+      %>
+
+      <div class="qr">
+        <img src="<%= qrUrl %>" alt="Scan QR to Pay" />
+      </div>
+
+      <div class="upi">
+        <a href="<%= upiLink %>" class="upi-link" target="_blank">
+          👉 Pay ₹<%= book.priceDiscounted %> via UPI
+        </a>
+      </div>
+
+      <form action="/api/payment/submit" method="POST">
+        <input type="hidden" name="bookId" value="<%= book._id %>" />
+        <label for="utr">Enter UTR / Transaction ID:</label>
+        <input type="text" id="utr" name="utr" placeholder="e.g., 1234567890" required />
+        <button type="submit">Submit Payment</button>
+      </form>
+
+      <div class="support">
+        <p>Need help? Contact <strong>students4396@okhdfcbank</strong></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

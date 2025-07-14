@@ -496,6 +496,18 @@ app.get("/courses/test", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+app.get("/api/payment/:bookId", async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.bookId);
+    if (!book) return res.status(404).send("Book not found");
+
+    res.render("payment", {
+      book, // Pass book to template
+    });
+  } catch (err) {
+    res.status(500).send("Error loading payment page");
+  }
+});
 
 app.use((err, req, res, next) => {
   console.error("💥 Uncaught Error:", err);

@@ -169,7 +169,7 @@ ${
   )}" class="btn-buy" target="_blank">📖 Read</a>
 `
     : `
-  <a href="#" class="btn-buy">Buy Now</a>
+  <a href="/api/payment/${card._id}" class="btn-buy">Buy Now</a>
 `
 }
 
