@@ -35,10 +35,7 @@ app.get("/api/book/:id/secure-pdf", async (req, res) => {
       return res.status(404).json({ error: "Book or PDF not found" });
     }
 
-    // Optionally add auth check here if needed
-
-    // Proxy the PDF URL
-    res.redirect(book.pdfUrl); // ✅ OR use res.sendFile() if stored locally
+    res.json({ url: book.pdfUrl }); // ✅ Return JSON instead of redirect
   } catch (err) {
     console.error("❌ Secure PDF Fetch Error:", err);
     res.status(500).json({ error: "Failed to fetch secure PDF" });
