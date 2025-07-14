@@ -50,6 +50,7 @@ app.get("/api/book/:id/secure-pdf", async (req, res) => {
 app.use(
   helmet({
     contentSecurityPolicy: {
+      useDefaults: true, // ✅ important
       directives: {
         formAction: [
           "'self'",
@@ -57,7 +58,11 @@ app.use(
           "https://api.acadmix.shop",
         ],
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://apis.google.com"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://apis.google.com",
+        ],
         styleSrc: [
           "'self'",
           "'unsafe-inline'",
@@ -75,7 +80,7 @@ app.use(
         connectSrc: [
           "'self'",
           "https://acadmix.shop",
-          "https://api.acadmix.shop", // ✅ Add this
+          "https://api.acadmix.shop",
         ],
       },
     },
