@@ -72,7 +72,8 @@ app.use(
         connectSrc: [
           "'self'",
           "https://acadmix.shop",
-          "https://acadmix-opal.vercel.app",
+          "https://api.acadmix.shop", // ✅ Add this line
+          "https://acadmix-opal.vercel.app", // (optional: only needed if you still use this)
         ],
       },
     },
