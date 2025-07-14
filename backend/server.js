@@ -25,11 +25,10 @@ const app = express();
 app.set("trust proxy", 1);
 const path = require("path");
 
-app.get("/reader", (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "public", "client", "ebook-reader", "index.html")
-  );
+app.get('/reader', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'client', 'ebook-reader', 'index.html'));
 });
+
 
 app.use(
   helmet({
