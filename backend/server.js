@@ -17,22 +17,22 @@ const session = require("express-session");
 const serverless = require("serverless-http");
 const cors = require("cors");
 const helmet = require("helmet");
-const QRCode = require('qrcode');
+const QRCode = require("qrcode");
 
 const User = require("./models/User");
 const Book = require("./models/Book");
-const Payment     = require('./models/Payment');  
-const isLoggedIn  = require('./middleware/isLoggedIn'); 
+const Payment = require("./models/Payment");
+const isLoggedIn = require("./middleware/isLoggedIn");
 
 const app = express();
 app.set("trust proxy", 1);
 const path = require("path");
 // Serve static files (JS, CSS, PDF.js files)
-app.use('/reader-assets', express.static(path.join(__dirname, 'ebook-reader')));
+app.use("/reader-assets", express.static(path.join(__dirname, "ebook-reader")));
 
 // Serve the main reader HTML
-app.get('/reader', (req, res) => {
-  res.sendFile(path.join(__dirname, 'ebook-reader', 'index.html'));
+app.get("/reader", (req, res) => {
+  res.sendFile(path.join(__dirname, "ebook-reader", "index.html"));
 });
 app.get("/api/book/:id/secure-pdf", async (req, res) => {
   try {
@@ -172,7 +172,8 @@ passport.use(
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
-
+const paymentRouter = require("./routes/payment");
+app.use("/api", paymentRouter);
 function isAdminAuthenticated(req, res, next) {
   if (req.session?.admin) return next();
   res.redirect("/api/admin/login");
@@ -203,13 +204,12 @@ app.get("/api/admin", isAdminAuthenticated, async (req, res, next) => {
     const users = await User.find().lean();
 
     // Count totals
-    const totalUsers    = users.length;
-    const totalBooks    = await Book.countDocuments();
+    const totalUsers = users.length;
+    const totalBooks = await Book.countDocuments();
     const totalPayments = await Payment.countDocuments();
 
     // Load recent payments (with user & book info)
-    const payments = await Payment
-      .find()
+    const payments = await Payment.find()
       .sort({ submittedAt: -1 })
       .limit(50)
       .populate("user", "name email")
@@ -221,7 +221,7 @@ app.get("/api/admin", isAdminAuthenticated, async (req, res, next) => {
       totalUsers,
       totalBooks,
       totalPayments,
-      payments
+      payments,
     });
   } catch (err) {
     console.error("❌ Admin panel error:", err);
@@ -229,20 +229,32 @@ app.get("/api/admin", isAdminAuthenticated, async (req, res, next) => {
   }
 });
 // Approve a payment
-app.post("/api/admin/payments/:id/approve", isAdminAuthenticated, async (req, res, next) => {
-  try {
-    await Payment.findByIdAndUpdate(req.params.id, { status: "approved" });
-    res.redirect("/api/admin?tab=payments-tab");
-  } catch (err) { next(err); }
-});
+app.post(
+  "/api/admin/payments/:id/approve",
+  isAdminAuthenticated,
+  async (req, res, next) => {
+    try {
+      await Payment.findByIdAndUpdate(req.params.id, { status: "approved" });
+      res.redirect("/api/admin?tab=payments-tab");
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // Reject a payment
-app.post("/api/admin/payments/:id/reject", isAdminAuthenticated, async (req, res, next) => {
-  try {
-    await Payment.findByIdAndUpdate(req.params.id, { status: "rejected" });
-    res.redirect("/api/admin?tab=payments-tab");
-  } catch (err) { next(err); }
-});
+app.post(
+  "/api/admin/payments/:id/reject",
+  isAdminAuthenticated,
+  async (req, res, next) => {
+    try {
+      await Payment.findByIdAndUpdate(req.params.id, { status: "rejected" });
+      res.redirect("/api/admin?tab=payments-tab");
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // ─── Public API to Fetch All Books ─────────────────────────────────────────
 app.get("/api/books", async (req, res) => {
@@ -538,7 +550,6 @@ app.get("/courses/test", async (req, res) => {
   }
 });
 
-
 app.get("/api/payment/:bookId", isLoggedIn, async (req, res, next) => {
   try {
     const book = await Book.findById(req.params.bookId);
@@ -566,7 +577,6 @@ app.get("/api/payment/:bookId", isLoggedIn, async (req, res, next) => {
   }
 });
 
-
 app.post("/api/payment/submit", isLoggedIn, async (req, res) => {
   const { utr, bookId } = req.body;
 
@@ -576,7 +586,7 @@ app.post("/api/payment/submit", isLoggedIn, async (req, res) => {
       book: bookId,
       utr,
       status: "pending", // admin will later update to "approved"
-      submittedAt: new Date()
+      submittedAt: new Date(),
     });
 
     res.send(`
@@ -589,7 +599,6 @@ app.post("/api/payment/submit", isLoggedIn, async (req, res) => {
     res.status(500).send("Error saving payment");
   }
 });
-
 
 app.use((err, req, res, next) => {
   console.error("💥 Uncaught Error:", err);
@@ -607,4 +616,3 @@ if (process.env.NODE_ENV !== "production") {
   module.exports = app;
   module.exports.handler = serverless(app);
 }
-
