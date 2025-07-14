@@ -79,7 +79,7 @@ function zoomOut() {
 const urlParams = new URLSearchParams(window.location.search);
 const bookId = urlParams.get("id");
 
-fetch(`https://acadmix-opal.vercel.app/api/book/${bookId}/secure-pdf`)
+fetch(`https://api.acadmix.shop/api/book/${bookId}/secure-pdf`)
   .then(res => res.json())
   .then(data => {
     if (!data.url) {

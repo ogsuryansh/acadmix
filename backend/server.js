@@ -51,7 +51,11 @@ app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
-        formAction: ["'self'", "https://acadmix.shop", "https://api.acadmix.shop"],
+        formAction: [
+          "'self'",
+          "https://acadmix.shop",
+          "https://api.acadmix.shop",
+        ],
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'", "https://apis.google.com"],
         styleSrc: [
@@ -65,14 +69,14 @@ app.use(
           "data:",
           "https://fonts.googleapis.com",
           "https://cdnjs.cloudflare.com",
-          "https://acadmix-opal.vercel.app",
+          "https://api.acadmix.shop",
         ],
         imgSrc: ["'self'", "data:", "https:"],
         connectSrc: [
           "'self'",
           "https://acadmix.shop",
           "https://acadmix-opal.vercel.app",
-          "https://api.acadmix.shop" // ✅ ADD THIS LINE
+          "https://api.acadmix.shop", // ✅ ADD THIS LINE
         ],
       },
     },
@@ -159,7 +163,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "https://acadmix-opal.vercel.app/api/auth/google/callback",
+      callbackURL: "https://api.acadmix.shop/api/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
