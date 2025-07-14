@@ -48,7 +48,9 @@
         justify-content: center;
         margin-bottom: 1rem;
       }
-      #qr-canvas {
+      .qr img {
+        width: 200px;
+        max-width: 80%;
         border: 2px solid #0070f3;
         border-radius: 8px;
       }
@@ -100,9 +102,9 @@
         text-align: center;
       }
       @media (max-width: 400px) {
-        #qr-canvas {
-          width: 160px !important;
-          height: 160px !important;
+        .qr img {
+          width: 160px;
+          height: 160px;
         }
         .amount {
           font-size: 1rem;
@@ -112,21 +114,10 @@
         }
       }
     </style>
-
-    <!-- QRious library for client-side QR generation -->
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"
-      integrity="sha512-GH6RVbue5D9jKXQm6h1lDdzpNPkvycbaW2aZ8MdA3UttSkmjO5kgCxFXRaKwj5Zl1JCFeYKFu/nQ1El1pHKmzw=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
   </head>
-  <body>
-    <% 
-      // Define the UPI deep link once
-      const upiLink = `upi://pay?pa=students4396@okhdfcbank&pn=Acadmix&am=${book.priceDiscounted}&cu=INR`;
-    %>
 
+  <body>
+    <!-- upiLink and qrDataUrl are passed in from your route handler -->
     <div class="container">
       <header>
         <h2>Payment for: <%= book.title %></h2>
@@ -136,7 +127,7 @@
         <p class="amount">Amount: ₹<%= book.priceDiscounted %></p>
 
         <div class="qr">
-          <canvas id="qr-canvas" width="200" height="200"></canvas>
+          <img src="<%= qrDataUrl %>" alt="Scan QR to Pay" />
         </div>
 
         <div class="upi" style="text-align: center; margin-bottom: 1rem">
@@ -163,16 +154,5 @@
         </div>
       </div>
     </div>
-
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        new QRious({
-          element: document.getElementById("qr-canvas"),
-          value: "<%= upiLink %>",
-          size: 200,
-          level: "H"
-        });
-      });
-    </script>
   </body>
 </html>
