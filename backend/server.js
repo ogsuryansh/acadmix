@@ -16,7 +16,9 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const session = require("express-session");
 const serverless = require("serverless-http");
 const cors = require("cors");
-const { contentSecurityPolicy } = require("helmet");
+const helmet = require("helmet");                  // full helmet bundle
+const { contentSecurityPolicy } = helmet;          // standalone CSP
+const path = require("path");
 const QRCode = require("qrcode");
 
 const User = require("./models/User");
@@ -24,38 +26,33 @@ const Book = require("./models/Book");
 const Payment = require("./models/Payment");
 const MongoStore = require("connect-mongo");
 
+// ─── EXPRESS APP ─────────────────────────────────────────────────────────────
 const app = express();
 app.set("trust proxy", 1);
-const path = require("path");
-// Serve static files (JS, CSS, PDF.js files)
-app.use("/reader-assets", express.static(path.join(__dirname, "ebook-reader")));
 
-// Serve the main reader HTML
-app.get("/reader", (req, res) => {
-  res.sendFile(path.join(__dirname, "ebook-reader", "index.html"));
-});
-app.get("/api/book/:id/secure-pdf", async (req, res) => {
-  try {
-    const book = await Book.findById(req.params.id);
-    if (!book || !book.pdfUrl) {
-      return res.status(404).json({ error: "Book or PDF not found" });
-    }
+// ─── HELMET & CSP ────────────────────────────────────────────────────────────
+// 1) Apply all default helmet protections (HSTS, referrer-policy, etc.)
+app.use(helmet());
 
-    res.json({ url: book.pdfUrl }); // ✅ Return JSON instead of redirect
-  } catch (err) {
-    console.error("❌ Secure PDF Fetch Error:", err);
-    res.status(500).json({ error: "Failed to fetch secure PDF" });
-  }
-});
+// 2) Then override only CSP so it includes your API host
 app.use(
   contentSecurityPolicy({
     useDefaults: true,
     directives: {
-      // start from the defaults…
       defaultSrc: ["'self'"],
-      // …then explicitly add your API host
-      connectSrc: ["'self'", "https://acadmix.shop", "https://api.acadmix.shop"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://apis.google.com"],
+      connectSrc: [
+        "'self'",
+        "https://acadmix.shop",
+        "https://www.acadmix.shop",
+        "https://api.acadmix.shop",
+        "https://acadmix-opal.vercel.app",
+      ],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://apis.google.com",
+        "https://cdnjs.cloudflare.com",
+      ],
       styleSrc: [
         "'self'",
         "'unsafe-inline'",
@@ -67,38 +64,41 @@ app.use(
         "data:",
         "https://fonts.gstatic.com",
         "https://cdnjs.cloudflare.com",
-        "https://api.acadmix.shop",
       ],
       imgSrc: ["'self'", "data:", "https:"],
-      formAction: ["'self'", "https://acadmix.shop", "https://api.acadmix.shop"],
+      formAction: [
+        "'self'",
+        "https://acadmix.shop",
+        "https://api.acadmix.shop",
+      ],
     },
   })
 );
+
+// ─── CORS ────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
-  "https://acadmix.shop", // ✅ Always allow frontend domain
-  "https://www.acadmix.shop", // ✅ In case of www subdomain
-  "http://127.0.0.1:5500", // ✅ Dev testing
+  "https://acadmix.shop",
+  "https://www.acadmix.shop",
   "https://api.acadmix.shop",
-  "http://localhost:3000", // ✅ Dev testing
+  "https://acadmix-opal.vercel.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:5500",
 ];
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // 🟢 Allow null (used by redirects, sandboxed requests, some mobile browsers)
-      if (!origin || origin === "null" || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.warn("❌ CORS blocked:", origin);
-        callback(new Error(`CORS not allowed from ${origin}`));
-      }
-    },
-    credentials: true, // Needed to support cookies/session
+    origin: (origin, cb) =>
+      !origin || allowedOrigins.includes(origin)
+        ? cb(null, true)
+        : cb(new Error("CORS DENIED")),
+    credentials: true,
   })
 );
 
+// ─── BODY PARSERS ─────────────────────────────────────────────────────────────
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+// ─── MONGO CONNECTION ─────────────────────────────────────────────────────────
 async function connectToDB() {
   if (global._mongoConn) return global._mongoConn;
   if (!global._mongoPromise) {
@@ -117,12 +117,11 @@ app.use(async (req, res, next) => {
     next();
   } catch (err) {
     console.error("❌ DB Connection Error:", err);
-    res
-      .status(500)
-      .json({ error: "Database connection failed", message: err.message });
+    res.status(500).json({ error: "Database connection failed" });
   }
 });
 
+// ─── SESSIONS & PASSPORT ──────────────────────────────────────────────────────
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "fallback-secret",
@@ -133,22 +132,19 @@ app.use(
       ttl: 14 * 24 * 60 * 60, // 14 days
     }),
     cookie: {
-      secure: true, // Required for HTTPS
-      sameSite: "none", // Cross-site cookie allowed
-      domain: ".acadmix.shop", // Shared across subdomains (frontend + backend)
+      secure: true,
+      sameSite: "none",
+      domain: ".acadmix.shop",
     },
   })
 );
-
 app.use(passport.initialize());
 app.use(passport.session());
 
 passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser((id, done) => {
-  User.findById(id)
-    .then((u) => done(null, u))
-    .catch((e) => done(e));
-});
+passport.deserializeUser((id, done) =>
+  User.findById(id).then(u => done(null, u)).catch(e => done(e))
+);
 passport.use(
   new GoogleStrategy(
     {
@@ -176,21 +172,49 @@ passport.use(
   )
 );
 
+// ─── VIEWS & ROUTES ──────────────────────────────────────────────────────────
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
+
+// Public reader assets
+app.use(
+  "/reader-assets",
+  express.static(path.join(__dirname, "ebook-reader"))
+);
+app.get("/reader", (req, res) => {
+  res.sendFile(path.join(__dirname, "ebook-reader", "index.html"));
+});
+
+// Secure PDF JSON endpoint
+app.get("/api/book/:id/secure-pdf", async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+    if (!book?.pdfUrl) return res.status(404).json({ error: "Not found" });
+    res.json({ url: book.pdfUrl });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Payment routes
 const paymentRouter = require("./routes/payment");
 app.use("/api", paymentRouter);
+
+// Auth routes
+app.use("/api/auth", require("./routes/auth"));
+
+// Admin panel
 function isAdminAuthenticated(req, res, next) {
   if (req.session?.admin) return next();
   res.redirect("/api/admin/login");
 }
-
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
 
-app.get("/api/admin/login", (req, res) => {
-  res.render("login", { error: req.query.error });
-});
+app.get("/api/admin/login", (req, res) =>
+  res.render("login", { error: req.query.error })
+);
 app.post("/api/admin/login", (req, res) => {
   const { username, password } = req.body;
   if (username === ADMIN_USER && password === ADMIN_PASS) {
@@ -206,15 +230,10 @@ app.post("/api/admin/logout", (req, res) => {
 
 app.get("/api/admin", isAdminAuthenticated, async (req, res, next) => {
   try {
-    // Fetch all users
     const users = await User.find().lean();
-
-    // Count totals
     const totalUsers = users.length;
     const totalBooks = await Book.countDocuments();
     const totalPayments = await Payment.countDocuments();
-
-    // Load recent payments (with user & book info)
     const payments = await Payment.find()
       .sort({ submittedAt: -1 })
       .limit(50)
@@ -234,7 +253,7 @@ app.get("/api/admin", isAdminAuthenticated, async (req, res, next) => {
     next(err);
   }
 });
-// Approve a payment
+
 app.post(
   "/api/admin/payments/:id/approve",
   isAdminAuthenticated,
@@ -247,8 +266,6 @@ app.post(
     }
   }
 );
-
-// Reject a payment
 app.post(
   "/api/admin/payments/:id/reject",
   isAdminAuthenticated,
@@ -262,7 +279,7 @@ app.post(
   }
 );
 
-// ─── Public API to Fetch All Books ─────────────────────────────────────────
+// Public API to fetch all books
 app.get("/api/books", async (req, res) => {
   try {
     const books = await Book.find().sort({ createdAt: -1 });
@@ -273,6 +290,7 @@ app.get("/api/books", async (req, res) => {
   }
 });
 
+// Admin book management
 app.get("/api/admin/books", isAdminAuthenticated, async (req, res) => {
   const books = await Book.find().sort({ createdAt: -1 });
   res.render("admin-books", { books });
@@ -287,6 +305,7 @@ const BOOK_CATEGORIES = [
   "NEET",
 ];
 const BOOK_SECTIONS = ["home", "class11", "class12", "test"];
+
 app.get("/api/admin/books/new", isAdminAuthenticated, (req, res) => {
   res.render("add-book", {
     categories: BOOK_CATEGORIES,
@@ -302,11 +321,12 @@ app.get("/api/admin/books/new", isAdminAuthenticated, (req, res) => {
     badge: "",
     imageUrl: "",
     demo: "",
-    pdfPath: "", // ✅ Add this line
+    pdfPath: "", // newly added
     editMode: false,
     bookId: null,
   });
 });
+
 app.post("/api/admin/books/new", isAdminAuthenticated, async (req, res) => {
   const {
     title,
@@ -319,10 +339,10 @@ app.post("/api/admin/books/new", isAdminAuthenticated, async (req, res) => {
     badge,
     imageUrl,
     demo,
-    pdfPath, // ✅ Newly added input from the form
+    pdfPath,
   } = req.body;
 
-  // ✅ Image URL validation
+  // Image URL validation
   if (!/^https?:\/\/.+\.(jpg|jpeg|png|gif)$/i.test(imageUrl)) {
     return res.status(400).render("add-book", {
       categories: BOOK_CATEGORIES,
@@ -344,7 +364,7 @@ app.post("/api/admin/books/new", isAdminAuthenticated, async (req, res) => {
     });
   }
 
-  // ✅ (Optional) Basic PDF URL validation
+  // PDF URL validation
   if (pdfPath && !/^https?:\/\/.+\.pdf$/i.test(pdfPath)) {
     return res.status(400).render("add-book", {
       categories: BOOK_CATEGORIES,
@@ -378,9 +398,8 @@ app.post("/api/admin/books/new", isAdminAuthenticated, async (req, res) => {
       badge,
       imageUrl,
       demo,
-      pdfUrl: pdfPath, // ✅ Store pdfPath as pdfUrl in MongoDB
+      pdfUrl: pdfPath,
     });
-
     res.redirect("/api/admin/books");
   } catch (err) {
     console.error("❌ Book creation error:", err);
@@ -424,7 +443,7 @@ app.get("/api/admin/books/:id/edit", isAdminAuthenticated, async (req, res) => {
       badge: book.badge,
       imageUrl: book.imageUrl,
       demo: book.demo,
-      pdfPath: book.pdfUrl || "", // ✅ Add this line
+      pdfPath: book.pdfUrl || "",
       editMode: true,
       bookId: book._id,
     });
@@ -449,7 +468,7 @@ app.post(
       badge,
       imageUrl,
       demo,
-      pdfPath, // ✅ Add pdfPath
+      pdfPath,
     } = req.body;
 
     try {
@@ -467,7 +486,7 @@ app.post(
         badge,
         imageUrl,
         demo,
-        pdfUrl: pdfPath, // ✅ Save PDF link
+        pdfUrl: pdfPath,
       });
 
       await book.save();
@@ -493,14 +512,7 @@ app.post(
   }
 );
 
-app.use("/api/auth", require("./routes/auth"));
-app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "..", "public", "uploads"))
-);
-app.get("/favicon.ico", (req, res) => res.status(204).end());
-app.use(express.static(path.join(__dirname, "..", "public")));
-
+// Course pages
 app.get("/courses/class11", async (req, res) => {
   try {
     const neetBooks = await Book.find({
@@ -555,17 +567,25 @@ app.get("/courses/test", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
+// Static & error handling
+app.use("/uploads", express.static(path.join(__dirname, "..", "public", "uploads")));
+app.get("/favicon.ico", (req, res) => res.status(204).end());
+app.use(express.static(path.join(__dirname, "..", "public")));
+
+// Global error handler (JSON)
 app.use((err, req, res, next) => {
   console.error("💥 Uncaught Error:", err);
-  res
-    .status(500)
-    .json({ error: "Internal Server Error", message: err.message });
+  res.status(500).json({ error: "Internal Server Error", message: err.message });
 });
+
+// Client build (if any)
 app.use("/client", express.static(path.join(__dirname, "..", "client")));
+
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () =>
-    console.log(`🚀 Server running on http://localhost:${PORT}`)
+    console.log(`🚀 Dev server listening at http://localhost:${PORT}`)
   );
 } else {
   module.exports = app;
