@@ -72,13 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return res.json();
     })
     .then((user) => {
-      if (user && user.photo) {
-        localStorage.setItem("acadmix-user", JSON.stringify(user));
-        renderUserUI(user);
-      } else {
-        localStorage.removeItem("acadmix-user");
-        renderUserUI(null);
-      }
+      // …
     })
     .catch((err) => {
       console.warn("⚠️ Auth check failed:", err);
