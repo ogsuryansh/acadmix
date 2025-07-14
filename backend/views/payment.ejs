@@ -48,7 +48,6 @@
         justify-content: center;
         margin-bottom: 1rem;
       }
-      /* the canvas will size itself */
       #qr-canvas {
         border: 2px solid #0070f3;
         border-radius: 8px;
@@ -123,19 +122,20 @@
     ></script>
   </head>
   <body>
+    <% 
+      // Define the UPI deep link once
+      const upiLink = `upi://pay?pa=students4396@okhdfcbank&pn=Acadmix&am=${book.priceDiscounted}&cu=INR`;
+    %>
+
     <div class="container">
       <header>
         <h2>Payment for: <%= book.title %></h2>
       </header>
+
       <div class="content">
         <p class="amount">Amount: ₹<%= book.priceDiscounted %></p>
 
-        <% // Build the UPI deep link const upiLink =
-        `upi://pay?pa=students4396@okhdfcbank&pn=Acadmix&am=${book.priceDiscounted}&cu=INR`;
-        %>
-
         <div class="qr">
-          <!-- Canvas where QR will be drawn -->
           <canvas id="qr-canvas" width="200" height="200"></canvas>
         </div>
 
@@ -164,20 +164,13 @@
       </div>
     </div>
 
-    <!-- Your custom script to render the QR -->
     <script>
-      // public/js/script.js
       document.addEventListener("DOMContentLoaded", function () {
-        // Grab the UPI link from the inline EJS var
-        const upiLinkElement = document.querySelector(".upi-link");
-        const upiLink = upiLinkElement.getAttribute("href");
-
-        // Initialize QRious
         new QRious({
           element: document.getElementById("qr-canvas"),
-          value: upiLink,
+          value: "<%= upiLink %>",
           size: 200,
-          level: "H", // High error correction
+          level: "H"
         });
       });
     </script>
