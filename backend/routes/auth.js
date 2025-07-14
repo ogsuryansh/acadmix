@@ -11,7 +11,9 @@ router.get(
   "/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   (req, res) => {
-    res.redirect("https://acadmix.shop");
+    const redirectTo = req.session.redirectAfterLogin || "https://acadmix.shop";
+    delete req.session.redirectAfterLogin;
+    res.redirect(redirectTo);
   }
 );
 

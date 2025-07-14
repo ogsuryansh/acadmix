@@ -1,12 +1,14 @@
 document.addEventListener("DOMContentLoaded", () => {
   const BASE_API = "https://acadmix-opal.vercel.app";
 
+  const toggleButton = document.querySelector(".nav-toggle");
+  const navMenu = document.querySelector(".nav-menu");
+  const joinButtons = document.querySelectorAll(".join-btn");
+  const userIcons = document.querySelectorAll(".user-icon");
+
   // ----------------------------------------
   // 🔁 Navbar toggle (for mobile)
   // ----------------------------------------
-  const toggleButton = document.querySelector(".nav-toggle");
-  const navMenu = document.querySelector(".nav-menu");
-
   if (toggleButton && navMenu) {
     toggleButton.addEventListener("click", () => {
       navMenu.classList.toggle("active");
@@ -15,77 +17,61 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.querySelectorAll(".nav-item").forEach((link) => {
       link.addEventListener("click", () => {
-        if (navMenu.classList.contains("active")) {
-          navMenu.classList.remove("active");
-          toggleButton.classList.remove("open");
-        }
+        navMenu.classList.remove("active");
+        toggleButton.classList.remove("open");
       });
     });
   }
 
   // ----------------------------------------
-  // 👤 Load from localStorage (faster paint)
+  // 👤 Render user UI
+  // ----------------------------------------
+  function renderUserUI(user) {
+    if (user && user.photo) {
+      userIcons.forEach((icon) => {
+        icon.innerHTML = `<img src="${user.photo}" style="width: 35px; height: 35px; border-radius: 50%;" />`;
+      });
+
+      joinButtons.forEach((btn) => {
+        btn.textContent = "Logout";
+        btn.onclick = () => {
+          localStorage.removeItem("acadmix-user");
+          window.location.href = `${BASE_API}/api/auth/logout`;
+        };
+      });
+    } else {
+      localStorage.removeItem("acadmix-user");
+
+      joinButtons.forEach((btn) => {
+        btn.textContent = "Join";
+        btn.onclick = () => {
+          window.location.href = `${BASE_API}/api/auth/google`;
+        };
+      });
+    }
+  }
+
+  // ----------------------------------------
+  // 🚀 1. Try from localStorage (instant UX)
   // ----------------------------------------
   const storedUser = JSON.parse(localStorage.getItem("acadmix-user"));
-  const joinButtons = document.querySelectorAll(".join-btn");
-  const userIcons = document.querySelectorAll(".user-icon");
-
-  if (storedUser && storedUser.photo) {
-    userIcons.forEach((icon) => {
-      icon.innerHTML = `<img src="${storedUser.photo}" style="width: 35px; height: 35px; border-radius: 50%;" />`;
-    });
-
-    joinButtons.forEach((btn) => {
-      btn.textContent = "Logout";
-      btn.onclick = () => {
-        localStorage.removeItem("acadmix-user");
-        window.location.href = `${BASE_API}/api/auth/logout`;
-      };
-    });
-  }
+  if (storedUser) renderUserUI(storedUser);
 
   // ----------------------------------------
-  // 👤 Auth Check from Server
+  // 🔁 2. Check live session from backend
   // ----------------------------------------
-  if (BASE_API) {
-    fetch(`${BASE_API}/api/auth/user`, { credentials: "include" })
-      .then((res) => {
-        if (!res.ok) throw new Error("User fetch failed");
-        return res.json();
-      })
-      .then((user) => {
-        // ✅ Update stored user
-        localStorage.setItem("acadmix-user", JSON.stringify(user));
-
-        if (user && user.photo) {
-          userIcons.forEach((icon) => {
-            icon.innerHTML = `<img src="${user.photo}" style="width: 35px; height: 35px; border-radius: 50%;" />`;
-          });
-
-          joinButtons.forEach((btn) => {
-            btn.textContent = "Logout";
-            btn.onclick = () => {
-              localStorage.removeItem("acadmix-user");
-              window.location.href = `${BASE_API}/api/auth/logout`;
-            };
-          });
-        } else {
-          joinButtons.forEach((btn) => {
-            btn.textContent = "Join";
-            btn.onclick = () => {
-              window.location.href = `${BASE_API}/api/auth/google`;
-            };
-          });
-        }
-      })
-      .catch((err) => {
-        console.warn("Auth check failed:", err);
-      });
-  } else {
-    console.error(
-      "❌ BASE_API is not defined. Check environment config or hardcoded value."
-    );
-  }
+  fetch(`${BASE_API}/api/auth/user`, { credentials: "include" })
+    .then((res) => {
+      if (!res.ok) throw new Error("User fetch failed");
+      return res.json();
+    })
+    .then((user) => {
+      localStorage.setItem("acadmix-user", JSON.stringify(user));
+      renderUserUI(user);
+    })
+    .catch((err) => {
+      console.warn("Auth check failed:", err);
+    });
 });
 
 
