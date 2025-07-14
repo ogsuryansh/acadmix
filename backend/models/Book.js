@@ -29,11 +29,11 @@ const bookSchema = new mongoose.Schema({
     default: 'No'
   },
 
-  // ✅ Add this field to store path of uploaded PDF
-  pdfPath: {
-    type: String,
-    required: false  // Optional in case some books don't have PDFs
-  }
+pdfUrl: {
+  type: String,
+  required: false
+}
+
 
 }, { timestamps: true });
 
