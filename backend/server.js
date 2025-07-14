@@ -549,57 +549,6 @@ app.get("/courses/test", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
-
-app.get("/api/payment/:bookId", isLoggedIn, async (req, res, next) => {
-  try {
-    const book = await Book.findById(req.params.bookId);
-    if (!book) return res.status(404).send("Book not found");
-
-    // 1. Build the UPI deep link
-    const upiLink = `upi://pay?pa=students4396@okhdfcbank&pn=Acadmix&am=${book.priceDiscounted}&cu=INR`;
-
-    // 2. Generate a base64 QR code Data‑URL
-    const qrDataUrl = await QRCode.toDataURL(upiLink, {
-      errorCorrectionLevel: "H",
-      width: 300,
-    });
-
-    // 3. Render the payment page and pass all data
-    res.render("payment", {
-      book,
-      upiLink,
-      qrDataUrl,
-      user: req.user || null,
-    });
-  } catch (err) {
-    console.error("❌ Payment route error:", err);
-    next(err);
-  }
-});
-
-app.post("/api/payment/submit", isLoggedIn, async (req, res) => {
-  const { utr, bookId } = req.body;
-
-  try {
-    await Payment.create({
-      user: req.user._id,
-      book: bookId,
-      utr,
-      status: "pending", // admin will later update to "approved"
-      submittedAt: new Date(),
-    });
-
-    res.send(`
-      <h2>✅ Payment Submitted!</h2>
-      <p>Once your payment is <strong>approved by admin</strong>, you’ll be able to access your book.</p>
-      <a href="/">⬅️ Go back to Home</a>
-    `);
-  } catch (err) {
-    console.error("❌ Payment submission error:", err);
-    res.status(500).send("Error saving payment");
-  }
-});
-
 app.use((err, req, res, next) => {
   console.error("💥 Uncaught Error:", err);
   res
