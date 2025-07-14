@@ -119,40 +119,47 @@
   <body>
     <!-- upiLink and qrDataUrl are passed in from your route handler -->
     <div class="container">
-      <header>
-        <h2>Payment for: <%= book.title %></h2>
-      </header>
+  <header>
+    <h2>Payment for: <%= book.title %></h2>
+  </header>
 
-      <div class="content">
-        <p class="amount">Amount: ₹<%= book.priceDiscounted %></p>
+  <div class="content">
+    <p class="amount">Amount: ₹<%= book.priceDiscounted %></p>
 
-        <div class="qr">
-          <img src="<%= qrDataUrl %>" alt="Scan QR to Pay" />
-        </div>
+    <% if (user) { %>
+      <p style="text-align:center; font-size: 0.95rem; color: #555;">
+        Logged in as <strong><%= user.name %></strong>
+      </p>
+    <% } %>
 
-        <div class="upi" style="text-align: center; margin-bottom: 1rem">
-          <a href="<%= upiLink %>" class="upi-link" target="_blank">
-            👉 Pay ₹<%= book.priceDiscounted %> via UPI
-          </a>
-        </div>
-
-        <form action="/api/payment/submit" method="POST">
-          <input type="hidden" name="bookId" value="<%= book._id %>" />
-          <label for="utr">Enter UTR / Transaction ID:</label>
-          <input
-            type="text"
-            id="utr"
-            name="utr"
-            placeholder="e.g., 1234567890"
-            required
-          />
-          <button type="submit">Submit Payment</button>
-        </form>
-
-        <div class="support">
-          <p>Need help? Contact <strong>students4396@okhdfcbank</strong></p>
-        </div>
-      </div>
+    <div class="qr">
+      <img src="<%= qrDataUrl %>" alt="Scan QR to Pay" />
     </div>
+
+    <div class="upi" style="text-align: center; margin-bottom: 1rem">
+      <a href="<%= upiLink %>" class="upi-link" target="_blank">
+        👉 Pay ₹<%= book.priceDiscounted %> via UPI
+      </a>
+    </div>
+
+    <form action="/api/payment/submit" method="POST">
+      <input type="hidden" name="bookId" value="<%= book._id %>" />
+      <label for="utr">Enter UTR / Transaction ID:</label>
+      <input
+        type="text"
+        id="utr"
+        name="utr"
+        placeholder="e.g., 1234567890"
+        required
+      />
+      <button type="submit">Submit Payment</button>
+    </form>
+
+    <div class="support">
+      <p>Need help? Contact <strong>students4396@okhdfcbank</strong></p>
+    </div>
+  </div>
+</div>
+
   </body>
 </html>

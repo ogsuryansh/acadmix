@@ -169,6 +169,20 @@
       text-decoration: none;
       font-weight: bold;
     }
+
+    /* Payment actions */
+    .actions form {
+      display: inline;
+      margin-right: 0.5rem;
+    }
+    .actions button {
+      padding: 0.3rem 0.6rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .actions .approve { background: #28a745; color: #fff; }
+    .actions .reject  { background: #dc3545; color: #fff; }
   </style>
 </head>
 <body>
@@ -179,8 +193,8 @@
       <h2>Admin</h2>
       <a data-tab="dashboard-tab">Dashboard</a>
       <a data-tab="books-tab">Books</a>
-      <a href="#">Payments</a>
-      <a href="/admin/logout">Logout</a>
+      <a data-tab="payments-tab">Payments</a>
+      <a href="/api/admin/logout">Logout</a>
     </div>
 
     <!-- Main Content -->
@@ -227,9 +241,47 @@
         <div class="btn-group">
           <a href="/api/admin/books">Show All Books</a>
           <a href="/api/admin/books/new">Add New Book</a>
-          <a href="/api/admin/books/edit">Edit Book</a>
-          <a href="/api/admin/books/delete">Delete Book</a>
         </div>
+      </div>
+
+      <!-- Payments Tab -->
+      <div class="tab" id="payments-tab">
+        <h1>Payments</h1>
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Book</th>
+              <th>UTR</th>
+              <th>Status</th>
+              <th>Submitted</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% payments.forEach(p => { %>
+              <tr>
+                <td><%= p.user.name %> (<%= p.user.email %>)</td>
+                <td><%= p.book.title %></td>
+                <td><%= p.utr %></td>
+                <td><%= p.status.charAt(0).toUpperCase() + p.status.slice(1) %></td>
+                <td><%= new Date(p.submittedAt).toLocaleString() %></td>
+                <td class="actions">
+                  <% if (p.status === 'pending') { %>
+                    <form action="/api/admin/payments/<%= p._id %>/approve" method="POST">
+                      <button type="submit" class="approve">Approve</button>
+                    </form>
+                    <form action="/api/admin/payments/<%= p._id %>/reject" method="POST">
+                      <button type="submit" class="reject">Reject</button>
+                    </form>
+                  <% } else { %>
+                    &mdash;
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -248,12 +300,10 @@
       });
 
       const sidebar = document.getElementById("sidebar");
-      document.getElementById("openSidebar").addEventListener("click", () => {
-        sidebar.classList.add("show");
-      });
-      document.getElementById("closeSidebar").addEventListener("click", () => {
-        sidebar.classList.remove("show");
-      });
+      document.getElementById("openSidebar")
+        .addEventListener("click", () => sidebar.classList.add("show"));
+      document.getElementById("closeSidebar")
+        .addEventListener("click", () => sidebar.classList.remove("show"));
     });
   </script>
 </body>

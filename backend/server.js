@@ -21,6 +21,7 @@ const QRCode = require('qrcode');
 
 const User = require("./models/User");
 const Book = require("./models/Book");
+const isLoggedIn = require("../middleware/isLoggedIn"); 
 
 const app = express();
 app.set("trust proxy", 1);
@@ -195,15 +196,53 @@ app.post("/api/admin/logout", (req, res) => {
   res.redirect("/api/admin/login");
 });
 
-app.get("/api/admin", isAdminAuthenticated, async (req, res) => {
-  const users = await User.find();
-  res.render("admin", {
-    users,
-    totalUsers: users.length,
-    totalPayments: 0,
-    totalBooks: 0,
-  });
+app.get("/api/admin", isAdminAuthenticated, async (req, res, next) => {
+  try {
+    // Fetch all users
+    const users = await User.find().lean();
+
+    // Count totals
+    const totalUsers    = users.length;
+    const totalBooks    = await Book.countDocuments();
+    const totalPayments = await Payment.countDocuments();
+
+    // Load recent payments (with user & book info)
+    const payments = await Payment
+      .find()
+      .sort({ submittedAt: -1 })
+      .limit(50)
+      .populate("user", "name email")
+      .populate("book", "title")
+      .lean();
+
+    res.render("admin", {
+      users,
+      totalUsers,
+      totalBooks,
+      totalPayments,
+      payments
+    });
+  } catch (err) {
+    console.error("❌ Admin panel error:", err);
+    next(err);
+  }
 });
+// Approve a payment
+app.post("/api/admin/payments/:id/approve", isAdminAuthenticated, async (req, res, next) => {
+  try {
+    await Payment.findByIdAndUpdate(req.params.id, { status: "approved" });
+    res.redirect("/api/admin?tab=payments-tab");
+  } catch (err) { next(err); }
+});
+
+// Reject a payment
+app.post("/api/admin/payments/:id/reject", isAdminAuthenticated, async (req, res, next) => {
+  try {
+    await Payment.findByIdAndUpdate(req.params.id, { status: "rejected" });
+    res.redirect("/api/admin?tab=payments-tab");
+  } catch (err) { next(err); }
+});
+
 // ─── Public API to Fetch All Books ─────────────────────────────────────────
 app.get("/api/books", async (req, res) => {
   try {
@@ -497,7 +536,9 @@ app.get("/courses/test", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
-app.get("/api/payment/:bookId", async (req, res, next) => {
+
+
+app.get("/api/payment/:bookId", isLoggedIn, async (req, res, next) => {
   try {
     const book = await Book.findById(req.params.bookId);
     if (!book) return res.status(404).send("Book not found");
@@ -507,20 +548,48 @@ app.get("/api/payment/:bookId", async (req, res, next) => {
 
     // 2. Generate a base64 QR code Data‑URL
     const qrDataUrl = await QRCode.toDataURL(upiLink, {
-      errorCorrectionLevel: 'H',
-      width: 300
+      errorCorrectionLevel: "H",
+      width: 300,
     });
 
-    // 3. Render your EJS, passing book, upiLink and qrDataUrl
+    // 3. Render the payment page and pass all data
     res.render("payment", {
       book,
       upiLink,
-      qrDataUrl
+      qrDataUrl,
+      user: req.user, // pass user to the template (optional)
     });
-
   } catch (err) {
     console.error("❌ Payment route error:", err);
     next(err);
+  }
+});
+const Payment = require("./models/Payment");
+const isLoggedIn = (req, res, next) => {
+  if (req.isAuthenticated()) return next();
+  res.redirect("/login"); // or a better login page
+};
+
+app.post("/api/payment/submit", isLoggedIn, async (req, res) => {
+  const { utr, bookId } = req.body;
+
+  try {
+    await Payment.create({
+      user: req.user._id,
+      book: bookId,
+      utr,
+      status: "pending", // admin will later update to "approved"
+      submittedAt: new Date()
+    });
+
+    res.send(`
+      <h2>✅ Payment Submitted!</h2>
+      <p>Once your payment is <strong>approved by admin</strong>, you’ll be able to access your book.</p>
+      <a href="/">⬅️ Go back to Home</a>
+    `);
+  } catch (err) {
+    console.error("❌ Payment submission error:", err);
+    res.status(500).send("Error saving payment");
   }
 });
 
