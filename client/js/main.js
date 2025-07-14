@@ -1,5 +1,5 @@
-// Use same‑origin for all API calls
-const BASE_API = ""; // or window.location.origin
+// Use same-origin for all API calls
+const BASE_API = ""; // "" or window.location.origin
 
 document.addEventListener("DOMContentLoaded", () => {
   const toggleButton = document.querySelector(".nav-toggle");
@@ -7,9 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const joinButtons = document.querySelectorAll(".join-btn");
   const userIcons = document.querySelectorAll(".user-icon");
 
-  // ----------------------------------------
   // 🔁 Navbar toggle (for mobile)
-  // ----------------------------------------
   if (toggleButton && navMenu) {
     toggleButton.addEventListener("click", () => {
       navMenu.classList.toggle("active");
@@ -24,25 +22,20 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ----------------------------------------
   // 👤 Render user UI
-  // ----------------------------------------
   function renderUserUI(user) {
     const isLoggedIn = user && user.photo;
 
-    // update avatar icons
     userIcons.forEach((icon) => {
       icon.innerHTML = isLoggedIn
         ? `<img src="${user.photo}" style="width: 35px; height: 35px; border-radius: 50%;" />`
         : `<i class="fa fa-user-circle"></i>`;
     });
 
-    // update join/logout buttons
     joinButtons.forEach((btn) => {
       if (isLoggedIn) {
         btn.textContent = "Logout";
         btn.onclick = async () => {
-          // call POST /api/auth/logout
           try {
             await fetch(`${BASE_API}/api/auth/logout`, {
               method: "POST",
@@ -63,9 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ----------------------------------------
-  // 🚀 1. Try from localStorage (instant UX)
-  // ----------------------------------------
+  // 🚀 1. Instant load from localStorage
   try {
     const storedUser = JSON.parse(localStorage.getItem("acadmix-user"));
     if (storedUser && storedUser.photo) {
@@ -75,21 +66,15 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.removeItem("acadmix-user");
   }
 
-  // ----------------------------------------
   // 🔁 2. Check live session from backend
-  // ----------------------------------------
   fetch(`${BASE_API}/api/auth/user`, { credentials: "include" })
     .then((res) => {
-      if (res.status === 401) {
-        // not authenticated
-        return null;
-      }
-      if (!res.ok) {
-        throw new Error("User fetch failed");
-      }
+      if (res.status === 401) return null;
+      if (!res.ok) throw new Error("User fetch failed");
       return res.json();
     })
     .then((user) => {
+      console.log("👤 Live session user:", user);
       if (user && user.photo) {
         localStorage.setItem("acadmix-user", JSON.stringify(user));
         renderUserUI(user);
@@ -103,9 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// ----------------------------------------
 // 🚀 "Get Started" Button Animation
-// ----------------------------------------
 const btn = document.querySelector(".btn-get-started");
 if (btn) {
   btn.addEventListener("click", () => {
@@ -113,7 +96,7 @@ if (btn) {
   });
 }
 
-// Determine which section we’re on
+// 📚 Detect page section
 let PAGE_SECTION;
 if (window.location.pathname.includes("class11")) PAGE_SECTION = "class11";
 else if (window.location.pathname.includes("class12")) PAGE_SECTION = "class12";
@@ -131,9 +114,7 @@ fetch(`${BASE_API}/api/books`)
     if (PAGE_SECTION === "home") {
       const container = document.getElementById("card-container");
       container.innerHTML = "";
-      filtered.forEach((card) => {
-        container.appendChild(createCard(card));
-      });
+      filtered.forEach((card) => container.appendChild(createCard(card)));
       if (filtered.length === 0) {
         container.innerHTML = "<p>No books found for homepage.</p>";
       }
@@ -146,18 +127,15 @@ fetch(`${BASE_API}/api/books`)
 
       if (neetContainer) {
         neetContainer.innerHTML = "";
-        neetCards.forEach((card) =>
-          neetContainer.appendChild(createCard(card))
-        );
+        neetCards.forEach((card) => neetContainer.appendChild(createCard(card)));
         if (neetCards.length === 0) {
           neetContainer.innerHTML = "<p>📚 NEET Content Coming Soon</p>";
         }
       }
+
       if (jeeContainer) {
         jeeContainer.innerHTML = "";
-        jeeCards.forEach((card) =>
-          jeeContainer.appendChild(createCard(card))
-        );
+        jeeCards.forEach((card) => jeeContainer.appendChild(createCard(card)));
         if (jeeCards.length === 0) {
           jeeContainer.innerHTML = "<p>📘 JEE Content Coming Soon</p>";
         }
@@ -170,13 +148,11 @@ fetch(`${BASE_API}/api/books`)
     const neetContainer = document.getElementById("card-container-neet");
     const jeeContainer = document.getElementById("card-container-jee");
     if (homeContainer) homeContainer.innerHTML = "<p>Error loading materials.</p>";
-    if (neetContainer)
-      neetContainer.innerHTML = "<p>Error loading NEET materials.</p>";
-    if (jeeContainer)
-      jeeContainer.innerHTML = "<p>Error loading JEE materials.</p>";
+    if (neetContainer) neetContainer.innerHTML = "<p>Error loading NEET materials.</p>";
+    if (jeeContainer) jeeContainer.innerHTML = "<p>Error loading JEE materials.</p>";
   });
 
-// Card creation helper
+// 🧱 Card creation helper
 function createCard(card) {
   const cardEl = document.createElement("div");
   cardEl.className = "card";
@@ -192,14 +168,10 @@ function createCard(card) {
         <p class="original">₹${card.priceOriginal}</p>
         <p class="discount">₹${card.priceDiscounted}</p>
       </div>
-      <div class="demo">Demo Available: ${
-        card.demo === "Yes" ? "Yes" : "No"
-      }</div>
+      <div class="demo">Demo Available: ${card.demo === "Yes" ? "Yes" : "No"}</div>
       ${
         card.pdfPath
-          ? `<a href="/client/ebook-reader/index.html?pdf=${encodeURIComponent(
-              card.pdfPath
-            )}" class="btn-buy" target="_blank">📖 Read</a>`
+          ? `<a href="/client/ebook-reader/index.html?pdf=${encodeURIComponent(card.pdfPath)}" class="btn-buy" target="_blank">📖 Read</a>`
           : `<a href="/api/payment/${card._id}" class="btn-buy">Buy Now</a>`
       }
     </div>
