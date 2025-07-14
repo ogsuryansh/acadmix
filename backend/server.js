@@ -1,3 +1,5 @@
+const isProd = process.env.NODE_ENV === "production";
+
 require("dotenv").config();
 console.log("🔑 ENV Check:", {
   GOOGLE_CLIENT_ID: !!process.env.GOOGLE_CLIENT_ID,
@@ -25,7 +27,7 @@ const User = require("./models/User");
 const Book = require("./models/Book");
 const Payment = require("./models/Payment");
 const MongoStore = require("connect-mongo");
-const isProd = process.env.NODE_ENV === "production";
+
 
 // ─── EXPRESS APP ─────────────────────────────────────────────────────────────
 const app = express();
