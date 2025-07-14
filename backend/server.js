@@ -75,8 +75,7 @@ app.use(
         connectSrc: [
           "'self'",
           "https://acadmix.shop",
-          "https://acadmix-opal.vercel.app",
-          "https://api.acadmix.shop", // ✅ ADD THIS LINE
+          "https://api.acadmix.shop", // ✅ Add this
         ],
       },
     },
@@ -104,7 +103,6 @@ app.use(
     credentials: true, // Needed to support cookies/session
   })
 );
-
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
