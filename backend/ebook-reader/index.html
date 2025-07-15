@@ -12,102 +12,126 @@
       rel="stylesheet"
     />
     <style>
+      :root {
+        --primary: #2563eb;
+        --primary-dark: #1e40af;
+        --primary-light: #3b82f6;
+        --background: #f2f4f8;
+        --card-bg: #fff;
+        --shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
+        --border-radius: 16px;
+      }
       body {
         margin: 0;
-        font-family: "Segoe UI", sans-serif;
-        background: #f2f4f8;
+        font-family: "Inter", "Segoe UI", Arial, sans-serif;
+        background: var(--background);
         overflow: hidden;
         padding-bottom: 0;
       }
 
       #pdf-container {
         height: 100vh;
-        overflow: auto; /* ✅ allow horizontal + vertical scroll */
+        overflow: auto;
         -webkit-overflow-scrolling: touch;
         box-sizing: border-box;
         padding: 20px;
-
-        display: block; /* ✅ change from flex */
-        text-align: center; /* ✅ center content initially */
+        display: block;
+        text-align: center;
       }
       .pdf-frame {
         display: inline-block;
-        background: white;
+        background: var(--card-bg);
         padding: 10px;
-        border-radius: 12px;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
       }
 
       canvas {
         display: block;
         max-width: 100%;
         height: auto;
-        border-radius: 6px;
+        border-radius: 8px;
         transition: opacity 0.3s ease;
+        background: #fff;
       }
-      canvas {
-        display: block;
-        max-width: none; /* ✅ allow width to grow with scale */
-        height: auto;
-      }
-
       canvas.fade-out {
         opacity: 0;
       }
       canvas.fade-in {
         opacity: 1;
       }
+
       .toolbar {
         position: fixed;
         bottom: 0px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(33, 33, 33, 0.9);
-        backdrop-filter: blur(6px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        padding: 10px 14px;
-        border-radius: 16px;
+        background: linear-gradient(90deg, var(--primary), var(--primary-light));
+        box-shadow: 0 5px 15px rgba(37, 99, 235, 0.13);
+        padding: 10px 16px;
+        border-radius: 18px 18px 0 0;
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 14px;
         z-index: 9999;
         flex-wrap: wrap;
+        min-width: 260px;
       }
 
       .toolbar button {
-        background: #444;
+        background: var(--primary-dark);
         color: #fff;
         border: none;
         border-radius: 8px;
-        padding: 6px 12px;
-        font-size: 14px;
+        padding: 7px 15px;
+        font-size: 15px;
         cursor: pointer;
-        transition: background 0.2s ease;
+        font-weight: 600;
+        transition: background 0.2s, transform 0.2s;
+        box-shadow: 0 2px 8px #2563eb22;
+        letter-spacing: 0.5px;
       }
 
       .toolbar button:hover {
-        background: #5a5a5a;
+        background: var(--primary-light);
+        color: #fff;
+        transform: translateY(-2px) scale(1.04);
       }
 
       .toolbar span {
-        color: #ddd;
-        font-size: 14px;
-        font-weight: 500;
+        color: #e0e7ff;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
       }
 
       /* 📱 Mobile Responsive */
-      @media (max-width: 500px) {
+      @media (max-width: 600px) {
+        #pdf-container {
+          padding: 6px;
+        }
         .toolbar {
-          gap: 8px;
-          width: 100% !important;
+          gap: 7px;
+          width: 98vw !important;
+          min-width: 0;
+          left: 1vw;
+          transform: none;
+          border-radius: 12px 12px 0 0;
+          padding: 7px 2px;
         }
-
         .toolbar button {
-          font-size: 10px;
+          font-size: 12px;
+          padding: 6px 8px;
         }
-
         .toolbar span {
-          font-size: 15px;
+          font-size: 13px;
+        }
+        .pdf-frame {
+          padding: 4px;
+          border-radius: 10px;
+        }
+        canvas {
+          border-radius: 5px;
         }
       }
     </style>
@@ -121,10 +145,10 @@
 
     <div class="toolbar">
       <button onclick="prevPage()">⬅ Prev</button>
-      <span
-        >Page <span id="page_num" class="highlight">1</span> of
-        <span id="page_count">--</span></span
-      >
+      <span>
+        Page <span id="page_num" class="highlight">1</span> of
+        <span id="page_count">--</span>
+      </span>
       <button onclick="nextPage()">Next ➡</button>
       <button onclick="zoomOut()">➖ Zoom</button>
       <button onclick="zoomIn()">➕ Zoom</button>
