@@ -3,11 +3,12 @@
   [headers.values]
     Content-Security-Policy = """
       default-src 'self';
-      script-src  'self' https://apis.google.com;
+      script-src  'self' 'unsafe-inline' https://apis.google.com https://cdnjs.cloudflare.com;
       style-src   'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
       font-src    'self' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com data:;
       img-src     'self' data: https:;
-      connect-src 'self' https://acadmix.shop https://api.acadmix.shop;
+      connect-src 'self' https://acadmix.shop https://www.acadmix.shop https://api.acadmix.shop https://ucarecdn.com;
+      worker-src  'self' blob:;
     """
 
 [[redirects]]
@@ -15,3 +16,5 @@
   to = "https://api.acadmix.shop/api/:splat"
   status = 200
   force = true
+
+
