@@ -37,45 +37,62 @@ app.set("trust proxy", 1);
 // 1) Apply all default helmet protections (HSTS, referrer-policy, etc.)
 app.use(helmet());
 
-// 2) Then override only CSP so it includes your API host
+// 2) Then override only CSP so it includes your custom domains and PDF needs
 app.use(
   contentSecurityPolicy({
     useDefaults: true,
     directives: {
       defaultSrc: ["'self'"],
+
       connectSrc: [
         "'self'",
         "https://acadmix.shop",
         "https://www.acadmix.shop",
         "https://api.acadmix.shop",
+        "https://ucarecdn.com", // ✅ Needed if PDFs are hosted here
       ],
+
       scriptSrc: [
         "'self'",
-        "'unsafe-inline'",
+        "'unsafe-inline'", // ✅ Needed for inline scripts like PDF.js
         "https://apis.google.com",
         "https://cdnjs.cloudflare.com",
       ],
+
       styleSrc: [
         "'self'",
         "'unsafe-inline'",
         "https://fonts.googleapis.com",
         "https://cdnjs.cloudflare.com",
       ],
+
       fontSrc: [
         "'self'",
         "data:",
         "https://fonts.gstatic.com",
         "https://cdnjs.cloudflare.com",
       ],
+
       imgSrc: ["'self'", "data:", "https:"],
+
       formAction: [
         "'self'",
         "https://acadmix.shop",
         "https://api.acadmix.shop",
       ],
+
+      // ✅ Needed for PDF.js Web Workers
+      workerSrc: ["'self'", "blob:"],
+
+      // ✅ Prevent <object>, <embed>, <applet> (safety)
+      objectSrc: ["'none'"],
+
+      // ✅ Disallow loading <base href> from external
+      baseUri: ["'self'"],
     },
   })
 );
+
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
