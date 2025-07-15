@@ -61,14 +61,14 @@ app.use(
           "'self'",
           "data:",
           "https:",
-          "https://cdnbbsr.s3waas.gov.in", // <-- add here
+          "https://cdnbbsr.s3waas.gov.in", // Ensure this is still needed
         ],
         connectSrc: [
           "'self'",
           "https://acadmix.shop",
           "https://api.acadmix.shop",
           "https://ucarecdn.com",
-          "https://cdnbbsr.s3waas.gov.in", // <-- add here
+          "https://cdnbbsr.s3waas.gov.in", // Ensure this is still needed
         ],
         formAction: [
           "'self'",
