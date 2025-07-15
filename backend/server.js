@@ -82,19 +82,23 @@ const allowedOrigins = [
   "https://acadmix.shop",
   "https://www.acadmix.shop",
   "https://api.acadmix.shop",
-  "https://acadmix-opal.vercel.app",
   "http://localhost:3000",
   "http://127.0.0.1:5500",
 ];
 app.use(
   cors({
-    origin: (origin, cb) =>
-      !origin || allowedOrigins.includes(origin)
-        ? cb(null, true)
-        : cb(new Error("CORS DENIED")),
-    credentials: true,
+    origin: (origin, cb) => {
+      if (!origin || origin === "null" || allowedOrigins.includes(origin)) {
+        cb(null, true);
+      } else {
+        console.warn("❌ CORS blocked:", origin);
+        cb(new Error("CORS DENIED"));
+      }
+    },
+    credentials: true, // ✅ keep this for session cookies
   })
 );
+
 
 // ─── BODY PARSERS ─────────────────────────────────────────────────────────────
 app.use(express.urlencoded({ extended: true }));
