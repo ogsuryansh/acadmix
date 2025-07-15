@@ -4,7 +4,11 @@ let pdfDoc = null,
     pageNum = 1,
     pageIsRendering = false,
     pageNumIsPending = null,
-    scale = 1.5,
+    // Start with a higher scale on mobile for better readability
+    scale = window.innerWidth < 600 ? 2.2 : 1.5,
+    minScale = 0.5,
+    maxScale = 5,
+    zoomStep = window.innerWidth < 600 ? 0.3 : 0.2,
     canvas = document.getElementById('pdf-render'),
     ctx = canvas.getContext('2d');
 
@@ -19,27 +23,48 @@ function renderPage(num) {
 
   pdfDoc.getPage(num).then(page => {
     const viewport = page.getViewport({ scale });
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
 
-    const renderCtx = {
-      canvasContext: ctx,
-      viewport: viewport
-    };
-
-    page.render(renderCtx).promise.then(() => {
-      pageIsRendering = false;
-      if (pageNumIsPending !== null) {
-        renderPage(pageNumIsPending);
-        pageNumIsPending = null;
-      }
-
-      setTimeout(() => {
-        canvas.classList.remove('fade-out');
-        canvas.classList.add('fade-in');
-        container.scrollLeft = (canvas.width - container.clientWidth) / 2;
-      }, 50);
-    });
+    // Responsive canvas width for mobile
+    if (window.innerWidth < 600) {
+      // Fit width to viewport, but allow zoom
+      const desiredWidth = Math.min(viewport.width, window.innerWidth * 0.98 * scale);
+      const ratio = desiredWidth / viewport.width;
+      canvas.width = viewport.width * ratio;
+      canvas.height = viewport.height * ratio;
+      page.render({
+        canvasContext: ctx,
+        viewport: page.getViewport({ scale: scale * ratio })
+      }).promise.then(() => {
+        pageIsRendering = false;
+        if (pageNumIsPending !== null) {
+          renderPage(pageNumIsPending);
+          pageNumIsPending = null;
+        }
+        setTimeout(() => {
+          canvas.classList.remove('fade-out');
+          canvas.classList.add('fade-in');
+          container.scrollLeft = (canvas.width - container.clientWidth) / 2;
+        }, 50);
+      });
+    } else {
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      page.render({
+        canvasContext: ctx,
+        viewport: viewport
+      }).promise.then(() => {
+        pageIsRendering = false;
+        if (pageNumIsPending !== null) {
+          renderPage(pageNumIsPending);
+          pageNumIsPending = null;
+        }
+        setTimeout(() => {
+          canvas.classList.remove('fade-out');
+          canvas.classList.add('fade-in');
+          container.scrollLeft = (canvas.width - container.clientWidth) / 2;
+        }, 50);
+      });
+    }
 
     document.getElementById('page_num').textContent = num;
   });
@@ -66,12 +91,12 @@ function nextPage() {
 }
 
 function zoomIn() {
-  scale += 0.2;
+  scale = Math.min(maxScale, scale + zoomStep);
   queueRenderPage(pageNum);
 }
 
 function zoomOut() {
-  scale = Math.max(0.2, scale - 0.2);
+  scale = Math.max(minScale, scale - zoomStep);
   queueRenderPage(pageNum);
 }
 
@@ -106,7 +131,7 @@ fetch(`https://api.acadmix.shop/api/book/${bookId}/secure-pdf`)
     alert("Something went wrong while loading the PDF.");
   });
 
-// 👇 Mobile pinch zoom remains unchanged
+// 👇 Improved Mobile Pinch Zoom
 let initialDistance = null;
 
 function getDistance(touches) {
@@ -129,11 +154,12 @@ pdfContainer.addEventListener('touchmove', (e) => {
     const currentDistance = getDistance(e.touches);
     const difference = currentDistance - initialDistance;
 
-    if (Math.abs(difference) > 20) {
+    // Make pinch zoom more sensitive and allow continuous zooming
+    if (Math.abs(difference) > 10) {
       if (difference > 0) {
-        scale += 0.1;
+        scale = Math.min(maxScale, scale + zoomStep * 0.7);
       } else {
-        scale = Math.max(0.2, scale - 0.1);
+        scale = Math.max(minScale, scale - zoomStep * 0.7);
       }
       queueRenderPage(pageNum);
       initialDistance = currentDistance;
