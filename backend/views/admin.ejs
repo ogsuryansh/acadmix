@@ -282,7 +282,8 @@
               "medium", timeStyle: "short" }); %>
               <tr>
                 <td><%= p.user.name %> (<%= p.user.email %>)</td>
-                <td><%= p.book.title %></td>
+                <td><%= p.book ? p.book.title : 'Deleted Book' %></td>
+
                 <td><%= p.utr %></td>
                 <td>
                   <%= p.status.charAt(0).toUpperCase() + p.status.slice(1) %>
