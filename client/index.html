@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy"
-        content="
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
           default-src 'self';
           connect-src 'self' https://acadmix.shop https://acadmix-opal.vercel.app https://api.acadmix.shop;
           script-src 'self' 'unsafe-inline' https://apis.google.com https://cdnjs.cloudflare.com;
@@ -13,66 +13,85 @@
           font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com;
           img-src 'self' data: https:;
           form-action 'self' https://acadmix.shop https://api.acadmix.shop;
-        ">
-  <title>ACADEMIX</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="css/main.css" />
-</head>
+        "
+    />
+    <title>ACADEMIX</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
 
-<body>
-  <nav class="navbar">
-    <div class="navbar-container">
-      <a href="#" class="brand">
-        <img src="assets/imgs/ChatGPT Image Jul 3, 2025, 11_20_27 PM.png" alt="Logo" class="logo" />
-        <span class="brand-name">ACADEMIX</span>
-      </a>
-      <div class="nav-menu">
-        <a href="https://acadmix-opal.vercel.app/courses/class11" class="nav-item">Class 11</a>
-        <a href="https://acadmix-opal.vercel.app/courses/class12" class="nav-item">Class 12</a>
-        <a href="https://acadmix-opal.vercel.app/courses/test" class="nav-item">Test</a>
-        <div class="user-join-mobile">
+  <body>
+    <nav class="navbar">
+      <div class="navbar-container">
+        <a href="#" class="brand">
+          <img
+            src="assets/imgs/ChatGPT Image Jul 3, 2025, 11_20_27 PM.png"
+            alt="Logo"
+            class="logo"
+          />
+          <span class="brand-name">ACADEMIX</span>
+        </a>
+        <div class="nav-menu">
+          <a href="https://api.acadmix.shop/courses/class11" class="nav-item"
+            >Class 11</a
+          >
+          <a href="https://api.acadmix.shop/courses/class12" class="nav-item"
+            >Class 12</a
+          >
+          <a href="https://api.acadmix.shop/courses/test" class="nav-item"
+            >Test</a
+          >
+          <div class="user-join-mobile">
+            <div class="user-icon"><i class="fas fa-user-circle"></i></div>
+            <button class="join-btn">Join Now</button>
+          </div>
+        </div>
+        <div class="user-join">
           <div class="user-icon"><i class="fas fa-user-circle"></i></div>
           <button class="join-btn">Join Now</button>
         </div>
+        <button class="nav-toggle" aria-label="Toggle menu">
+          <span class="bar"></span>
+          <span class="bar"></span>
+          <span class="bar"></span>
+        </button>
       </div>
-      <div class="user-join">
-        <div class="user-icon"><i class="fas fa-user-circle"></i></div>
-        <button class="join-btn">Join Now</button>
-      </div>
-      <button class="nav-toggle" aria-label="Toggle menu">
-        <span class="bar"></span>
-        <span class="bar"></span>
-        <span class="bar"></span>
-      </button>
-    </div>
-  </nav>
+    </nav>
 
-  <main>
-    <section class="mainHead">
-      <div class="content-wrapper">
-        <div class="text-content">
-          <h1>Welcome to ACADEMIX</h1>
-          <p>Study smarter, not harder — get exclusive access to top-notch study materials at Acadmix. Sign in &amp; get started!</p>
-          <button class="btn-get-started">
-            Get Started
-            <span class="arrow"><i class="fa-solid fa-arrow-right"></i></span>
-          </button>
+    <main>
+      <section class="mainHead">
+        <div class="content-wrapper">
+          <div class="text-content">
+            <h1>Welcome to ACADEMIX</h1>
+            <p>
+              Study smarter, not harder — get exclusive access to top-notch
+              study materials at Acadmix. Sign in &amp; get started!
+            </p>
+            <button class="btn-get-started">
+              Get Started
+              <span class="arrow"><i class="fa-solid fa-arrow-right"></i></span>
+            </button>
+          </div>
+          <div class="image-content">
+            <img
+              src="assets/imgs/ChatGPT Image Jul 3, 2025, 11_20_27 PM.png"
+              alt="Academix Logo"
+            />
+          </div>
         </div>
-        <div class="image-content">
-          <img src="assets/imgs/ChatGPT Image Jul 3, 2025, 11_20_27 PM.png" alt="Academix Logo" />
-        </div>
+      </section>
+
+      <div class="lable">Main Featured Materials</div>
+
+      <!-- 📦 Dynamic Card Container -->
+      <div class="cards" id="card-container">
+        <!-- Cards will be injected here from backend -->
       </div>
-    </section>
+    </main>
 
-    <div class="lable">Main Featured Materials</div>
-
-    <!-- 📦 Dynamic Card Container -->
-    <div class="cards" id="card-container">
-      <!-- Cards will be injected here from backend -->
-    </div>
-  </main>
-
-  <script type="module" src="js/main.js"></script>
- 
-</body>
+    <script type="module" src="js/main.js"></script>
+  </body>
 </html>
