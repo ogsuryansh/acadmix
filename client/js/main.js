@@ -103,6 +103,36 @@ else if (window.location.pathname.includes("class12")) PAGE_SECTION = "class12";
 else if (window.location.pathname.includes("test")) PAGE_SECTION = "test";
 else PAGE_SECTION = "home";
 
+// 🌀 Show loading indicator
+function showLoading(container, message = "Loading...") {
+  if (container) {
+    container.innerHTML = `
+      <div class="loading-spinner" style="text-align:center; padding: 2em;">
+        <div class="spinner" style="margin-bottom: 1em;">
+          <svg width="40" height="40" viewBox="0 0 40 40">
+            <circle cx="20" cy="20" r="18" stroke="#007bff" stroke-width="4" fill="none" stroke-linecap="round">
+              <animateTransform attributeName="transform" type="rotate" from="0 20 20" to="360 20 20" dur="1s" repeatCount="indefinite"/>
+            </circle>
+          </svg>
+        </div>
+        <div>${message}</div>
+      </div>
+    `;
+  }
+}
+
+// 🌀 Show loading on all containers
+const homeContainer = document.getElementById("card-container");
+const neetContainer = document.getElementById("card-container-neet");
+const jeeContainer = document.getElementById("card-container-jee");
+
+if (PAGE_SECTION === "home" && homeContainer) {
+  showLoading(homeContainer, "Loading books...");
+} else {
+  if (neetContainer) showLoading(neetContainer, "Loading NEET books...");
+  if (jeeContainer) showLoading(jeeContainer, "Loading JEE books...");
+}
+
 fetch(`${BASE_API}/api/books`)
   .then((res) => {
     if (!res.ok) throw new Error("Books fetch failed");
@@ -156,6 +186,7 @@ fetch(`${BASE_API}/api/books`)
     if (jeeContainer)
       jeeContainer.innerHTML = "<p>Error loading JEE materials.</p>";
   });
+
 function createCard(card) {
   const cardEl = document.createElement("div");
   cardEl.className = "card";
@@ -186,4 +217,3 @@ function createCard(card) {
   `;
   return cardEl;
 }
-
