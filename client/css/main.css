@@ -456,14 +456,14 @@ html {
 .btn-buy:hover {
   background: #e6b800;
 }
+.btn-buy.retry {
+  background-color: #f39c12;
+  color: white;
+}
+
 .btn-buy.disabled {
   background-color: #ccc;
   cursor: not-allowed;
-}
-
-.btn-buy.rejected {
-  background-color: #e74c3c;
-  color: white;
 }
 
 header {

@@ -179,7 +179,7 @@ function createCard(card) {
           : card.paymentStatus === "pending"
           ? `<button class="btn-buy disabled" disabled>⏳ Pending</button>`
           : card.paymentStatus === "rejected"
-          ? `<button class="btn-buy disabled rejected" disabled>❌ Rejected</button>`
+          ? `<a href="/api/payment/${card._id}" class="btn-buy retry">🔁 Retry Payment</a>`
           : `<a href="/api/payment/${card._id}" class="btn-buy">Buy Now</a>`
       }
     </div>
