@@ -291,9 +291,26 @@ app.post(
 app.get("/api/books", async (req, res) => {
   try {
     const books = await Book.find().sort({ createdAt: -1 });
-    res.json(books);
+    const userId = req.user?._id;
+
+    let approvedBookIds = [];
+
+    if (userId) {
+      const payments = await Payment.find({
+        user: userId,
+        status: "approved",
+      }).select("book");
+      approvedBookIds = payments.map((p) => p.book.toString());
+    }
+
+    const booksWithAccess = books.map((book) => ({
+      ...book.toObject(),
+      canRead: approvedBookIds.includes(book._id.toString()),
+    }));
+
+    res.json(booksWithAccess);
   } catch (err) {
-    console.error("❌ Error fetching books:", err);
+    console.error("❌ Error fetching books with access info:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

@@ -152,7 +152,6 @@ fetch(`${BASE_API}/api/books`)
     if (jeeContainer) jeeContainer.innerHTML = "<p>Error loading JEE materials.</p>";
   });
 
-// 🧱 Card creation helper
 function createCard(card) {
   const cardEl = document.createElement("div");
   cardEl.className = "card";
@@ -169,9 +168,10 @@ function createCard(card) {
         <p class="discount">₹${card.priceDiscounted}</p>
       </div>
       <div class="demo">Demo Available: ${card.demo === "Yes" ? "Yes" : "No"}</div>
+
       ${
-        card.pdfPath
-          ? `<a href="/client/ebook-reader/index.html?pdf=${encodeURIComponent(card.pdfPath)}" class="btn-buy" target="_blank">📖 Read</a>`
+        card.canRead && card.pdfUrl
+          ? `<a href="/client/ebook-reader/index.html?pdf=${encodeURIComponent(card.pdfUrl)}" class="btn-buy" target="_blank">📖 Read</a>`
           : `<a href="/api/payment/${card._id}" class="btn-buy">Buy Now</a>`
       }
     </div>
