@@ -33,65 +33,54 @@ const MongoStore = require("connect-mongo");
 const app = express();
 app.set("trust proxy", 1);
 
-// ─── HELMET & CSP ────────────────────────────────────────────────────────────
-// 1) Apply all default helmet protections (HSTS, referrer-policy, etc.)
-app.use(helmet());
 
 // 2) Then override only CSP so it includes your custom domains and PDF needs
+const helmet = require("helmet");
+
 app.use(
-  contentSecurityPolicy({
-    useDefaults: true,
-    directives: {
-      defaultSrc: ["'self'"],
-
-      connectSrc: [
-        "'self'",
-        "https://acadmix.shop",
-        "https://www.acadmix.shop",
-        "https://api.acadmix.shop",
-        "https://ucarecdn.com", // ✅ Needed if PDFs are hosted here
-      ],
-
-      scriptSrc: [
-        "'self'",
-        "'unsafe-inline'", // ✅ Needed for inline scripts like PDF.js
-        "https://apis.google.com",
-        "https://cdnjs.cloudflare.com",
-      ],
-
-      styleSrc: [
-        "'self'",
-        "'unsafe-inline'",
-        "https://fonts.googleapis.com",
-        "https://cdnjs.cloudflare.com",
-      ],
-
-      fontSrc: [
-        "'self'",
-        "data:",
-        "https://fonts.gstatic.com",
-        "https://cdnjs.cloudflare.com",
-      ],
-
-      imgSrc: ["'self'", "data:", "https:"],
-
-      formAction: [
-        "'self'",
-        "https://acadmix.shop",
-        "https://api.acadmix.shop",
-      ],
-
-      // ✅ Needed for PDF.js Web Workers
-      workerSrc: ["'self'", "blob:"],
-
-      // ✅ Prevent <object>, <embed>, <applet> (safety)
-      objectSrc: ["'none'"],
-
-      // ✅ Disallow loading <base href> from external
-      baseUri: ["'self'"],
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://apis.google.com",
+          "https://cdnjs.cloudflare.com",
+        ],
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://fonts.googleapis.com",
+          "https://cdnjs.cloudflare.com",
+        ],
+        fontSrc: [
+          "'self'",
+          "data:",
+          "https://fonts.gstatic.com",
+          "https://cdnjs.cloudflare.com",
+        ],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: [
+          "'self'",
+          "https://acadmix.shop",
+          "https://api.acadmix.shop",
+          "https://ucarecdn.com",
+        ],
+        formAction: [
+          "'self'",
+          "https://acadmix.shop",
+          "https://api.acadmix.shop",
+        ],
+        workerSrc: ["'self'", "blob:"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+      },
     },
   })
 );
+
 
 
 // ─── CORS ────────────────────────────────────────────────────────────────────

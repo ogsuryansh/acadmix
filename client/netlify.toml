@@ -7,9 +7,11 @@
       style-src   'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
       font-src    'self' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com data:;
       img-src     'self' data: https:;
-      connect-src 'self' https://acadmix.shop https://www.acadmix.shop https://api.acadmix.shop https://ucarecdn.com;
+      connect-src 'self' https://acadmix.shop https://api.acadmix.shop https://ucarecdn.com;
+      form-action 'self' https://acadmix.shop https://api.acadmix.shop;
       worker-src  'self' blob:;
     """
+
 
 [[redirects]]
   from = "/api/*"
