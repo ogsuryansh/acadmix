@@ -75,6 +75,14 @@ function zoomOut() {
   queueRenderPage(pageNum);
 }
 
+// Attach event listeners to toolbar buttons
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelector('.btn-prev').addEventListener('click', prevPage);
+  document.querySelector('.btn-next').addEventListener('click', nextPage);
+  document.querySelector('.btn-zoom-in').addEventListener('click', zoomIn);
+  document.querySelector('.btn-zoom-out').addEventListener('click', zoomOut);
+});
+
 // ✅ Dynamic PDF loading based on bookId
 const urlParams = new URLSearchParams(window.location.search);
 const bookId = urlParams.get("id");
@@ -97,7 +105,6 @@ fetch(`https://api.acadmix.shop/api/book/${bookId}/secure-pdf`)
     console.error("Error fetching PDF:", err);
     alert("Something went wrong while loading the PDF.");
   });
-
 
 // 👇 Mobile pinch zoom remains unchanged
 let initialDistance = null;
