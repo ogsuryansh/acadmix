@@ -35,7 +35,6 @@ app.set("trust proxy", 1);
 
 
 // 2) Then override only CSP so it includes your custom domains and PDF needs
-const helmet = require("helmet");
 
 app.use(
   helmet({
