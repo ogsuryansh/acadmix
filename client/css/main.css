@@ -418,7 +418,12 @@ html {
   font-weight: 600;
   margin: 0.25rem 0 0.75rem;
 }
-
+.card .page-count {
+  font-size: 0.98rem;
+  color: #2563eb;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
 .price {
   display: flex;
   flex-direction: column;

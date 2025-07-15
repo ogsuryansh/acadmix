@@ -198,12 +198,12 @@ function createCard(card) {
     <div class="card-body">
       <h1 class="category">${card.category}</h1>
       <h3 class="card-title">${card.title}</h3>
+      <div class="page-count">Pages: ${card.pageCount || "N/A"}</div>
       <div class="price">
         <p class="original">₹${card.priceOriginal}</p>
         <p class="discount">₹${card.priceDiscounted}</p>
       </div>
       <div class="demo">Demo Available: ${card.demo === "Yes" ? "Yes" : "No"}</div>
-
       ${
         card.canRead && card.pdfUrl
           ? `<a href="https://api.acadmix.shop/reader?id=${card._id}" class="btn-buy" target="_blank">📖 Read</a>`
