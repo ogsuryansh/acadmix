@@ -725,8 +725,7 @@ header h1 {
 /* Responsive */
 @media (max-width: 900px) {
   .footer-container {
-    flex-wrap: wrap;
-    gap: 24px;
+    display: none;
   }
   .footer-col {
     flex: 1 1 45%;
@@ -735,10 +734,11 @@ header h1 {
 }
 
 @media (max-width: 600px) {
+  .footer{
+    background-color: transparent;
+  }
   .footer-container {
-    flex-direction: column;
-    gap: 0;
-    padding: 0 12px;
+    display: none;
   }
   .footer-col {
     min-width: 100%;
@@ -746,6 +746,6 @@ header h1 {
   }
   .footer-bottom {
     font-size: 14px;
-    padding: 12px 0;
+    padding: 18px 0;
   }
 }
