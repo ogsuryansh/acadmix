@@ -211,16 +211,35 @@ app.get("/reader", (req, res) => {
 });
 
 // Secure PDF JSON endpoint
-app.get("/api/book/:id/secure-pdf", async (req, res) => {
+const isLoggedIn = require("./middleware/isLoggedIn"); // make sure this works for session auth
+
+app.get("/api/book/:id/secure-pdf", isLoggedIn, async (req, res) => {
   try {
-    const book = await Book.findById(req.params.id);
-    if (!book?.pdfUrl) return res.status(404).json({ error: "Not found" });
+    const bookId = req.params.id;
+    const userId = req.user._id;
+
+    const payment = await Payment.findOne({
+      user: userId,
+      book: bookId,
+      status: "approved",
+    });
+
+    if (!payment) {
+      return res.status(403).json({ error: "Access denied. Payment not found." });
+    }
+
+    const book = await Book.findById(bookId);
+    if (!book || !book.pdfUrl) {
+      return res.status(404).json({ error: "Book or PDF not found" });
+    }
+
     res.json({ url: book.pdfUrl });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Server error" });
+  } catch (err) {
+    console.error("❌ Secure PDF Fetch Error:", err);
+    res.status(500).json({ error: "Failed to fetch secure PDF" });
   }
 });
+
 
 // Payment routes
 const paymentRouter = require("./routes/payment");

@@ -151,7 +151,6 @@ fetch(`${BASE_API}/api/books`)
     if (neetContainer) neetContainer.innerHTML = "<p>Error loading NEET materials.</p>";
     if (jeeContainer) jeeContainer.innerHTML = "<p>Error loading JEE materials.</p>";
   });
-
 function createCard(card) {
   const cardEl = document.createElement("div");
   cardEl.className = "card";
@@ -171,7 +170,7 @@ function createCard(card) {
 
       ${
         card.canRead && card.pdfUrl
-          ? `<a href="/client/ebook-reader/index.html?pdf=${encodeURIComponent(card.pdfUrl)}" class="btn-buy" target="_blank">📖 Read</a>`
+          ? `<a href="/reader?id=${card._id}" class="btn-buy" target="_blank">📖 Read</a>`
           : `<a href="/api/payment/${card._id}" class="btn-buy">Buy Now</a>`
       }
     </div>
