@@ -33,7 +33,6 @@ const app = express();
 app.set("trust proxy", 1);
 
 // 2) Then override only CSP so it includes your custom domains and PDF needs
-
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -58,12 +57,18 @@ app.use(
           "https://fonts.gstatic.com",
           "https://cdnjs.cloudflare.com",
         ],
-        imgSrc: ["'self'", "data:", "https:"],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "https:",
+          "https://cdnbbsr.s3waas.gov.in", // <-- add here
+        ],
         connectSrc: [
           "'self'",
           "https://acadmix.shop",
           "https://api.acadmix.shop",
           "https://ucarecdn.com",
+          "https://cdnbbsr.s3waas.gov.in", // <-- add here
         ],
         formAction: [
           "'self'",
