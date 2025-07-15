@@ -419,10 +419,11 @@ html {
   margin: 0.25rem 0 0.75rem;
 }
 .card .page-count {
-  font-size: 0.98rem;
-  color: #2563eb;
+  font-size: 0.97rem;
+  color: #555;
   margin-bottom: 0.5rem;
   font-weight: 500;
+  letter-spacing: 0.2px;
 }
 .price {
   display: flex;
