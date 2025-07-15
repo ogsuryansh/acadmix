@@ -171,17 +171,19 @@ function createCard(card) {
         <p class="original">₹${card.priceOriginal}</p>
         <p class="discount">₹${card.priceDiscounted}</p>
       </div>
-      <div class="demo">Demo Available: ${
-        card.demo === "Yes" ? "Yes" : "No"
-      }</div>
+      <div class="demo">Demo Available: ${card.demo === "Yes" ? "Yes" : "No"}</div>
 
       ${
         card.canRead && card.pdfUrl
-          ? `<a href="https://api.acadmix.shop/reader?id=${card._id}" class="btn-buy" target="_blank">📖 Read</a>
-`
+          ? `<a href="https://api.acadmix.shop/reader?id=${card._id}" class="btn-buy" target="_blank">📖 Read</a>`
+          : card.paymentStatus === "pending"
+          ? `<button class="btn-buy disabled" disabled>⏳ Pending</button>`
+          : card.paymentStatus === "rejected"
+          ? `<button class="btn-buy disabled rejected" disabled>❌ Rejected</button>`
           : `<a href="/api/payment/${card._id}" class="btn-buy">Buy Now</a>`
       }
     </div>
   `;
   return cardEl;
 }
+

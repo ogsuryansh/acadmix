@@ -456,6 +456,15 @@ html {
 .btn-buy:hover {
   background: #e6b800;
 }
+.btn-buy.disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.btn-buy.rejected {
+  background-color: #e74c3c;
+  color: white;
+}
 
 header {
   width: 100%;

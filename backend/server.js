@@ -317,24 +317,26 @@ app.get("/api/books", async (req, res) => {
     const books = await Book.find().sort({ createdAt: -1 });
     const userId = req.user?._id;
 
-    let approvedBookIds = [];
-
+    let payments = [];
     if (userId) {
-      const payments = await Payment.find({
-        user: userId,
-        status: "approved",
-      }).select("book");
-      approvedBookIds = payments.map((p) => p.book.toString());
+      payments = await Payment.find({ user: userId }).lean();
     }
 
-    const booksWithAccess = books.map((book) => ({
-      ...book.toObject(),
-      canRead: approvedBookIds.includes(book._id.toString()),
-    }));
+    const booksWithAccess = books.map((book) => {
+      const userPayment = payments.find(
+        (p) => p.book.toString() === book._id.toString()
+      );
+      return {
+        ...book.toObject(),
+        canRead: userPayment?.status === "approved",
+        paymentStatus: userPayment?.status || null,
+        pdfUrl: book.pdfUrl || null,
+      };
+    });
 
     res.json(booksWithAccess);
   } catch (err) {
-    console.error("❌ Error fetching books with access info:", err);
+    console.error("❌ Error fetching books:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
