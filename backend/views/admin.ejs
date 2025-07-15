@@ -6,10 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
       :root {
-        --primary: #ff5722;
-        --background: #f5f5f5;
+        --primary: #2563eb;
+        --primary-dark: #1e40af;
+        --primary-light: #3b82f6;
+        --background: #f0f4f8;
         --card-bg: #fff;
-        --text: #333;
+        --text: #222;
+        --sidebar-bg: linear-gradient(135deg, #2563eb 60%, #1e40af 100%);
+        --shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
+        --border-radius: 16px;
       }
 
       * {
@@ -19,7 +24,7 @@
       }
 
       body {
-        font-family: "Segoe UI", sans-serif;
+        font-family: "Segoe UI", "Roboto", Arial, sans-serif;
         background-color: var(--background);
         color: var(--text);
       }
@@ -30,102 +35,150 @@
       }
 
       .sidebar {
-        width: 220px;
-        background: var(--primary);
+        width: 240px;
+        background: var(--sidebar-bg);
         color: #fff;
         padding: 2rem 1rem;
         transition: transform 0.3s ease;
+        box-shadow: 2px 0 12px rgba(37, 99, 235, 0.08);
+        z-index: 1000;
       }
 
       .sidebar h2 {
-        margin-bottom: 2rem;
+        margin-bottom: 2.5rem;
         text-align: center;
+        font-size: 2rem;
+        letter-spacing: 2px;
+        font-weight: 700;
       }
 
       .sidebar a {
         display: block;
         color: #fff;
         text-decoration: none;
-        margin: 1rem 0;
-        font-weight: bold;
-        cursor: pointer;
+        margin: 1.2rem 0;
+        font-weight: 500;
+        font-size: 1.1rem;
+        padding: 0.7rem 1rem;
+        border-radius: 8px;
+        transition: background 0.2s;
+      }
+
+      .sidebar a[data-tab]:hover,
+      .sidebar a[data-tab].active {
+        background: var(--primary-light);
+        color: #fff;
       }
 
       .hamburger {
         display: none;
-        font-size: 1.8rem;
+        font-size: 2rem;
         cursor: pointer;
-        margin: 1rem;
+        margin: 1rem 0 1rem 1rem;
+        color: var(--primary);
       }
 
       .close-btn {
         display: none;
-        font-size: 1.5rem;
+        font-size: 1.7rem;
         color: #fff;
         text-align: right;
         cursor: pointer;
+        margin-bottom: 1.5rem;
       }
 
       .main {
         flex: 1;
-        padding: 2rem;
+        padding: 2.5rem 2rem;
+        min-width: 0;
       }
 
       .tab {
         display: none;
+        animation: fadeIn 0.4s;
       }
 
       .tab.active {
         display: block;
       }
 
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px);}
+        to { opacity: 1; transform: translateY(0);}
+      }
+
       .dashboard-cards {
         display: flex;
-        gap: 1.5rem;
+        gap: 2rem;
         flex-wrap: wrap;
-        margin-bottom: 2rem;
+        margin-bottom: 2.5rem;
       }
 
       .card {
         background: var(--card-bg);
-        padding: 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 2rem 1.5rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
         flex: 1;
-        min-width: 200px;
+        min-width: 220px;
         text-align: center;
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #e0e7ef;
+      }
+
+      .card:hover {
+        transform: translateY(-6px) scale(1.03);
+        box-shadow: 0 8px 32px rgba(37, 99, 235, 0.12);
       }
 
       .card h3 {
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.7rem;
         color: var(--primary);
+        font-size: 1.3rem;
+        font-weight: 600;
+      }
+
+      .card p {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-dark);
       }
 
       table {
         width: 100%;
         background: #fff;
-        border-radius: 12px;
+        border-radius: var(--border-radius);
         overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--shadow);
+        border-collapse: collapse;
+        margin-bottom: 2rem;
       }
 
       th,
       td {
-        padding: 1rem;
+        padding: 1rem 0.8rem;
         text-align: left;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 1rem;
       }
 
       th {
-        background: #fafafa;
+        background: #f3f6fa;
+        color: var(--primary-dark);
+        font-weight: 600;
+      }
+
+      tr:last-child td {
+        border-bottom: none;
       }
 
       img.user-img {
-        width: 30px;
-        height: 30px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         object-fit: cover;
-        margin-right: 8px;
+        margin-right: 10px;
+        border: 2px solid var(--primary-light);
       }
 
       .user-info {
@@ -133,42 +186,26 @@
         align-items: center;
       }
 
-      /* Responsive */
-      @media (max-width: 768px) {
-        .hamburger {
-          display: block;
-        }
-        .sidebar {
-          position: fixed;
-          top: 0;
-          left: 0;
-          height: 100%;
-          transform: translateX(-100%);
-          z-index: 999;
-        }
-        .sidebar.show {
-          transform: translateX(0);
-        }
-        .close-btn {
-          display: block;
-          margin-bottom: 1rem;
-        }
-      }
-
       .btn-group {
         display: flex;
         flex-wrap: wrap;
         gap: 1rem;
-        margin: 1rem 0;
+        margin: 1.5rem 0;
       }
 
       .btn-group a {
-        padding: 0.5rem 1rem;
+        padding: 0.6rem 1.3rem;
         background: var(--primary);
         color: #fff;
-        border-radius: 5px;
+        border-radius: 6px;
         text-decoration: none;
-        font-weight: bold;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: background 0.2s;
+      }
+
+      .btn-group a:hover {
+        background: var(--primary-dark);
       }
 
       /* Payment actions */
@@ -177,18 +214,96 @@
         margin-right: 0.5rem;
       }
       .actions button {
-        padding: 0.3rem 0.6rem;
+        padding: 0.4rem 0.8rem;
         border: none;
-        border-radius: 4px;
+        border-radius: 5px;
         cursor: pointer;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: background 0.2s;
       }
       .actions .approve {
-        background: #28a745;
+        background: #22c55e;
         color: #fff;
       }
+      .actions .approve:hover {
+        background: #16a34a;
+      }
       .actions .reject {
-        background: #dc3545;
+        background: #ef4444;
         color: #fff;
+      }
+      .actions .reject:hover {
+        background: #b91c1c;
+      }
+
+      /* Responsive Design */
+      @media (max-width: 1100px) {
+        .dashboard-cards {
+          flex-direction: column;
+        }
+        .card {
+          min-width: 0;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .main {
+          padding: 1.5rem 0.5rem;
+        }
+        .sidebar {
+          width: 200px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .admin-container {
+          flex-direction: column;
+        }
+        .sidebar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          height: 100%;
+          transform: translateX(-100%);
+          z-index: 999;
+          width: 70vw;
+          max-width: 320px;
+          min-width: 180px;
+          box-shadow: 2px 0 16px rgba(37, 99, 235, 0.18);
+        }
+        .sidebar.show {
+          transform: translateX(0);
+        }
+        .close-btn {
+          display: block;
+        }
+        .hamburger {
+          display: block;
+        }
+        .main {
+          padding: 1.2rem 0.5rem;
+        }
+        .dashboard-cards {
+          gap: 1rem;
+        }
+      }
+
+      @media (max-width: 500px) {
+        .sidebar {
+          width: 90vw;
+          min-width: 0;
+        }
+        .main {
+          padding: 0.7rem 0.2rem;
+        }
+        th, td {
+          padding: 0.6rem 0.3rem;
+          font-size: 0.95rem;
+        }
+        .card {
+          padding: 1.2rem 0.7rem;
+        }
       }
     </style>
   </head>
@@ -198,7 +313,7 @@
       <div class="sidebar" id="sidebar">
         <div class="close-btn" id="closeSidebar">✖</div>
         <h2>Admin</h2>
-        <a data-tab="dashboard-tab">Dashboard</a>
+        <a data-tab="dashboard-tab" class="active">Dashboard</a>
         <a data-tab="books-tab">Books</a>
         <a data-tab="payments-tab">Payments</a>
         <a href="/api/admin/logout">Logout</a>
@@ -283,7 +398,6 @@
               <tr>
                 <td><%= p.user.name %> (<%= p.user.email %>)</td>
                 <td><%= p.book ? p.book.title : 'Deleted Book' %></td>
-
                 <td><%= p.utr %></td>
                 <td>
                   <%= p.status.charAt(0).toUpperCase() + p.status.slice(1) %>
@@ -320,9 +434,15 @@
 
         sidebarLinks.forEach((link) => {
           link.addEventListener("click", () => {
+            sidebarLinks.forEach(l => l.classList.remove("active"));
+            link.classList.add("active");
             const tabId = link.getAttribute("data-tab");
             tabs.forEach((tab) => tab.classList.remove("active"));
             document.getElementById(tabId).classList.add("active");
+            // On mobile, close sidebar after click
+            if (window.innerWidth <= 768) {
+              document.getElementById("sidebar").classList.remove("show");
+            }
           });
         });
 
