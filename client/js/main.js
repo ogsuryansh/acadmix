@@ -127,7 +127,9 @@ fetch(`${BASE_API}/api/books`)
 
       if (neetContainer) {
         neetContainer.innerHTML = "";
-        neetCards.forEach((card) => neetContainer.appendChild(createCard(card)));
+        neetCards.forEach((card) =>
+          neetContainer.appendChild(createCard(card))
+        );
         if (neetCards.length === 0) {
           neetContainer.innerHTML = "<p>📚 NEET Content Coming Soon</p>";
         }
@@ -147,9 +149,12 @@ fetch(`${BASE_API}/api/books`)
     const homeContainer = document.getElementById("card-container");
     const neetContainer = document.getElementById("card-container-neet");
     const jeeContainer = document.getElementById("card-container-jee");
-    if (homeContainer) homeContainer.innerHTML = "<p>Error loading materials.</p>";
-    if (neetContainer) neetContainer.innerHTML = "<p>Error loading NEET materials.</p>";
-    if (jeeContainer) jeeContainer.innerHTML = "<p>Error loading JEE materials.</p>";
+    if (homeContainer)
+      homeContainer.innerHTML = "<p>Error loading materials.</p>";
+    if (neetContainer)
+      neetContainer.innerHTML = "<p>Error loading NEET materials.</p>";
+    if (jeeContainer)
+      jeeContainer.innerHTML = "<p>Error loading JEE materials.</p>";
   });
 function createCard(card) {
   const cardEl = document.createElement("div");
@@ -166,11 +171,14 @@ function createCard(card) {
         <p class="original">₹${card.priceOriginal}</p>
         <p class="discount">₹${card.priceDiscounted}</p>
       </div>
-      <div class="demo">Demo Available: ${card.demo === "Yes" ? "Yes" : "No"}</div>
+      <div class="demo">Demo Available: ${
+        card.demo === "Yes" ? "Yes" : "No"
+      }</div>
 
       ${
         card.canRead && card.pdfUrl
-          ? `<a href="/reader?id=${card._id}" class="btn-buy" target="_blank">📖 Read</a>`
+          ? `<a href="https://api.acadmix.shop/reader?id=${card._id}" class="btn-buy" target="_blank">📖 Read</a>
+`
           : `<a href="/api/payment/${card._id}" class="btn-buy">Buy Now</a>`
       }
     </div>
