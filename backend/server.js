@@ -18,8 +18,8 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const session = require("express-session");
 const serverless = require("serverless-http");
 const cors = require("cors");
-const helmet = require("helmet");                  // full helmet bundle
-const { contentSecurityPolicy } = helmet;          // standalone CSP
+const helmet = require("helmet"); // full helmet bundle
+const { contentSecurityPolicy } = helmet; // standalone CSP
 const path = require("path");
 const QRCode = require("qrcode");
 
@@ -28,11 +28,9 @@ const Book = require("./models/Book");
 const Payment = require("./models/Payment");
 const MongoStore = require("connect-mongo");
 
-
 // ─── EXPRESS APP ─────────────────────────────────────────────────────────────
 const app = express();
 app.set("trust proxy", 1);
-
 
 // 2) Then override only CSP so it includes your custom domains and PDF needs
 
@@ -80,8 +78,6 @@ app.use(
   })
 );
 
-
-
 // ─── CORS ────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
   "https://acadmix.shop",
@@ -103,7 +99,6 @@ app.use(
     credentials: true, // ✅ keep this for session cookies
   })
 );
-
 
 // ─── BODY PARSERS ─────────────────────────────────────────────────────────────
 app.use(express.urlencoded({ extended: true }));
@@ -144,8 +139,8 @@ app.use(
     }),
     cookie: {
       httpOnly: true,
-      secure: isProd,                         // only over HTTPS in prod
-      sameSite: isProd ? "none" : "lax",      // none for cross‑site in prod
+      secure: isProd, // only over HTTPS in prod
+      sameSite: isProd ? "none" : "lax", // none for cross‑site in prod
       ...(isProd && { domain: ".acadmix.shop" }), // only set domain in prod
     },
   })
@@ -156,7 +151,9 @@ app.use(passport.session());
 
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser((id, done) =>
-  User.findById(id).then(u => done(null, u)).catch(e => done(e))
+  User.findById(id)
+    .then((u) => done(null, u))
+    .catch((e) => done(e))
 );
 passport.use(
   new GoogleStrategy(
@@ -190,10 +187,7 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
 // Public reader assets
-app.use(
-  "/reader-assets",
-  express.static(path.join(__dirname, "ebook-reader"))
-);
+app.use("/reader-assets", express.static(path.join(__dirname, "ebook-reader")));
 app.get("/reader", (req, res) => {
   res.sendFile(path.join(__dirname, "ebook-reader", "index.html"));
 });
@@ -213,7 +207,9 @@ app.get("/api/book/:id/secure-pdf", isLoggedIn, async (req, res) => {
     });
 
     if (!payment) {
-      return res.status(403).json({ error: "Access denied. Payment not found." });
+      return res
+        .status(403)
+        .json({ error: "Access denied. Payment not found." });
     }
 
     const book = await Book.findById(bookId);
@@ -227,7 +223,6 @@ app.get("/api/book/:id/secure-pdf", isLoggedIn, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch secure PDF" });
   }
 });
-
 
 // Payment routes
 const paymentRouter = require("./routes/payment");
@@ -323,9 +318,12 @@ app.get("/api/books", async (req, res) => {
     }
 
     const booksWithAccess = books.map((book) => {
-      const userPayment = payments.find(
-        (p) => p.book.toString() === book._id.toString()
-      );
+      const userPayments = payments
+        .filter((p) => p.book.toString() === book._id.toString())
+        .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)); // latest first
+
+      const userPayment = userPayments[0]; // latest payment
+
       return {
         ...book.toObject(),
         canRead: userPayment?.status === "approved",
@@ -620,14 +618,19 @@ app.get("/courses/test", async (req, res) => {
 });
 
 // Static & error handling
-app.use("/uploads", express.static(path.join(__dirname, "..", "public", "uploads")));
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "..", "public", "uploads"))
+);
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 // Global error handler (JSON)
 app.use((err, req, res, next) => {
   console.error("💥 Uncaught Error:", err);
-  res.status(500).json({ error: "Internal Server Error", message: err.message });
+  res
+    .status(500)
+    .json({ error: "Internal Server Error", message: err.message });
 });
 
 // Client build (if any)
