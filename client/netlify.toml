@@ -7,16 +7,13 @@
       style-src   'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
       font-src    'self' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com data:;
       img-src     'self' data: https:;
-      connect-src 'self' https://acadmix.shop https://api.acadmix.shop https://ucarecdn.com;
+      connect-src 'self' https://acadmix.shop https://api.acadmix.shop https://ucarecdn.com https://cdnbbsr.s3waas.gov.in;  # Add the S3 URL here
       form-action 'self' https://acadmix.shop https://api.acadmix.shop;
       worker-src  'self' blob:;
     """
-
 
 [[redirects]]
   from = "/api/*"
   to = "https://api.acadmix.shop/api/:splat"
   status = 200
   force = true
-
-
