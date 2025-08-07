@@ -43,7 +43,7 @@ router.get("/payment/:bookId", isLoggedIn, async (req, res, next) => {
 });
 
 // API endpoint for payment data
-router.get("/api/payment/:bookId", isLoggedIn, async (req, res) => {
+router.get("/payment/:bookId", isLoggedIn, async (req, res) => {
   try {
     const book = await Book.findById(req.params.bookId);
     if (!book) return res.status(404).json({ error: "Book not found" });
@@ -72,7 +72,7 @@ router.get("/api/payment/:bookId", isLoggedIn, async (req, res) => {
 });
 
 // Dynamic QR code generation endpoint
-router.get("/api/payment/:bookId/qr", isLoggedIn, async (req, res) => {
+router.get("/payment/:bookId/qr", isLoggedIn, async (req, res) => {
   try {
     const { amount, upiId, payeeName } = req.query;
     const book = await Book.findById(req.params.bookId);
@@ -105,7 +105,7 @@ router.get("/api/payment/:bookId/qr", isLoggedIn, async (req, res) => {
 });
 
 // Handle payment submission
-router.post("/api/payment/submit", isLoggedIn, async (req, res) => {
+router.post("/payment/submit", isLoggedIn, async (req, res) => {
   try {
     const { utr, bookId } = req.body;
     
@@ -129,7 +129,7 @@ router.post("/api/payment/submit", isLoggedIn, async (req, res) => {
 });
 
 // Admin endpoint to update payment configuration
-router.put("/api/admin/payment-config", isLoggedIn, async (req, res) => {
+router.put("/admin/payment-config", isLoggedIn, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: "Admin access required" });
@@ -153,7 +153,7 @@ router.put("/api/admin/payment-config", isLoggedIn, async (req, res) => {
 });
 
 // Admin endpoint to get current payment configuration
-router.get("/api/admin/payment-config", isLoggedIn, async (req, res) => {
+router.get("/admin/payment-config", isLoggedIn, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: "Admin access required" });

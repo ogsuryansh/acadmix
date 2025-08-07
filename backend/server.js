@@ -602,46 +602,6 @@ app.get("/api/books/:section", async (req, res) => {
   }
 });
 
-// Payment API
-app.get("/api/payment/:bookId", authenticateToken, async (req, res) => {
-  try {
-    const book = await Book.findById(req.params.bookId);
-    if (!book) return res.status(404).json({ error: "Book not found" });
-
-    const upiLink = `upi://pay?pa=students4396@okhdfcbank&pn=Acadmix&am=${book.priceDiscounted}&cu=INR`;
-    const qrDataUrl = await QRCode.toDataURL(upiLink, {
-      errorCorrectionLevel: "H",
-      width: 300,
-    });
-
-    res.json({
-      book,
-      qrDataUrl,
-      upiLink,
-    });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to generate payment" });
-  }
-});
-
-app.post("/api/payment/submit", authenticateToken, async (req, res) => {
-  try {
-    const { utr, bookId } = req.body;
-    await Payment.create({
-      user: req.user.id,
-      book: bookId,
-      utr,
-      status: "pending",
-      submittedAt: new Date(),
-    });
-
-    res.json({ message: "Payment submitted successfully" });
-  } catch (err) {
-    console.error("❌ Payment submission error:", err);
-    res.status(500).json({ error: "Payment submission failed" });
-  }
-});
-
 // Secure PDF endpoint
 app.get("/api/book/:id/secure-pdf", authenticateToken, async (req, res) => {
   try {
