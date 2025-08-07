@@ -1,7 +1,12 @@
 import axios from 'axios';
 
-// Use environment variable for API URL, fallback to relative path for local development
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+// Detect environment and set appropriate base URL
+const isDevelopment = import.meta.env.DEV;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+  (isDevelopment ? 'http://localhost:5000/api' : 'https://api.acadmix.shop/api');
+
+console.log('🌍 Environment:', isDevelopment ? 'Development' : 'Production');
+console.log('🔗 API Base URL:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
