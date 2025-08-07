@@ -1,0 +1,1310 @@
+const isProd = process.env.NODE_ENV === "production";
+
+require("dotenv").config();
+console.log("🔑 ENV Check:", {
+  GOOGLE_CLIENT_ID: !!process.env.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: !!process.env.GOOGLE_CLIENT_SECRET,
+  MONGO_URI: !!process.env.MONGO_URI,
+  JWT_SECRET: !!process.env.JWT_SECRET,
+  ADMIN_USER: !!process.env.ADMIN_USER,
+  ADMIN_PASS: !!process.env.ADMIN_PASS,
+});
+console.log("🚀 Starting MERN API server...");
+
+const express = require("express");
+const mongoose = require("mongoose");
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const session = require("express-session");
+const serverless = require("serverless-http");
+const cors = require("cors");
+const helmet = require("helmet");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const rateLimit = require("express-rate-limit");
+const QRCode = require("qrcode");
+const path = require("path");
+
+const User = require("./models/User");
+const Book = require("./models/Book");
+const Payment = require("./models/Payment");
+const MongoStore = require("connect-mongo");
+const upload = require("./middleware/upload");
+const { uploadImage, uploadPdf, deleteFile, getPublicIdFromUrl } = require("./utils/cloudStorage");
+
+// ─── EXPRESS APP ─────────────────────────────────────────────────────────────
+const app = express();
+app.set("trust proxy", 1);
+
+// ─── SECURITY MIDDLEWARE ─────────────────────────────────────────────────────
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://apis.google.com",
+          "https://cdnjs.cloudflare.com",
+        ],
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://fonts.googleapis.com",
+          "https://cdnjs.cloudflare.com",
+        ],
+        fontSrc: [
+          "'self'",
+          "data:",
+          "https://fonts.gstatic.com",
+          "https://cdnjs.cloudflare.com",
+        ],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "https:",
+        ],
+        connectSrc: [
+          "'self'",
+          "https://acadmix.shop",
+          "https://api.acadmix.shop",
+        ],
+        formAction: [
+          "'self'",
+          "https://acadmix.shop",
+          "https://api.acadmix.shop",
+        ],
+        workerSrc: ["'self'", "blob:"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+      },
+    },
+  })
+);
+
+// ─── RATE LIMITING ──────────────────────────────────────────────────────────
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: { error: "Too many requests from this IP" }
+});
+app.use("/api/", limiter);
+
+// ─── CORS ────────────────────────────────────────────────────────────────────
+const allowedOrigins = [
+  "https://acadmix.shop",
+  "https://www.acadmix.shop",
+  "https://api.acadmix.shop",
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5500",
+  "http://localhost:5000",
+];
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin || origin === "null" || allowedOrigins.includes(origin)) {
+        cb(null, true);
+      } else {
+        console.warn("❌ CORS blocked:", origin);
+        cb(new Error("CORS DENIED"));
+      }
+    },
+    credentials: true,
+  })
+);
+
+// ─── BODY PARSERS ─────────────────────────────────────────────────────────────
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+// ─── MONGO CONNECTION ─────────────────────────────────────────────────────────
+async function connectToDB() {
+  if (global._mongoConn) return global._mongoConn;
+  if (!global._mongoPromise) {
+      global._mongoPromise = mongoose.connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 5000,
+  }).catch(err => {
+      console.error("❌ MongoDB Connection Error:", err.message);
+      global._mongoPromise = null;
+      throw err;
+    });
+  }
+  global._mongoConn = await global._mongoPromise;
+  return global._mongoConn;
+}
+
+// Initialize MongoDB connection on startup (non-blocking)
+connectToDB().then(() => {
+  console.log("✅ MongoDB connected successfully");
+}).catch(err => {
+  console.error("❌ Failed to connect to MongoDB:", err.message);
+  console.log("⚠️  Server will start but some features may not work");
+});
+
+app.use(async (req, res, next) => {
+  try {
+    await connectToDB();
+    next();
+  } catch (err) {
+    console.error("❌ DB Connection Error:", err);
+    res.status(500).json({ error: "Database connection failed" });
+  }
+});
+
+// ─── SESSIONS & PASSPORT ──────────────────────────────────────────────────────
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "fallback-secret",
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI,
+      ttl: 14 * 24 * 60 * 60, // 14 days
+    }),
+    cookie: {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
+      ...(isProd && { domain: ".acadmix.shop" }),
+    },
+  })
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.serializeUser((user, done) => done(null, user.id));
+passport.deserializeUser((id, done) =>
+  User.findById(id)
+    .then((u) => done(null, u))
+    .catch((e) => done(e))
+);
+
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "https://api.acadmix.shop/api/auth/google/callback",
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        let user = await User.findOne({ googleId: profile.id });
+        
+        if (!user) {
+          // Check if user exists with same email but different auth method
+          const existingUser = await User.findOne({ email: profile.emails?.[0]?.value });
+          if (existingUser) {
+            // Link Google account to existing user
+            user = await User.findByIdAndUpdate(
+              existingUser._id,
+              { 
+                googleId: profile.id,
+                photo: profile.photos?.[0]?.value
+              },
+              { new: true }
+            );
+          } else {
+            // Create new user
+            user = await User.create({
+              googleId: profile.id,
+              name: profile.displayName,
+              email: profile.emails?.[0]?.value,
+              photo: profile.photos?.[0]?.value,
+              role: 'user',
+              isActive: true
+            });
+          }
+        } else {
+          // Update existing user's info
+          user = await User.findByIdAndUpdate(
+            user._id,
+            {
+              name: profile.displayName,
+              email: profile.emails?.[0]?.value,
+              photo: profile.photos?.[0]?.value
+            },
+            { new: true }
+          );
+        }
+        
+        done(null, user);
+      } catch (err) {
+        console.error("🚨 GoogleStrategy error:", err);
+        done(err, null);
+      }
+    }
+  )
+);
+
+// ─── JWT MIDDLEWARE ──────────────────────────────────────────────────────────
+const generateToken = (user) => {
+  return jwt.sign(
+    { 
+      id: user._id, 
+      email: user.email, 
+      name: user.name,
+      role: user.role || 'user'
+    },
+    process.env.JWT_SECRET || "fallback-jwt-secret",
+    { expiresIn: "7d" }
+  );
+};
+
+const authenticateToken = async (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Access token required" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-jwt-secret");
+    
+    // Handle admin tokens (created with environment variables)
+    if (decoded.admin && decoded.role === 'admin') {
+      req.user = decoded;
+      return next();
+    }
+    
+    // Check if user still exists and is active (for regular users)
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) {
+      return res.status(401).json({ error: "User not found" });
+    }
+    
+    if (!user.isActive) {
+      return res.status(403).json({ error: "Account is deactivated" });
+    }
+    
+    req.user = { ...decoded, role: user.role };
+    next();
+  } catch (err) {
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(403).json({ error: "Invalid token" });
+    } else if (err.name === 'TokenExpiredError') {
+      return res.status(403).json({ error: "Token expired" });
+    }
+    return res.status(403).json({ error: "Invalid or expired token" });
+  }
+};
+
+// ─── API ROUTES ──────────────────────────────────────────────────────────────
+
+// Health check
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: "OK", 
+    message: "Server is running",
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Auth routes
+app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+
+app.get("/api/auth/google/callback", 
+  passport.authenticate("google", { failureRedirect: "/login" }),
+  async (req, res) => {
+    try {
+      const token = generateToken(req.user);
+      res.redirect(`https://acadmix.shop/auth-callback?token=${token}`);
+    } catch (err) {
+      console.error("❌ Google OAuth callback error:", err);
+      res.redirect(`https://acadmix.shop/login?error=oauth_failed`);
+    }
+  }
+);
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+    
+    const user = await User.findOne({ email, isActive: true });
+    
+    if (!user) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+    
+    // Check if user has password (not Google OAuth user)
+    if (!user.password) {
+      return res.status(401).json({ error: "Please login with Google" });
+    }
+    
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+    
+    const token = generateToken(user);
+    res.json({ 
+      token, 
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        email: user.email,
+        role: user.role,
+        photo: user.photo
+      } 
+    });
+  } catch (err) {
+    console.error("❌ Login error:", err);
+    res.status(500).json({ error: "Login failed" });
+  }
+});
+
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: "Name, email, and password are required" });
+    }
+    
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters long" });
+    }
+    
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: "User with this email already exists" });
+    }
+    
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: 'user'
+    });
+    
+    const token = generateToken(user);
+    res.status(201).json({ 
+      token, 
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        email: user.email,
+        role: user.role
+      } 
+    });
+  } catch (err) {
+    console.error("❌ Registration error:", err);
+    if (err.code === 11000) {
+      return res.status(400).json({ error: "User with this email already exists" });
+    }
+    res.status(500).json({ error: "Registration failed" });
+  }
+});
+
+// Get current user profile
+app.get("/api/auth/me", authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json({ user });
+  } catch (err) {
+    console.error("❌ Get user profile error:", err);
+    res.status(500).json({ error: "Failed to get user profile" });
+  }
+});
+
+// Update user profile
+app.put("/api/auth/profile", authenticateToken, async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    const updates = {};
+    
+    if (name) updates.name = name;
+    if (email) {
+      const existingUser = await User.findOne({ email, _id: { $ne: req.user.id } });
+      if (existingUser) {
+        return res.status(400).json({ error: "Email already in use" });
+      }
+      updates.email = email;
+    }
+    
+    const user = await User.findByIdAndUpdate(
+      req.user.id, 
+      updates, 
+      { new: true, runValidators: true }
+    ).select('-password');
+    
+    res.json({ user });
+  } catch (err) {
+    console.error("❌ Update profile error:", err);
+    res.status(500).json({ error: "Failed to update profile" });
+  }
+});
+
+// Change password
+app.put("/api/auth/change-password", authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Current password and new password are required" });
+    }
+    
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "New password must be at least 6 characters long" });
+    }
+    
+    const user = await User.findById(req.user.id);
+    if (!user.password) {
+      return res.status(400).json({ error: "Cannot change password for Google OAuth users" });
+    }
+    
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!isValidPassword) {
+      return res.status(400).json({ error: "Current password is incorrect" });
+    }
+    
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await User.findByIdAndUpdate(req.user.id, { password: hashedPassword });
+    
+    res.json({ message: "Password changed successfully" });
+  } catch (err) {
+    console.error("❌ Change password error:", err);
+    res.status(500).json({ error: "Failed to change password" });
+  }
+});
+
+// Logout (client-side token removal, but we can add server-side blacklisting if needed)
+app.post("/api/auth/logout", authenticateToken, (req, res) => {
+  res.json({ message: "Logged out successfully" });
+});
+
+// Forgot password (send reset email)
+app.post("/api/auth/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    
+    const user = await User.findOne({ email, isActive: true });
+    if (!user) {
+      // Don't reveal if user exists or not for security
+      return res.json({ message: "If an account with that email exists, a password reset link has been sent" });
+    }
+    
+    // Generate reset token (you can implement email sending here)
+    const resetToken = jwt.sign(
+      { id: user._id, type: 'password-reset' },
+      process.env.JWT_SECRET || "fallback-jwt-secret",
+      { expiresIn: '1h' }
+    );
+    
+    // TODO: Send email with reset link
+    // For now, just return success message
+    res.json({ message: "If an account with that email exists, a password reset link has been sent" });
+  } catch (err) {
+    console.error("❌ Forgot password error:", err);
+    res.status(500).json({ error: "Failed to process password reset request" });
+  }
+});
+
+// Reset password
+app.post("/api/auth/reset-password", async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: "Token and new password are required" });
+    }
+    
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters long" });
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-jwt-secret");
+    if (decoded.type !== 'password-reset') {
+      return res.status(400).json({ error: "Invalid reset token" });
+    }
+    
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await User.findByIdAndUpdate(decoded.id, { password: hashedPassword });
+    
+    res.json({ message: "Password reset successfully" });
+  } catch (err) {
+    console.error("❌ Reset password error:", err);
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+      return res.status(400).json({ error: "Invalid or expired reset token" });
+    }
+    res.status(500).json({ error: "Failed to reset password" });
+  }
+});
+
+// Books API
+app.get("/api/books", async (req, res) => {
+  try {
+    const { section } = req.query;
+    let query = {};
+    
+    if (section && section !== 'home') {
+      query.section = section;
+    }
+    
+    const books = await Book.find(query).sort({ createdAt: -1 });
+    const userId = req.user?.id;
+    const isAdmin = req.user?.role === 'admin';
+
+    let payments = [];
+    if (userId && !isAdmin) {
+      payments = await Payment.find({ user: userId }).lean();
+    }
+
+    const booksWithAccess = books.map((book) => {
+      const userPayments = payments
+        .filter((p) => p.book.toString() === book._id.toString())
+        .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+
+      const userPayment = userPayments[0];
+
+      return {
+        ...book.toObject(),
+        canRead: isAdmin || userPayment?.status === "approved",
+        paymentStatus: isAdmin ? "admin_access" : (userPayment?.status || null),
+        pdfUrl: book.pdfUrl || null,
+      };
+    });
+
+    res.json(booksWithAccess);
+  } catch (err) {
+    console.error("❌ Error fetching books:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get("/api/books/:section", async (req, res) => {
+  try {
+    const { section } = req.params;
+    const books = await Book.find({ section }).sort({ createdAt: -1 });
+    res.json(books);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch books" });
+  }
+});
+
+// Payment API
+app.get("/api/payment/:bookId", authenticateToken, async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.bookId);
+    if (!book) return res.status(404).json({ error: "Book not found" });
+
+    const upiLink = `upi://pay?pa=students4396@okhdfcbank&pn=Acadmix&am=${book.priceDiscounted}&cu=INR`;
+    const qrDataUrl = await QRCode.toDataURL(upiLink, {
+      errorCorrectionLevel: "H",
+      width: 300,
+    });
+
+    res.json({
+      book,
+      qrDataUrl,
+      upiLink,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to generate payment" });
+  }
+});
+
+app.post("/api/payment/submit", authenticateToken, async (req, res) => {
+  try {
+    const { utr, bookId } = req.body;
+    await Payment.create({
+      user: req.user.id,
+      book: bookId,
+      utr,
+      status: "pending",
+      submittedAt: new Date(),
+    });
+
+    res.json({ message: "Payment submitted successfully" });
+  } catch (err) {
+    console.error("❌ Payment submission error:", err);
+    res.status(500).json({ error: "Payment submission failed" });
+  }
+});
+
+// Secure PDF endpoint
+app.get("/api/book/:id/secure-pdf", authenticateToken, async (req, res) => {
+  try {
+    const bookId = req.params.id;
+    const userId = req.user.id;
+    const isAdmin = req.user.role === 'admin';
+
+    // Admin gets automatic access to all books
+    if (isAdmin) {
+      const book = await Book.findById(bookId);
+      if (!book || !book.pdfUrl) {
+        return res.status(404).json({ error: "Book or PDF not found" });
+      }
+      return res.json({ url: book.pdfUrl });
+    }
+
+    // Regular users need approved payment
+    const payment = await Payment.findOne({
+      user: userId,
+      book: bookId,
+      status: "approved",
+    });
+
+    if (!payment) {
+      return res.status(403).json({ error: "Access denied. Payment not found." });
+    }
+
+    const book = await Book.findById(bookId);
+    if (!book || !book.pdfUrl) {
+      return res.status(404).json({ error: "Book or PDF not found" });
+    }
+
+    res.json({ url: book.pdfUrl });
+  } catch (err) {
+    console.error("❌ Secure PDF Fetch Error:", err);
+    res.status(500).json({ error: "Failed to fetch secure PDF" });
+  }
+});
+
+// PDF Proxy endpoint for Cloudinary PDFs
+app.get("/api/pdf-proxy", authenticateToken, async (req, res) => {
+  try {
+    console.log("🔍 PDF Proxy Request:", {
+      url: req.query.url,
+      user: req.user,
+      userRole: req.user?.role,
+      isAdmin: req.user?.admin,
+      timestamp: new Date().toISOString()
+    });
+    
+    const { url } = req.query;
+    
+    if (!url) {
+      console.log("❌ PDF Proxy: Missing URL");
+      return res.status(400).json({ error: "PDF URL is required" });
+    }
+
+    // Validate that it's a Cloudinary URL
+    if (!url.includes('res.cloudinary.com')) {
+      console.log("❌ PDF Proxy: Invalid URL (not Cloudinary)");
+      return res.status(400).json({ error: "Invalid PDF URL" });
+    }
+
+    console.log("📥 Fetching PDF from Cloudinary:", url);
+    
+    // Fetch the PDF from Cloudinary
+    const response = await fetch(url);
+    
+    console.log("📊 Cloudinary Response:", {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries())
+    });
+    
+    if (!response.ok) {
+      console.log("❌ PDF Proxy: Cloudinary returned error status");
+      return res.status(response.status).json({ error: "Failed to fetch PDF" });
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    console.log("✅ PDF Proxy: Successfully fetched PDF, size:", buffer.length, "bytes");
+    
+    // Set appropriate headers with security measures
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    
+    res.send(buffer);
+    console.log("✅ PDF Proxy: PDF sent successfully");
+  } catch (err) {
+    console.error("❌ PDF Proxy Error:", err);
+    res.status(500).json({ error: "Failed to proxy PDF" });
+  }
+});
+
+// Test PDF endpoint (no authentication required for debugging)
+app.get("/api/test-pdf", async (req, res) => {
+  try {
+    const { url } = req.query;
+    
+    if (!url) {
+      return res.status(400).json({ error: "PDF URL is required" });
+    }
+
+    console.log("🧪 Test PDF Request:", url);
+    
+    // Fetch the PDF directly
+    const response = await fetch(url);
+    
+    console.log("🧪 Test PDF Response:", {
+      status: response.status,
+      statusText: response.statusText,
+      contentType: response.headers.get('content-type')
+    });
+    
+    if (!response.ok) {
+      return res.status(response.status).json({ error: "Failed to fetch PDF" });
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    console.log("✅ Test PDF: Successfully fetched PDF, size:", buffer.length, "bytes");
+    
+    // Set appropriate headers with security measures
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    
+    res.send(buffer);
+  } catch (err) {
+    console.error("❌ Test PDF Error:", err);
+    res.status(500).json({ error: "Failed to fetch PDF" });
+  }
+});
+
+// Simple PDF URL test endpoint
+app.get("/api/test-pdf-url", async (req, res) => {
+  try {
+    const { url } = req.query;
+    
+    if (!url) {
+      return res.status(400).json({ error: "PDF URL is required" });
+    }
+
+    console.log("🔗 Testing PDF URL:", url);
+    
+    // Just test if the URL is accessible
+    const response = await fetch(url, { method: 'HEAD' });
+    
+    console.log("🔗 URL Test Response:", {
+      status: response.status,
+      statusText: response.statusText,
+      contentType: response.headers.get('content-type'),
+      contentLength: response.headers.get('content-length')
+    });
+    
+    if (response.ok) {
+      res.json({ 
+        success: true, 
+        status: response.status,
+        contentType: response.headers.get('content-type'),
+        contentLength: response.headers.get('content-length')
+      });
+    } else {
+      res.json({ 
+        success: false, 
+        status: response.status,
+        error: "URL not accessible"
+      });
+    }
+  } catch (err) {
+    console.error("❌ URL Test Error:", err);
+    res.status(500).json({ error: "Failed to test URL" });
+  }
+});
+
+// Make existing PDF public endpoint
+app.post("/api/make-pdf-public", async (req, res) => {
+  try {
+    const { url } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ error: "PDF URL is required" });
+    }
+
+    console.log("🔧 Making PDF public:", url);
+    
+    // Extract public ID from Cloudinary URL
+    const urlParts = url.split('/');
+    const filename = urlParts[urlParts.length - 1];
+    const publicId = filename.split('.')[0];
+    const fullPublicId = `acadmix/pdfs/${publicId}`;
+    
+    console.log("🔧 Extracted public ID:", fullPublicId);
+    
+    // Make the resource public using Cloudinary API
+    const result = await new Promise((resolve, reject) => {
+      cloudinary.api.update(fullPublicId, { 
+        resource_type: 'raw',
+        access_mode: 'public',
+        invalidate: true
+      }, (error, result) => {
+        if (error) {
+          console.error("❌ Failed to make PDF public:", error);
+          reject(error);
+        } else {
+          console.log("✅ PDF made public:", result);
+          resolve(result);
+        }
+      });
+    });
+    
+    res.json({ 
+      success: true, 
+      message: "PDF made public successfully",
+      result: result
+    });
+  } catch (err) {
+    console.error("❌ Make PDF Public Error:", err);
+    res.status(500).json({ error: "Failed to make PDF public" });
+  }
+});
+
+// Admin API
+app.post("/api/admin/login", async (req, res) => {
+  console.log("🔐 Admin login attempt:", { 
+    username: req.body.username, 
+    hasPassword: !!req.body.password,
+    timestamp: new Date().toISOString()
+  });
+  
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      console.log("❌ Admin login: Missing credentials");
+      return res.status(400).json({ error: "Username and password are required" });
+    }
+    
+    console.log("🔍 Checking admin credentials...");
+    
+    // Check if MongoDB is connected for admin user lookup
+    let adminUser = null;
+    let useEnvAuth = false;
+    
+    try {
+      console.log("🔗 Attempting to connect to MongoDB...");
+      await connectToDB();
+      console.log("✅ MongoDB connected, searching for admin user...");
+      adminUser = await User.findOne({ role: 'admin', email: username });
+      console.log("👤 Admin user found in DB:", !!adminUser);
+    } catch (dbErr) {
+      console.log("⚠️  MongoDB not available, using environment variables for admin auth");
+      console.error("❌ DB Error:", dbErr.message);
+      useEnvAuth = true;
+    }
+    
+    let isValidAdmin = false;
+    
+    if (adminUser && adminUser.password) {
+      console.log("🔐 Checking against database admin user...");
+      // Check against database admin user
+      try {
+        isValidAdmin = await bcrypt.compare(password, adminUser.password);
+        console.log("✅ Database auth result:", isValidAdmin);
+      } catch (bcryptErr) {
+        console.error("❌ bcrypt compare error:", bcryptErr);
+        isValidAdmin = false;
+      }
+    } else if (useEnvAuth || !adminUser) {
+      console.log("🔐 Checking against environment variables...");
+      // Check against environment variables
+      const envUsername = process.env.ADMIN_USER;
+      const envPassword = process.env.ADMIN_PASS;
+      
+      console.log("🔑 Environment check:", {
+        hasEnvUsername: !!envUsername,
+        hasEnvPassword: !!envPassword,
+        usernameMatch: username === envUsername
+      });
+      
+      if (envUsername && envPassword) {
+        isValidAdmin = (username === envUsername && password === envPassword);
+        console.log("✅ Environment auth result:", isValidAdmin);
+      } else {
+        console.error("❌ Environment variables ADMIN_USER and ADMIN_PASS not set");
+        return res.status(500).json({ error: "Admin authentication not configured" });
+      }
+    }
+    
+    if (isValidAdmin) {
+      console.log("🎉 Admin authentication successful!");
+      const token = jwt.sign(
+        { 
+          admin: true, 
+          role: 'admin',
+          id: adminUser?._id || 'admin'
+        }, 
+        process.env.JWT_SECRET || "fallback-jwt-secret", 
+        { expiresIn: "7d" }
+      );
+      res.json({ token, message: "Admin login successful" });
+    } else {
+      console.log("❌ Admin authentication failed");
+      res.status(401).json({ error: "Admin authentication failed" });
+    }
+  } catch (err) {
+    console.error("❌ Admin login error:", err);
+    res.status(500).json({ error: "Admin authentication error" });
+  }
+});
+
+app.get("/api/admin/dashboard", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const users = await User.find().select('-password').lean();
+    const totalUsers = users.length;
+    const totalBooks = await Book.countDocuments();
+    const totalPayments = await Payment.countDocuments();
+    const payments = await Payment.find()
+      .sort({ submittedAt: -1 })
+      .limit(50)
+      .populate("user", "name email")
+      .populate("book", "title")
+      .lean();
+
+    res.json({
+      users,
+      totalUsers,
+      totalBooks,
+      totalPayments,
+      payments,
+    });
+  } catch (err) {
+    console.error("❌ Admin dashboard error:", err);
+    res.status(500).json({ error: "Failed to fetch admin data" });
+  }
+});
+
+app.post("/api/admin/payments/:id/approve", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    await Payment.findByIdAndUpdate(req.params.id, { status: "approved" });
+    res.json({ message: "Payment approved successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to approve payment" });
+  }
+});
+
+app.post("/api/admin/payments/:id/reject", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    await Payment.findByIdAndUpdate(req.params.id, { status: "rejected" });
+    res.json({ message: "Payment rejected successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to reject payment" });
+  }
+});
+
+// Book management API with file upload
+app.post("/api/admin/books", authenticateToken, upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'pdf', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    console.log("📝 Creating book with files:", {
+      body: req.body,
+      files: req.files ? Object.keys(req.files) : 'No files'
+    });
+    
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { title, description, category, section, price, priceDiscounted, pages } = req.body;
+    
+    // Upload files to cloud storage
+    let imageUrl = null;
+    let pdfUrl = null;
+    
+    if (req.files?.image) {
+      console.log("📸 Uploading image:", req.files.image[0].originalname);
+      imageUrl = await uploadImage(req.files.image[0]);
+      console.log("✅ Image uploaded:", imageUrl);
+    }
+    
+    if (req.files?.pdf) {
+      console.log("📄 Uploading PDF:", req.files.pdf[0].originalname);
+      pdfUrl = await uploadPdf(req.files.pdf[0]);
+      console.log("✅ PDF uploaded:", pdfUrl);
+    }
+
+    const bookData = {
+      title,
+      description,
+      category,
+      section,
+      price: parseFloat(price),
+      priceDiscounted: priceDiscounted ? parseFloat(priceDiscounted) : null,
+      pages: pages ? parseInt(pages) : null,
+      image: imageUrl,
+      pdfUrl: pdfUrl
+    };
+
+    const book = await Book.create(bookData);
+    res.status(201).json(book);
+  } catch (err) {
+    console.error("❌ Create book error:", err);
+    res.status(500).json({ error: "Failed to create book" });
+  }
+});
+
+app.put("/api/admin/books/:id", authenticateToken, upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'pdf', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { title, description, category, section, price, priceDiscounted, pages } = req.body;
+    
+    // Get existing book
+    const existingBook = await Book.findById(req.params.id);
+    if (!existingBook) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+
+    // Upload new files to cloud storage
+    let imageUrl = existingBook.image;
+    let pdfUrl = existingBook.pdfUrl;
+    
+    if (req.files?.image) {
+      // Delete old image if exists
+      if (existingBook.image) {
+        const publicId = getPublicIdFromUrl(existingBook.image);
+        if (publicId) {
+          await deleteFile(publicId);
+        }
+      }
+      imageUrl = await uploadImage(req.files.image[0]);
+    }
+    
+    if (req.files?.pdf) {
+      // Delete old PDF if exists
+      if (existingBook.pdfUrl) {
+        const publicId = getPublicIdFromUrl(existingBook.pdfUrl);
+        if (publicId) {
+          await deleteFile(publicId);
+        }
+      }
+      pdfUrl = await uploadPdf(req.files.pdf[0]);
+    }
+
+    const bookData = {
+      title,
+      description,
+      category,
+      section,
+      price: parseFloat(price),
+      priceDiscounted: priceDiscounted ? parseFloat(priceDiscounted) : null,
+      pages: pages ? parseInt(pages) : null,
+      image: imageUrl,
+      pdfUrl: pdfUrl
+    };
+
+    const book = await Book.findByIdAndUpdate(req.params.id, bookData, { new: true });
+    res.json(book);
+  } catch (err) {
+    console.error("❌ Update book error:", err);
+    res.status(500).json({ error: "Failed to update book" });
+  }
+});
+
+app.delete("/api/admin/books/:id", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const book = await Book.findById(req.params.id);
+    if (!book) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+
+    // Delete files from cloud storage
+    if (book.image) {
+      const publicId = getPublicIdFromUrl(book.image);
+      if (publicId) {
+        await deleteFile(publicId);
+      }
+    }
+    
+    if (book.pdfUrl) {
+      const publicId = getPublicIdFromUrl(book.pdfUrl);
+      if (publicId) {
+        await deleteFile(publicId);
+      }
+    }
+
+    await Book.findByIdAndDelete(req.params.id);
+    res.json({ message: "Book deleted successfully" });
+  } catch (err) {
+    console.error("❌ Delete book error:", err);
+    res.status(500).json({ error: "Failed to delete book" });
+  }
+});
+
+// Get all books for admin
+app.get("/api/admin/books", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const books = await Book.find().sort({ createdAt: -1 });
+    res.json(books);
+  } catch (err) {
+    console.error("❌ Get admin books error:", err);
+    res.status(500).json({ error: "Failed to fetch books" });
+  }
+});
+
+// User management endpoints
+app.get("/api/admin/users", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const users = await User.find().select('-password').sort({ createdAt: -1 }).lean();
+    res.json({ users });
+  } catch (err) {
+    console.error("❌ Get users error:", err);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+app.put("/api/admin/users/:id/role", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { role } = req.body;
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({ user });
+  } catch (err) {
+    console.error("❌ Update user role error:", err);
+    res.status(500).json({ error: "Failed to update user role" });
+  }
+});
+
+app.put("/api/admin/users/:id/status", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { isActive } = req.body;
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({ error: "isActive must be a boolean" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isActive },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({ user });
+  } catch (err) {
+    console.error("❌ Update user status error:", err);
+    res.status(500).json({ error: "Failed to update user status" });
+  }
+});
+
+app.delete("/api/admin/users/:id", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    // Don't allow admin to delete themselves
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({ error: "Cannot delete your own account" });
+    }
+
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({ message: "User deleted successfully" });
+  } catch (err) {
+    console.error("❌ Delete user error:", err);
+    res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+
+// ─── STATIC FILES ────────────────────────────────────────────────────────────
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+app.get("/favicon.ico", (req, res) => res.status(204).end());
+
+// ─── ERROR HANDLING ──────────────────────────────────────────────────────────
+app.use((err, req, res, next) => {
+  console.error("💥 Uncaught Error:", err);
+  res.status(500).json({ error: "Internal Server Error", message: err.message });
+});
+
+// ─── SERVER START ────────────────────────────────────────────────────────────
+console.log("🔧 Server startup configuration:", {
+  NODE_ENV: process.env.NODE_ENV,
+  PORT: process.env.PORT || 5000,
+  isProduction: process.env.NODE_ENV === "production"
+});
+
+if (process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT || 5000;
+  console.log(`🚀 Starting development server on port ${PORT}...`);
+  app.listen(PORT, () => {
+    console.log(`✅ MERN API server listening at http://localhost:${PORT}`);
+    console.log("📝 Admin login available at: http://localhost:5000/api/admin/login");
+    console.log("🔗 Health check: http://localhost:5000/api/health");
+  }).on('error', (err) => {
+    console.error("❌ Server startup error:", err);
+  });
+} else {
+  console.log("🚀 Production mode: Exporting app for serverless deployment");
+  module.exports = app;
+  module.exports.handler = serverless(app);
+}

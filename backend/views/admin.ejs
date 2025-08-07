@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Acadmix Admin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      :root {
+        --primary: #2563eb;
+        --primary-dark: #1e40af;
+        --primary-light: #3b82f6;
+        --background: #f0f4f8;
+        --card-bg: #fff;
+        --text: #222;
+        --sidebar-bg: linear-gradient(135deg, #2563eb 60%, #1e40af 100%);
+        --shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
+        --border-radius: 16px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", "Roboto", Arial, sans-serif;
+        background-color: var(--background);
+        color: var(--text);
+      }
+
+      .admin-container {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        width: 240px;
+        background: var(--sidebar-bg);
+        color: #fff;
+        padding: 2rem 1rem;
+        transition: transform 0.3s ease;
+        box-shadow: 2px 0 12px rgba(37, 99, 235, 0.08);
+        z-index: 1000;
+      }
+
+      .sidebar h2 {
+        margin-bottom: 2.5rem;
+        text-align: center;
+        font-size: 2rem;
+        letter-spacing: 2px;
+        font-weight: 700;
+      }
+
+      .sidebar a {
+        display: block;
+        color: #fff;
+        text-decoration: none;
+        margin: 1.2rem 0;
+        font-weight: 500;
+        font-size: 1.1rem;
+        padding: 0.7rem 1rem;
+        border-radius: 8px;
+        transition: background 0.2s;
+      }
+
+      .sidebar a[data-tab]:hover,
+      .sidebar a[data-tab].active {
+        background: var(--primary-light);
+        color: #fff;
+      }
+
+      .hamburger {
+        display: none;
+        font-size: 2rem;
+        cursor: pointer;
+        margin: 1rem 0 1rem 1rem;
+        color: var(--primary);
+      }
+
+      .close-btn {
+        display: none;
+        font-size: 1.7rem;
+        color: #fff;
+        text-align: right;
+        cursor: pointer;
+        margin-bottom: 1.5rem;
+      }
+
+      .main {
+        flex: 1;
+        padding: 2.5rem 2rem;
+        min-width: 0;
+      }
+
+      .tab {
+        display: none;
+        animation: fadeIn 0.4s;
+      }
+
+      .tab.active {
+        display: block;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px);}
+        to { opacity: 1; transform: translateY(0);}
+      }
+
+      .dashboard-cards {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+        margin-bottom: 2.5rem;
+      }
+
+      .card {
+        background: var(--card-bg);
+        padding: 2rem 1.5rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        flex: 1;
+        min-width: 220px;
+        text-align: center;
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #e0e7ef;
+      }
+
+      .card:hover {
+        transform: translateY(-6px) scale(1.03);
+        box-shadow: 0 8px 32px rgba(37, 99, 235, 0.12);
+      }
+
+      .card h3 {
+        margin-bottom: 0.7rem;
+        color: var(--primary);
+        font-size: 1.3rem;
+        font-weight: 600;
+      }
+
+      .card p {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-dark);
+      }
+
+      table {
+        width: 100%;
+        background: #fff;
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        border-collapse: collapse;
+        margin-bottom: 2rem;
+      }
+
+      th,
+      td {
+        padding: 1rem 0.8rem;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 1rem;
+      }
+
+      th {
+        background: #f3f6fa;
+        color: var(--primary-dark);
+        font-weight: 600;
+      }
+
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      img.user-img {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-right: 10px;
+        border: 2px solid var(--primary-light);
+      }
+
+      .user-info {
+        display: flex;
+        align-items: center;
+      }
+
+      .btn-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin: 1.5rem 0;
+      }
+
+      .btn-group a {
+        padding: 0.6rem 1.3rem;
+        background: var(--primary);
+        color: #fff;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: background 0.2s;
+      }
+
+      .btn-group a:hover {
+        background: var(--primary-dark);
+      }
+
+      /* Payment actions */
+      .actions form {
+        display: inline;
+        margin-right: 0.5rem;
+      }
+      .actions button {
+        padding: 0.4rem 0.8rem;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: background 0.2s;
+      }
+      .actions .approve {
+        background: #22c55e;
+        color: #fff;
+      }
+      .actions .approve:hover {
+        background: #16a34a;
+      }
+      .actions .reject {
+        background: #ef4444;
+        color: #fff;
+      }
+      .actions .reject:hover {
+        background: #b91c1c;
+      }
+
+      /* Responsive Design */
+      @media (max-width: 1100px) {
+        .dashboard-cards {
+          flex-direction: column;
+        }
+        .card {
+          min-width: 0;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .main {
+          padding: 1.5rem 0.5rem;
+        }
+        .sidebar {
+          width: 200px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .admin-container {
+          flex-direction: column;
+        }
+        .sidebar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          height: 100%;
+          transform: translateX(-100%);
+          z-index: 999;
+          width: 70vw;
+          max-width: 320px;
+          min-width: 180px;
+          box-shadow: 2px 0 16px rgba(37, 99, 235, 0.18);
+        }
+        .sidebar.show {
+          transform: translateX(0);
+        }
+        .close-btn {
+          display: block;
+        }
+        .hamburger {
+          display: block;
+        }
+        .main {
+          padding: 1.2rem 0.5rem;
+        }
+        .dashboard-cards {
+          gap: 1rem;
+        }
+      }
+
+      @media (max-width: 500px) {
+        .sidebar {
+          width: 90vw;
+          min-width: 0;
+        }
+        .main {
+          padding: 0.7rem 0.2rem;
+        }
+        th, td {
+          padding: 0.6rem 0.3rem;
+          font-size: 0.95rem;
+        }
+        .card {
+          padding: 1.2rem 0.7rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="admin-container">
+      <!-- Sidebar -->
+      <div class="sidebar" id="sidebar">
+        <div class="close-btn" id="closeSidebar">✖</div>
+        <h2>Admin</h2>
+        <a data-tab="dashboard-tab" class="active">Dashboard</a>
+        <a data-tab="books-tab">Books</a>
+        <a data-tab="payments-tab">Payments</a>
+        <a href="/api/admin/logout">Logout</a>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main">
+        <div class="hamburger" id="openSidebar">☰</div>
+
+        <!-- Dashboard Tab -->
+        <div class="tab active" id="dashboard-tab">
+          <h1>Dashboard</h1>
+          <div class="dashboard-cards">
+            <div class="card">
+              <h3>Total Users</h3>
+              <p><%= totalUsers %></p>
+            </div>
+            <div class="card">
+              <h3>Total Payments</h3>
+              <p><%= totalPayments %></p>
+            </div>
+            <div class="card">
+              <h3>Total Books</h3>
+              <p><%= totalBooks %></p>
+            </div>
+          </div>
+          <h2>All Users</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Books</th>
+                <th>Joined</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% users.forEach(user => { %>
+              <tr>
+                <td class="user-info">
+                  <img src="<%= user.photo %>" alt="user" class="user-img" />
+                  <%= user.name %>
+                </td>
+                <td><%= user.email %></td>
+                <td><%= user.books?.join(", ") || "None" %></td>
+                <td><%= new Date(user.createdAt).toLocaleDateString() %></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Books Tab -->
+        <div class="tab" id="books-tab">
+          <h1>Books Dashboard</h1>
+          <div class="btn-group">
+            <a href="/api/admin/books">Show All Books</a>
+            <a href="/api/admin/books/new">Add New Book</a>
+          </div>
+        </div>
+
+        <!-- Payments Tab -->
+        <div class="tab" id="payments-tab">
+          <h1>Payments</h1>
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Book</th>
+                <th>UTR</th>
+                <th>Status</th>
+                <th>Submitted</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% payments.forEach(p => { const submittedAt = new
+              Date(p.submittedAt); const istOffset = 5.5 * 60 * 60 * 1000; const
+              istDate = new Date(submittedAt.getTime() + istOffset); const
+              istFormatted = istDate.toLocaleString("en-IN", { dateStyle:
+              "medium", timeStyle: "short" }); %>
+              <tr>
+                <td><%= p.user.name %> (<%= p.user.email %>)</td>
+                <td><%= p.book ? p.book.title : 'Deleted Book' %></td>
+                <td><%= p.utr %></td>
+                <td>
+                  <%= p.status.charAt(0).toUpperCase() + p.status.slice(1) %>
+                </td>
+                <td><%= istFormatted %></td>
+                <td class="actions">
+                  <% if (p.status === 'pending') { %>
+                  <form
+                    action="/api/admin/payments/<%= p._id %>/approve"
+                    method="POST"
+                  >
+                    <button type="submit" class="approve">Approve</button>
+                  </form>
+                  <form
+                    action="/api/admin/payments/<%= p._id %>/reject"
+                    method="POST"
+                  >
+                    <button type="submit" class="reject">Reject</button>
+                  </form>
+                  <% } else { %> &mdash; <% } %>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const sidebarLinks = document.querySelectorAll(".sidebar a[data-tab]");
+        const tabs = document.querySelectorAll(".tab");
+
+        sidebarLinks.forEach((link) => {
+          link.addEventListener("click", () => {
+            sidebarLinks.forEach(l => l.classList.remove("active"));
+            link.classList.add("active");
+            const tabId = link.getAttribute("data-tab");
+            tabs.forEach((tab) => tab.classList.remove("active"));
+            document.getElementById(tabId).classList.add("active");
+            // On mobile, close sidebar after click
+            if (window.innerWidth <= 768) {
+              document.getElementById("sidebar").classList.remove("show");
+            }
+          });
+        });
+
+        const sidebar = document.getElementById("sidebar");
+        document
+          .getElementById("openSidebar")
+          .addEventListener("click", () => sidebar.classList.add("show"));
+        document
+          .getElementById("closeSidebar")
+          .addEventListener("click", () => sidebar.classList.remove("show"));
+      });
+    </script>
+  </body>
+</html>
