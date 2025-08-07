@@ -34,8 +34,8 @@ const Login = () => {
   };
 
   const handleGoogleLogin = () => {
-    // Redirect to Google OAuth
-    window.location.href = '/api/auth/google';
+    // Redirect to Google OAuth using the full backend URL
+    window.location.href = 'https://api.acadmix.shop/api/auth/google';
   };
 
   return (

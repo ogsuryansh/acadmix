@@ -166,7 +166,7 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
         console.log('🌐 Fetching PDF from proxy...');
         const authToken = localStorage.getItem('token') || localStorage.getItem('adminToken');
         
-        const response = await fetch(`/api/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`, {
+        const response = await fetch(`https://api.acadmix.shop/api/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${authToken}`,

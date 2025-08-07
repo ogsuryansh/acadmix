@@ -23,7 +23,7 @@ const PDFViewer = ({ pdfUrl, onClose, title }) => {
           
           if (token) {
             // Try authenticated proxy first
-            response = await fetch(`/api/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`, {
+            response = await fetch(`https://api.acadmix.shop/api/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }
@@ -33,7 +33,7 @@ const PDFViewer = ({ pdfUrl, onClose, title }) => {
           // If no token or authenticated request failed, try test endpoint
           if (!token || !response?.ok) {
             console.log('Trying test PDF endpoint...');
-            response = await fetch(`/api/test-pdf?url=${encodeURIComponent(pdfUrl)}`);
+            response = await fetch(`https://api.acadmix.shop/api/test-pdf?url=${encodeURIComponent(pdfUrl)}`);
           }
           
           if (!response.ok) {
@@ -215,7 +215,7 @@ const PDFViewer = ({ pdfUrl, onClose, title }) => {
                             let response;
                             
                             if (token) {
-                              response = await fetch(`/api/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`, {
+                              response = await fetch(`https://api.acadmix.shop/api/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`, {
                                 headers: {
                                   'Authorization': `Bearer ${token}`
                                 }
@@ -224,7 +224,7 @@ const PDFViewer = ({ pdfUrl, onClose, title }) => {
                             
                             if (!token || !response?.ok) {
                               console.log('Trying test PDF endpoint...');
-                              response = await fetch(`/api/test-pdf?url=${encodeURIComponent(pdfUrl)}`);
+                              response = await fetch(`https://api.acadmix.shop/api/test-pdf?url=${encodeURIComponent(pdfUrl)}`);
                             }
                             
                             if (!response.ok) {
