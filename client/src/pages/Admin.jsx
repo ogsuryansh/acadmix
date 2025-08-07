@@ -20,7 +20,9 @@ import {
   FileText,
   Image,
   DollarSign,
-  BarChart3
+  BarChart3,
+  QrCode,
+  CreditCard as CreditCardIcon
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
@@ -28,6 +30,12 @@ import BookManagement from '../components/BookManagement';
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [paymentConfig, setPaymentConfig] = useState({
+    upiId: '',
+    payeeName: '',
+    bankName: ''
+  });
+  const [isEditingPayment, setIsEditingPayment] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: dashboardData, isLoading } = useQuery({
@@ -39,6 +47,26 @@ const Admin = () => {
     queryKey: ['admin-users'],
     queryFn: () => api.get('/admin/users').then(res => res.data),
     enabled: activeTab === 'users',
+  });
+
+  // Payment configuration query
+  const { data: paymentConfigData } = useQuery({
+    queryKey: ['payment-config'],
+    queryFn: () => api.get('/admin/payment-config').then(res => res.data),
+    enabled: activeTab === 'payment-config',
+  });
+
+  // Payment configuration update mutation
+  const updatePaymentConfig = useMutation({
+    mutationFn: (config) => api.put('/admin/payment-config', config),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['payment-config']);
+      toast.success('Payment configuration updated successfully');
+      setIsEditingPayment(false);
+    },
+    onError: () => {
+      toast.error('Failed to update payment configuration');
+    },
   });
 
   // Payment approval mutation
@@ -216,6 +244,7 @@ const Admin = () => {
               { id: 'payments', label: 'Payments', icon: CreditCard },
               { id: 'users', label: 'Users', icon: Users },
               { id: 'books', label: 'Books', icon: BookOpen },
+              { id: 'payment-config', label: 'Payment Config', icon: CreditCardIcon },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -469,6 +498,166 @@ const Admin = () => {
 
         {/* Books Tab */}
         {activeTab === 'books' && <BookManagement />}
+
+        {/* Payment Configuration Tab */}
+        {activeTab === 'payment-config' && (
+          <div className="card">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Payment Configuration</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Configure UPI payment settings for your platform
+              </p>
+            </div>
+            
+            <div className="p-6">
+              {isEditingPayment ? (
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  updatePaymentConfig.mutate(paymentConfig);
+                }} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        UPI ID
+                      </label>
+                      <input
+                        type="text"
+                        value={paymentConfig.upiId}
+                        onChange={(e) => setPaymentConfig({...paymentConfig, upiId: e.target.value})}
+                        placeholder="e.g., acadmix@paytm"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Payee Name
+                      </label>
+                      <input
+                        type="text"
+                        value={paymentConfig.payeeName}
+                        onChange={(e) => setPaymentConfig({...paymentConfig, payeeName: e.target.value})}
+                        placeholder="e.g., Acadmix"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Bank Name
+                      </label>
+                      <input
+                        type="text"
+                        value={paymentConfig.bankName}
+                        onChange={(e) => setPaymentConfig({...paymentConfig, bankName: e.target.value})}
+                        placeholder="e.g., Paytm"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex space-x-3">
+                    <button
+                      type="submit"
+                      disabled={updatePaymentConfig.isPending}
+                      className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {updatePaymentConfig.isPending ? 'Saving...' : 'Save Configuration'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditingPayment(false);
+                        setPaymentConfig({
+                          upiId: paymentConfigData?.config?.upiId || '',
+                          payeeName: paymentConfigData?.config?.payeeName || '',
+                          bankName: paymentConfigData?.config?.bankName || ''
+                        });
+                      }}
+                      className="btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                      <div className="flex items-center mb-2">
+                        <CreditCardIcon className="h-5 w-5 text-primary-600 mr-2" />
+                        <h3 className="font-medium text-gray-900 dark:text-white">UPI ID</h3>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {paymentConfigData?.config?.upiId || 'Not configured'}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                      <div className="flex items-center mb-2">
+                        <UserCheck className="h-5 w-5 text-primary-600 mr-2" />
+                        <h3 className="font-medium text-gray-900 dark:text-white">Payee Name</h3>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {paymentConfigData?.config?.payeeName || 'Not configured'}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                      <div className="flex items-center mb-2">
+                        <BarChart3 className="h-5 w-5 text-primary-600 mr-2" />
+                        <h3 className="font-medium text-gray-900 dark:text-white">Bank Name</h3>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {paymentConfigData?.config?.bankName || 'Not configured'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Test QR Code</h3>
+                    <p className="text-sm text-blue-800 dark:text-blue-200 mb-4">
+                      Test the current configuration with a sample payment of ₹100
+                    </p>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={() => {
+                          const testUpiLink = `upi://pay?pa=${paymentConfigData?.config?.upiId}&pn=${encodeURIComponent(paymentConfigData?.config?.payeeName)}&am=100&cu=INR`;
+                          navigator.clipboard.writeText(testUpiLink);
+                          toast.success('Test UPI link copied to clipboard!');
+                        }}
+                        className="btn-secondary text-sm"
+                      >
+                        Copy Test UPI Link
+                      </button>
+                      <span className="text-sm text-blue-700 dark:text-blue-300">
+                        Amount: ₹100
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      setIsEditingPayment(true);
+                      setPaymentConfig({
+                        upiId: paymentConfigData?.config?.upiId || '',
+                        payeeName: paymentConfigData?.config?.payeeName || '',
+                        bankName: paymentConfigData?.config?.bankName || ''
+                      });
+                    }}
+                    className="btn-primary"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Configuration
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

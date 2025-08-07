@@ -176,6 +176,10 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+// ─── ROUTES ────────────────────────────────────────────────────────────────
+const paymentRoutes = require("./routes/payment");
+app.use("/api", paymentRoutes);
+
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser((id, done) =>
   User.findById(id)

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { BookOpen, CreditCard, QrCode, Copy, Check } from 'lucide-react';
+import { BookOpen, CreditCard, QrCode, Copy, Check, Download } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -9,6 +9,8 @@ const Payment = () => {
   const { bookId } = useParams();
   const [utrNumber, setUtrNumber] = useState('');
   const [copied, setCopied] = useState(false);
+  const [qrCode, setQrCode] = useState(null);
+  const [upiLink, setUpiLink] = useState('');
 
   const { data: book, isLoading } = useQuery({
     queryKey: ['book', bookId],
@@ -19,6 +21,37 @@ const Payment = () => {
     queryKey: ['payment', bookId],
     queryFn: () => api.get(`/payment/${bookId}`).then(res => res.data),
   });
+
+  // Generate dynamic QR code and UPI link when book data is available
+  useEffect(() => {
+    if (book && paymentData) {
+      generateDynamicPaymentData();
+    }
+  }, [book, paymentData]);
+
+  const generateDynamicPaymentData = async () => {
+    try {
+      const amount = book.priceDiscounted || book.price;
+      const upiId = paymentData?.upiId || 'acadmix@paytm';
+      const payeeName = paymentData?.payeeName || 'Acadmix';
+      
+      // Generate UPI link
+      const dynamicUpiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR`;
+      setUpiLink(dynamicUpiLink);
+
+      // Generate QR code using the backend
+      const response = await api.get(`/payment/${bookId}/qr`, {
+        params: { amount, upiId, payeeName }
+      });
+      
+      if (response.data.qrCode) {
+        setQrCode(response.data.qrCode);
+      }
+    } catch (error) {
+      console.error('Error generating payment data:', error);
+      toast.error('Failed to generate payment QR code');
+    }
+  };
 
   const submitPaymentMutation = useMutation({
     mutationFn: (data) => api.post('/payment/submit', data),
@@ -51,6 +84,17 @@ const Payment = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const downloadQRCode = () => {
+    if (qrCode) {
+      const link = document.createElement('a');
+      link.href = qrCode;
+      link.download = `payment-qr-${book?.title?.replace(/\s+/g, '-')}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -69,6 +113,10 @@ const Payment = () => {
       </div>
     );
   }
+
+  const amount = book.priceDiscounted || book.price;
+  const upiId = paymentData?.upiId || 'acadmix@paytm';
+  const payeeName = paymentData?.payeeName || 'Acadmix';
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -104,7 +152,16 @@ const Payment = () => {
                       <h3 className="font-semibold text-gray-900">{book.title}</h3>
                       <p className="text-sm text-gray-600 mt-1">{book.description}</p>
                       <div className="mt-2 flex items-center justify-between">
-                        <span className="text-lg font-bold text-primary-600">₹{book.price}</span>
+                        <div>
+                          {book.priceDiscounted ? (
+                            <div className="flex items-center space-x-2">
+                              <span className="text-lg font-bold text-primary-600">₹{book.priceDiscounted}</span>
+                              <span className="text-sm text-gray-500 line-through">₹{book.price}</span>
+                            </div>
+                          ) : (
+                            <span className="text-lg font-bold text-primary-600">₹{book.price}</span>
+                          )}
+                        </div>
                         <span className="text-sm text-gray-500 uppercase">{book.category}</span>
                       </div>
                     </div>
@@ -123,15 +180,29 @@ const Payment = () => {
                     <h3 className="font-medium text-gray-900">UPI Payment</h3>
                   </div>
                   
-                  {paymentData?.qrCode && (
-                    <div className="text-center mb-4">
-                      <img
-                        src={paymentData.qrCode}
-                        alt="UPI QR Code"
-                        className="mx-auto w-48 h-48 border rounded-lg"
-                      />
-                    </div>
-                  )}
+                  {/* Dynamic QR Code */}
+                  <div className="text-center mb-4">
+                    {qrCode ? (
+                      <div className="relative inline-block">
+                        <img
+                          src={qrCode}
+                          alt="UPI QR Code"
+                          className="mx-auto w-48 h-48 border rounded-lg"
+                        />
+                        <button
+                          onClick={downloadQRCode}
+                          className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-lg hover:bg-gray-50 transition-colors"
+                          title="Download QR Code"
+                        >
+                          <Download className="h-4 w-4 text-gray-600" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-48 h-48 mx-auto border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                        <QrCode className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
                   
                   <div className="space-y-3">
                     <div>
@@ -141,12 +212,12 @@ const Payment = () => {
                       <div className="flex items-center space-x-2">
                         <input
                           type="text"
-                          value={paymentData?.upiId || 'acadmix@paytm'}
+                          value={upiId}
                           readOnly
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900"
                         />
                         <button
-                          onClick={() => copyToClipboard(paymentData?.upiId || 'acadmix@paytm')}
+                          onClick={() => copyToClipboard(upiId)}
                           className="p-2 text-gray-500 hover:text-primary-600 transition-colors"
                         >
                           {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -161,12 +232,32 @@ const Payment = () => {
                       <div className="flex items-center space-x-2">
                         <input
                           type="text"
-                          value={`₹${book.price}`}
+                          value={`₹${amount}`}
                           readOnly
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900"
                         />
                         <button
-                          onClick={() => copyToClipboard(book.price.toString())}
+                          onClick={() => copyToClipboard(amount.toString())}
+                          className="p-2 text-gray-500 hover:text-primary-600 transition-colors"
+                        >
+                          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        UPI Link
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          value={upiLink}
+                          readOnly
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900 text-xs"
+                        />
+                        <button
+                          onClick={() => copyToClipboard(upiLink)}
                           className="p-2 text-gray-500 hover:text-primary-600 transition-colors"
                         >
                           {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -216,7 +307,7 @@ const Payment = () => {
               <h3 className="font-medium text-blue-900 mb-2">Payment Instructions:</h3>
               <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
                 <li>Scan the QR code or use the UPI ID to make payment</li>
-                <li>Pay the exact amount: ₹{book.price}</li>
+                <li>Pay the exact amount: ₹{amount}</li>
                 <li>Copy the UTR number from your payment app</li>
                 <li>Paste the UTR number in the form above</li>
                 <li>Click "Submit Payment" to complete your purchase</li>
