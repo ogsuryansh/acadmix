@@ -42,7 +42,12 @@ const Register = () => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = '/api/auth/google';
+    // Redirect to Google OAuth using environment-aware URL
+    const isDevelopment = import.meta.env.DEV;
+    const googleAuthUrl = isDevelopment 
+      ? 'http://localhost:5000/api/auth/google'
+      : 'https://api.acadmix.shop/api/auth/google';
+    window.location.href = googleAuthUrl;
   };
 
   return (

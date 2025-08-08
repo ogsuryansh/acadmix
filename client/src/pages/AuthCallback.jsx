@@ -33,7 +33,7 @@ const AuthCallback = () => {
         // Process the Google OAuth token
         await googleLogin(token);
         setStatus('success');
-        setMessage('Login successful! Redirecting...');
+        setMessage('Redirecting to dashboard...');
         setTimeout(() => navigate('/'), 2000);
 
       } catch (error) {
@@ -79,7 +79,7 @@ const AuthCallback = () => {
               <>
                 <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  Login Successful!
+                  Success!
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   {message}

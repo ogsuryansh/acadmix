@@ -98,8 +98,7 @@ export const AuthProvider = ({ children }) => {
       const response = await api.get('/auth/me');
       setUser(response.data.user);
       
-      toast.success('Google login successful!');
-      navigate('/');
+      // Don't navigate here - let AuthCallback handle the navigation
     } catch (error) {
       toast.error('Google login failed');
       throw error;

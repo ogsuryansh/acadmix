@@ -101,6 +101,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5500",
   "http://localhost:5000",
+  "http://localhost:3001",
 ];
 app.use(
   cors({
@@ -192,7 +193,9 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "https://api.acadmix.shop/api/auth/google/callback",
+      callbackURL: isProd 
+        ? "https://api.acadmix.shop/api/auth/google/callback"
+        : "http://localhost:5000/api/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -316,10 +319,16 @@ app.get("/api/auth/google/callback",
   async (req, res) => {
     try {
       const token = generateToken(req.user);
-      res.redirect(`https://acadmix.shop/auth-callback?token=${token}`);
+      const redirectUrl = isProd 
+        ? `https://acadmix.shop/auth-callback?token=${token}`
+        : `http://localhost:5173/auth-callback?token=${token}`;
+      res.redirect(redirectUrl);
     } catch (err) {
       console.error("❌ Google OAuth callback error:", err);
-      res.redirect(`https://acadmix.shop/login?error=oauth_failed`);
+      const errorUrl = isProd 
+        ? `https://acadmix.shop/login?error=oauth_failed`
+        : `http://localhost:5173/login?error=oauth_failed`;
+      res.redirect(errorUrl);
     }
   }
 );
