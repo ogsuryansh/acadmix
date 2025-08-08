@@ -35,7 +35,7 @@ const Login = () => {
 
   const handleGoogleLogin = () => {
     // Redirect to Google OAuth using environment-aware URL
-    const isDevelopment = import.meta.env.DEV;
+    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const googleAuthUrl = isDevelopment 
       ? 'http://localhost:5000/api/auth/google'
       : 'https://api.acadmix.shop/api/auth/google';

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Detect environment and set appropriate base URL
-const isDevelopment = import.meta.env.DEV;
+const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
   (isDevelopment ? 'http://localhost:5000/api' : 'https://api.acadmix.shop/api');
 
