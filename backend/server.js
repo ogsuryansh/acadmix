@@ -11,8 +11,17 @@ console.log("🔑 ENV Check:", {
   JWT_SECRET: !!process.env.JWT_SECRET,
   ADMIN_USER: !!process.env.ADMIN_USER,
   ADMIN_PASS: !!process.env.ADMIN_PASS,
+  NODE_ENV: process.env.NODE_ENV,
+  PORT: process.env.PORT,
+  FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN,
 });
 console.log("🚀 Starting MERN API server...");
+console.log("🌐 Environment info:", {
+  isProd,
+  nodeEnv: process.env.NODE_ENV,
+  defaultFrontendOrigin: DEFAULT_FRONTEND_ORIGIN,
+  actualPort: process.env.PORT || 5000
+});
 
 const express = require("express");
 const mongoose = require("mongoose");
@@ -108,10 +117,38 @@ const allowedOrigins = [
   "http://localhost:5000",
   "http://localhost:3001",
 ];
+
+console.log("🔧 CORS Configuration:", {
+  allowedOrigins,
+  production: isProd,
+  nodeEnv: process.env.NODE_ENV
+});
+
+// Handle preflight requests explicitly
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  console.log("🔧 CORS Preflight request from:", origin);
+  
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+    console.log("✅ CORS Preflight approved for:", origin);
+    return res.status(200).end();
+  } else {
+    console.warn("❌ CORS Preflight blocked for:", origin);
+    return res.status(403).json({ error: 'CORS not allowed' });
+  }
+});
+
 app.use(
   cors({
     origin: (origin, cb) => {
+      console.log("🔍 CORS origin check:", origin);
       if (!origin || origin === "null" || allowedOrigins.includes(origin)) {
+        console.log("✅ CORS origin approved:", origin);
         cb(null, true);
       } else {
         console.warn("❌ CORS blocked:", origin);
@@ -119,8 +156,26 @@ app.use(
       }
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    maxAge: 86400 // 24 hours
   })
 );
+
+// Additional CORS headers middleware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  }
+  
+  next();
+});
 
 // ─── BODY PARSERS ─────────────────────────────────────────────────────────────
 app.use(express.urlencoded({ extended: true }));
@@ -318,10 +373,16 @@ const authenticateToken = async (req, res, next) => {
 
 // Health check
 app.get("/api/health", (req, res) => {
+  console.log("🏥 Health check request from:", req.headers.origin);
   res.json({
     status: "OK",
     message: "Server is running",
     timestamp: new Date().toISOString(),
+    cors: {
+      origin: req.headers.origin,
+      allowedOrigins: allowedOrigins,
+      production: isProd
+    }
   });
 });
 
@@ -1670,6 +1731,32 @@ if (process.env.NODE_ENV !== "production") {
     });
 } else {
   console.log("🚀 Production mode: Exporting app for serverless deployment");
+  
+  // Additional CORS handling for serverless environments
+  const handler = serverless(app);
+  
   module.exports = app;
-  module.exports.handler = serverless(app);
+  module.exports.handler = async (event, context) => {
+    console.log("🌐 Serverless request:", {
+      method: event.httpMethod,
+      origin: event.headers?.origin || event.headers?.Origin,
+      path: event.path,
+      stage: event.requestContext?.stage
+    });
+    
+    // Set CORS headers for serverless response
+    const result = await handler(event, context);
+    
+    if (result && result.headers) {
+      const origin = event.headers?.origin || event.headers?.Origin;
+      if (!origin || allowedOrigins.includes(origin)) {
+        result.headers['Access-Control-Allow-Origin'] = origin || '*';
+        result.headers['Access-Control-Allow-Credentials'] = 'true';
+        result.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH';
+        result.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept, Origin';
+      }
+    }
+    
+    return result;
+  };
 }
