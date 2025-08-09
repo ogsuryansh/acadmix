@@ -1,7 +1,9 @@
-const isProd = process.env.NODE_ENV === "production";
-const DEFAULT_FRONTEND_ORIGIN = isProd ? "https://acadmix.shop" : "http://localhost:5173";
-
 require("dotenv").config();
+const isProd = process.env.NODE_ENV === "production";
+const DEFAULT_FRONTEND_ORIGIN = isProd
+  ? "https://acadmix.shop"
+  : "http://localhost:5173";
+
 console.log("🔑 ENV Check:", {
   GOOGLE_CLIENT_ID: !!process.env.GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET: !!process.env.GOOGLE_CLIENT_SECRET,
@@ -31,7 +33,12 @@ const Book = require("./models/Book");
 const Payment = require("./models/Payment");
 const MongoStore = require("connect-mongo");
 const upload = require("./middleware/upload");
-const { uploadImage, uploadPdf, deleteFile, getPublicIdFromUrl } = require("./utils/cloudStorage");
+const {
+  uploadImage,
+  uploadPdf,
+  deleteFile,
+  getPublicIdFromUrl,
+} = require("./utils/cloudStorage");
 
 // ─── EXPRESS APP ─────────────────────────────────────────────────────────────
 const app = express();
@@ -62,11 +69,7 @@ app.use(
           "https://fonts.gstatic.com",
           "https://cdnjs.cloudflare.com",
         ],
-        imgSrc: [
-          "'self'",
-          "data:",
-          "https:",
-        ],
+        imgSrc: ["'self'", "data:", "https:"],
         connectSrc: [
           "'self'",
           "https://acadmix.shop",
@@ -89,7 +92,7 @@ app.use(
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
-  message: { error: "Too many requests from this IP" }
+  message: { error: "Too many requests from this IP" },
 });
 app.use("/api/", limiter);
 
@@ -126,25 +129,29 @@ app.use(express.json());
 async function connectToDB() {
   if (global._mongoConn) return global._mongoConn;
   if (!global._mongoPromise) {
-      global._mongoPromise = mongoose.connect(process.env.MONGO_URI, {
-    serverSelectionTimeoutMS: 5000,
-  }).catch(err => {
-      console.error("❌ MongoDB Connection Error:", err.message);
-      global._mongoPromise = null;
-      throw err;
-    });
+    global._mongoPromise = mongoose
+      .connect(process.env.MONGO_URI, {
+        serverSelectionTimeoutMS: 5000,
+      })
+      .catch((err) => {
+        console.error("❌ MongoDB Connection Error:", err.message);
+        global._mongoPromise = null;
+        throw err;
+      });
   }
   global._mongoConn = await global._mongoPromise;
   return global._mongoConn;
 }
 
 // Initialize MongoDB connection on startup (non-blocking)
-connectToDB().then(() => {
-  console.log("✅ MongoDB connected successfully");
-}).catch(err => {
-  console.error("❌ Failed to connect to MongoDB:", err.message);
-  console.log("⚠️  Server will start but some features may not work");
-});
+connectToDB()
+  .then(() => {
+    console.log("✅ MongoDB connected successfully");
+  })
+  .catch((err) => {
+    console.error("❌ Failed to connect to MongoDB:", err.message);
+    console.log("⚠️  Server will start but some features may not work");
+  });
 
 app.use(async (req, res, next) => {
   try {
@@ -194,24 +201,26 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: isProd 
+      callbackURL: isProd
         ? "https://api.acadmix.shop/api/auth/google/callback"
         : "http://localhost:5000/api/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
         let user = await User.findOne({ googleId: profile.id });
-        
+
         if (!user) {
           // Check if user exists with same email but different auth method
-          const existingUser = await User.findOne({ email: profile.emails?.[0]?.value });
+          const existingUser = await User.findOne({
+            email: profile.emails?.[0]?.value,
+          });
           if (existingUser) {
             // Link Google account to existing user
             user = await User.findByIdAndUpdate(
               existingUser._id,
-              { 
+              {
                 googleId: profile.id,
-                photo: profile.photos?.[0]?.value
+                photo: profile.photos?.[0]?.value,
               },
               { new: true }
             );
@@ -222,8 +231,8 @@ passport.use(
               name: profile.displayName,
               email: profile.emails?.[0]?.value,
               photo: profile.photos?.[0]?.value,
-              role: 'user',
-              isActive: true
+              role: "user",
+              isActive: true,
             });
           }
         } else {
@@ -233,12 +242,12 @@ passport.use(
             {
               name: profile.displayName,
               email: profile.emails?.[0]?.value,
-              photo: profile.photos?.[0]?.value
+              photo: profile.photos?.[0]?.value,
             },
             { new: true }
           );
         }
-        
+
         done(null, user);
       } catch (err) {
         console.error("🚨 GoogleStrategy error:", err);
@@ -251,11 +260,11 @@ passport.use(
 // ─── JWT MIDDLEWARE ──────────────────────────────────────────────────────────
 const generateToken = (user) => {
   return jwt.sign(
-    { 
-      id: user._id, 
-      email: user.email, 
+    {
+      id: user._id,
+      email: user.email,
       name: user.name,
-      role: user.role || 'user'
+      role: user.role || "user",
     },
     process.env.JWT_SECRET || "fallback-jwt-secret",
     { expiresIn: "7d" }
@@ -271,30 +280,33 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-jwt-secret");
-    
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "fallback-jwt-secret"
+    );
+
     // Handle admin tokens (created with environment variables)
-    if (decoded.admin && decoded.role === 'admin') {
+    if (decoded.admin && decoded.role === "admin") {
       req.user = decoded;
       return next();
     }
-    
+
     // Check if user still exists and is active (for regular users)
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await User.findById(decoded.id).select("-password");
     if (!user) {
       return res.status(401).json({ error: "User not found" });
     }
-    
+
     if (!user.isActive) {
       return res.status(403).json({ error: "Account is deactivated" });
     }
-    
+
     req.user = { ...decoded, role: user.role };
     next();
   } catch (err) {
-    if (err.name === 'JsonWebTokenError') {
+    if (err.name === "JsonWebTokenError") {
       return res.status(403).json({ error: "Invalid token" });
-    } else if (err.name === 'TokenExpiredError') {
+    } else if (err.name === "TokenExpiredError") {
       return res.status(403).json({ error: "Token expired" });
     }
     return res.status(403).json({ error: "Invalid or expired token" });
@@ -305,10 +317,10 @@ const authenticateToken = async (req, res, next) => {
 
 // Health check
 app.get("/api/health", (req, res) => {
-  res.json({ 
-    status: "OK", 
+  res.json({
+    status: "OK",
     message: "Server is running",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -317,8 +329,12 @@ app.get("/api/auth/google", (req, res, next) => {
   const protocol = req.headers["x-forwarded-proto"] || req.protocol;
   const host = req.get("host");
   const baseUrl = `${protocol}://${host}`;
-  const callbackURL = process.env.GOOGLE_CALLBACK_URL || `${baseUrl}/api/auth/google/callback`;
-  return passport.authenticate("google", { scope: ["profile", "email"], callbackURL })(req, res, next);
+  const callbackURL =
+    process.env.GOOGLE_CALLBACK_URL || `${baseUrl}/api/auth/google/callback`;
+  return passport.authenticate("google", {
+    scope: ["profile", "email"],
+    callbackURL,
+  })(req, res, next);
 });
 
 app.get(
@@ -327,8 +343,12 @@ app.get(
     const protocol = req.headers["x-forwarded-proto"] || req.protocol;
     const host = req.get("host");
     const baseUrl = `${protocol}://${host}`;
-    const callbackURL = process.env.GOOGLE_CALLBACK_URL || `${baseUrl}/api/auth/google/callback`;
-    return passport.authenticate("google", { failureRedirect: "/login", callbackURL })(req, res, next);
+    const callbackURL =
+      process.env.GOOGLE_CALLBACK_URL || `${baseUrl}/api/auth/google/callback`;
+    return passport.authenticate("google", {
+      failureRedirect: "/login",
+      callbackURL,
+    })(req, res, next);
   },
   async (req, res) => {
     try {
@@ -336,14 +356,19 @@ app.get(
       const protocol = req.headers["x-forwarded-proto"] || req.protocol;
       const host = req.get("host");
       const requestOrigin = `${protocol}://${host}`;
-      const configuredFrontend = process.env.FRONTEND_ORIGIN || DEFAULT_FRONTEND_ORIGIN;
-      const frontendOrigin = isProd ? configuredFrontend : DEFAULT_FRONTEND_ORIGIN;
+      const configuredFrontend =
+        process.env.FRONTEND_ORIGIN || DEFAULT_FRONTEND_ORIGIN;
+      const frontendOrigin =
+        process.env.FRONTEND_ORIGIN || "https://acadmix.shop";
       const redirectUrl = `${frontendOrigin}/auth-callback?token=${token}`;
       res.redirect(redirectUrl);
     } catch (err) {
       console.error("❌ Google OAuth callback error:", err);
-      const configuredFrontend = process.env.FRONTEND_ORIGIN || DEFAULT_FRONTEND_ORIGIN;
-      const frontendOrigin = isProd ? configuredFrontend : DEFAULT_FRONTEND_ORIGIN;
+      const configuredFrontend =
+        process.env.FRONTEND_ORIGIN || DEFAULT_FRONTEND_ORIGIN;
+      const frontendOrigin = isProd
+        ? configuredFrontend
+        : DEFAULT_FRONTEND_ORIGIN;
       const errorUrl = `${frontendOrigin}/login?error=oauth_failed`;
       res.redirect(errorUrl);
     }
@@ -353,37 +378,37 @@ app.get(
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
     }
-    
+
     const user = await User.findOne({ email, isActive: true });
-    
+
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
-    
+
     // Check if user has password (not Google OAuth user)
     if (!user.password) {
       return res.status(401).json({ error: "Please login with Google" });
     }
-    
+
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
-    
+
     const token = generateToken(user);
-    res.json({ 
-      token, 
-      user: { 
-        id: user._id, 
-        name: user.name, 
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
         email: user.email,
         role: user.role,
-        photo: user.photo
-      } 
+        photo: user.photo,
+      },
     });
   } catch (err) {
     console.error("❌ Login error:", err);
@@ -394,42 +419,50 @@ app.post("/api/auth/login", async (req, res) => {
 app.post("/api/auth/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    
+
     if (!name || !email || !password) {
-      return res.status(400).json({ error: "Name, email, and password are required" });
+      return res
+        .status(400)
+        .json({ error: "Name, email, and password are required" });
     }
-    
+
     if (password.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters long" });
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 6 characters long" });
     }
-    
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ error: "User with this email already exists" });
+      return res
+        .status(400)
+        .json({ error: "User with this email already exists" });
     }
-    
+
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      role: 'user'
+      role: "user",
     });
-    
+
     const token = generateToken(user);
-    res.status(201).json({ 
-      token, 
-      user: { 
-        id: user._id, 
-        name: user.name, 
+    res.status(201).json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
         email: user.email,
-        role: user.role
-      } 
+        role: user.role,
+      },
     });
   } catch (err) {
     console.error("❌ Registration error:", err);
     if (err.code === 11000) {
-      return res.status(400).json({ error: "User with this email already exists" });
+      return res
+        .status(400)
+        .json({ error: "User with this email already exists" });
     }
     res.status(500).json({ error: "Registration failed" });
   }
@@ -438,7 +471,7 @@ app.post("/api/auth/register", async (req, res) => {
 // Get current user profile
 app.get("/api/auth/me", authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id).select("-password");
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -454,22 +487,24 @@ app.put("/api/auth/profile", authenticateToken, async (req, res) => {
   try {
     const { name, email } = req.body;
     const updates = {};
-    
+
     if (name) updates.name = name;
     if (email) {
-      const existingUser = await User.findOne({ email, _id: { $ne: req.user.id } });
+      const existingUser = await User.findOne({
+        email,
+        _id: { $ne: req.user.id },
+      });
       if (existingUser) {
         return res.status(400).json({ error: "Email already in use" });
       }
       updates.email = email;
     }
-    
-    const user = await User.findByIdAndUpdate(
-      req.user.id, 
-      updates, 
-      { new: true, runValidators: true }
-    ).select('-password');
-    
+
+    const user = await User.findByIdAndUpdate(req.user.id, updates, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
+
     res.json({ user });
   } catch (err) {
     console.error("❌ Update profile error:", err);
@@ -481,28 +516,37 @@ app.put("/api/auth/profile", authenticateToken, async (req, res) => {
 app.put("/api/auth/change-password", authenticateToken, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    
+
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({ error: "Current password and new password are required" });
+      return res
+        .status(400)
+        .json({ error: "Current password and new password are required" });
     }
-    
+
     if (newPassword.length < 6) {
-      return res.status(400).json({ error: "New password must be at least 6 characters long" });
+      return res
+        .status(400)
+        .json({ error: "New password must be at least 6 characters long" });
     }
-    
+
     const user = await User.findById(req.user.id);
     if (!user.password) {
-      return res.status(400).json({ error: "Cannot change password for Google OAuth users" });
+      return res
+        .status(400)
+        .json({ error: "Cannot change password for Google OAuth users" });
     }
-    
-    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+
+    const isValidPassword = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
     if (!isValidPassword) {
       return res.status(400).json({ error: "Current password is incorrect" });
     }
-    
+
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     await User.findByIdAndUpdate(req.user.id, { password: hashedPassword });
-    
+
     res.json({ message: "Password changed successfully" });
   } catch (err) {
     console.error("❌ Change password error:", err);
@@ -519,27 +563,33 @@ app.post("/api/auth/logout", authenticateToken, (req, res) => {
 app.post("/api/auth/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
-    
+
     if (!email) {
       return res.status(400).json({ error: "Email is required" });
     }
-    
+
     const user = await User.findOne({ email, isActive: true });
     if (!user) {
       // Don't reveal if user exists or not for security
-      return res.json({ message: "If an account with that email exists, a password reset link has been sent" });
+      return res.json({
+        message:
+          "If an account with that email exists, a password reset link has been sent",
+      });
     }
-    
+
     // Generate reset token (you can implement email sending here)
     const resetToken = jwt.sign(
-      { id: user._id, type: 'password-reset' },
+      { id: user._id, type: "password-reset" },
       process.env.JWT_SECRET || "fallback-jwt-secret",
-      { expiresIn: '1h' }
+      { expiresIn: "1h" }
     );
-    
+
     // TODO: Send email with reset link
     // For now, just return success message
-    res.json({ message: "If an account with that email exists, a password reset link has been sent" });
+    res.json({
+      message:
+        "If an account with that email exists, a password reset link has been sent",
+    });
   } catch (err) {
     console.error("❌ Forgot password error:", err);
     res.status(500).json({ error: "Failed to process password reset request" });
@@ -550,27 +600,34 @@ app.post("/api/auth/forgot-password", async (req, res) => {
 app.post("/api/auth/reset-password", async (req, res) => {
   try {
     const { token, newPassword } = req.body;
-    
+
     if (!token || !newPassword) {
-      return res.status(400).json({ error: "Token and new password are required" });
+      return res
+        .status(400)
+        .json({ error: "Token and new password are required" });
     }
-    
+
     if (newPassword.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters long" });
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 6 characters long" });
     }
-    
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-jwt-secret");
-    if (decoded.type !== 'password-reset') {
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "fallback-jwt-secret"
+    );
+    if (decoded.type !== "password-reset") {
       return res.status(400).json({ error: "Invalid reset token" });
     }
-    
+
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     await User.findByIdAndUpdate(decoded.id, { password: hashedPassword });
-    
+
     res.json({ message: "Password reset successfully" });
   } catch (err) {
     console.error("❌ Reset password error:", err);
-    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+    if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
       return res.status(400).json({ error: "Invalid or expired reset token" });
     }
     res.status(500).json({ error: "Failed to reset password" });
@@ -582,14 +639,14 @@ app.get("/api/books", async (req, res) => {
   try {
     const { section } = req.query;
     let query = {};
-    
-    if (section && section !== 'home') {
+
+    if (section && section !== "home") {
       query.section = section;
     }
-    
+
     const books = await Book.find(query).sort({ createdAt: -1 });
     const userId = req.user?.id;
-    const isAdmin = req.user?.role === 'admin';
+    const isAdmin = req.user?.role === "admin";
 
     let payments = [];
     if (userId && !isAdmin) {
@@ -606,7 +663,7 @@ app.get("/api/books", async (req, res) => {
       return {
         ...book.toObject(),
         canRead: isAdmin || userPayment?.status === "approved",
-        paymentStatus: isAdmin ? "admin_access" : (userPayment?.status || null),
+        paymentStatus: isAdmin ? "admin_access" : userPayment?.status || null,
         pdfUrl: book.pdfUrl || null,
       };
     });
@@ -633,7 +690,7 @@ app.get("/api/book/:id/secure-pdf", authenticateToken, async (req, res) => {
   try {
     const bookId = req.params.id;
     const userId = req.user.id;
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === "admin";
 
     // Admin gets automatic access to all books
     if (isAdmin) {
@@ -652,7 +709,9 @@ app.get("/api/book/:id/secure-pdf", authenticateToken, async (req, res) => {
     });
 
     if (!payment) {
-      return res.status(403).json({ error: "Access denied. Payment not found." });
+      return res
+        .status(403)
+        .json({ error: "Access denied. Payment not found." });
     }
 
     const book = await Book.findById(bookId);
@@ -675,33 +734,33 @@ app.get("/api/pdf-proxy", authenticateToken, async (req, res) => {
       user: req.user,
       userRole: req.user?.role,
       isAdmin: req.user?.admin,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
+
     const { url } = req.query;
-    
+
     if (!url) {
       console.log("❌ PDF Proxy: Missing URL");
       return res.status(400).json({ error: "PDF URL is required" });
     }
 
     // Validate that it's a Cloudinary URL
-    if (!url.includes('res.cloudinary.com')) {
+    if (!url.includes("res.cloudinary.com")) {
       console.log("❌ PDF Proxy: Invalid URL (not Cloudinary)");
       return res.status(400).json({ error: "Invalid PDF URL" });
     }
 
     console.log("📥 Fetching PDF from Cloudinary:", url);
-    
+
     // Fetch the PDF from Cloudinary
     const response = await fetch(url);
-    
+
     console.log("📊 Cloudinary Response:", {
       status: response.status,
       statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries())
+      headers: Object.fromEntries(response.headers.entries()),
     });
-    
+
     if (!response.ok) {
       console.log("❌ PDF Proxy: Cloudinary returned error status");
       return res.status(response.status).json({ error: "Failed to fetch PDF" });
@@ -709,18 +768,25 @@ app.get("/api/pdf-proxy", authenticateToken, async (req, res) => {
 
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    console.log("✅ PDF Proxy: Successfully fetched PDF, size:", buffer.length, "bytes");
-    
+    console.log(
+      "✅ PDF Proxy: Successfully fetched PDF, size:",
+      buffer.length,
+      "bytes"
+    );
+
     // Set appropriate headers with security measures
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline');
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "inline");
+    res.setHeader(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, private"
+    );
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+
     res.send(buffer);
     console.log("✅ PDF Proxy: PDF sent successfully");
   } catch (err) {
@@ -733,40 +799,47 @@ app.get("/api/pdf-proxy", authenticateToken, async (req, res) => {
 app.get("/api/test-pdf", async (req, res) => {
   try {
     const { url } = req.query;
-    
+
     if (!url) {
       return res.status(400).json({ error: "PDF URL is required" });
     }
 
     console.log("🧪 Test PDF Request:", url);
-    
+
     // Fetch the PDF directly
     const response = await fetch(url);
-    
+
     console.log("🧪 Test PDF Response:", {
       status: response.status,
       statusText: response.statusText,
-      contentType: response.headers.get('content-type')
+      contentType: response.headers.get("content-type"),
     });
-    
+
     if (!response.ok) {
       return res.status(response.status).json({ error: "Failed to fetch PDF" });
     }
 
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    console.log("✅ Test PDF: Successfully fetched PDF, size:", buffer.length, "bytes");
-    
+    console.log(
+      "✅ Test PDF: Successfully fetched PDF, size:",
+      buffer.length,
+      "bytes"
+    );
+
     // Set appropriate headers with security measures
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline');
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "inline");
+    res.setHeader(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, private"
+    );
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+
     res.send(buffer);
   } catch (err) {
     console.error("❌ Test PDF Error:", err);
@@ -778,35 +851,35 @@ app.get("/api/test-pdf", async (req, res) => {
 app.get("/api/test-pdf-url", async (req, res) => {
   try {
     const { url } = req.query;
-    
+
     if (!url) {
       return res.status(400).json({ error: "PDF URL is required" });
     }
 
     console.log("🔗 Testing PDF URL:", url);
-    
+
     // Just test if the URL is accessible
-    const response = await fetch(url, { method: 'HEAD' });
-    
+    const response = await fetch(url, { method: "HEAD" });
+
     console.log("🔗 URL Test Response:", {
       status: response.status,
       statusText: response.statusText,
-      contentType: response.headers.get('content-type'),
-      contentLength: response.headers.get('content-length')
+      contentType: response.headers.get("content-type"),
+      contentLength: response.headers.get("content-length"),
     });
-    
+
     if (response.ok) {
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         status: response.status,
-        contentType: response.headers.get('content-type'),
-        contentLength: response.headers.get('content-length')
+        contentType: response.headers.get("content-type"),
+        contentLength: response.headers.get("content-length"),
       });
     } else {
-      res.json({ 
-        success: false, 
+      res.json({
+        success: false,
         status: response.status,
-        error: "URL not accessible"
+        error: "URL not accessible",
       });
     }
   } catch (err) {
@@ -819,42 +892,46 @@ app.get("/api/test-pdf-url", async (req, res) => {
 app.post("/api/make-pdf-public", async (req, res) => {
   try {
     const { url } = req.body;
-    
+
     if (!url) {
       return res.status(400).json({ error: "PDF URL is required" });
     }
 
     console.log("🔧 Making PDF public:", url);
-    
+
     // Extract public ID from Cloudinary URL
-    const urlParts = url.split('/');
+    const urlParts = url.split("/");
     const filename = urlParts[urlParts.length - 1];
-    const publicId = filename.split('.')[0];
+    const publicId = filename.split(".")[0];
     const fullPublicId = `acadmix/pdfs/${publicId}`;
-    
+
     console.log("🔧 Extracted public ID:", fullPublicId);
-    
+
     // Make the resource public using Cloudinary API
     const result = await new Promise((resolve, reject) => {
-      cloudinary.api.update(fullPublicId, { 
-        resource_type: 'raw',
-        access_mode: 'public',
-        invalidate: true
-      }, (error, result) => {
-        if (error) {
-          console.error("❌ Failed to make PDF public:", error);
-          reject(error);
-        } else {
-          console.log("✅ PDF made public:", result);
-          resolve(result);
+      cloudinary.api.update(
+        fullPublicId,
+        {
+          resource_type: "raw",
+          access_mode: "public",
+          invalidate: true,
+        },
+        (error, result) => {
+          if (error) {
+            console.error("❌ Failed to make PDF public:", error);
+            reject(error);
+          } else {
+            console.log("✅ PDF made public:", result);
+            resolve(result);
+          }
         }
-      });
+      );
     });
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: "PDF made public successfully",
-      result: result
+      result: result,
     });
   } catch (err) {
     console.error("❌ Make PDF Public Error:", err);
@@ -864,40 +941,44 @@ app.post("/api/make-pdf-public", async (req, res) => {
 
 // Admin API
 app.post("/api/admin/login", async (req, res) => {
-  console.log("🔐 Admin login attempt:", { 
-    username: req.body.username, 
+  console.log("🔐 Admin login attempt:", {
+    username: req.body.username,
     hasPassword: !!req.body.password,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
-  
+
   try {
     const { username, password } = req.body;
-    
+
     if (!username || !password) {
       console.log("❌ Admin login: Missing credentials");
-      return res.status(400).json({ error: "Username and password are required" });
+      return res
+        .status(400)
+        .json({ error: "Username and password are required" });
     }
-    
+
     console.log("🔍 Checking admin credentials...");
-    
+
     // Check if MongoDB is connected for admin user lookup
     let adminUser = null;
     let useEnvAuth = false;
-    
+
     try {
       console.log("🔗 Attempting to connect to MongoDB...");
       await connectToDB();
       console.log("✅ MongoDB connected, searching for admin user...");
-      adminUser = await User.findOne({ role: 'admin', email: username });
+      adminUser = await User.findOne({ role: "admin", email: username });
       console.log("👤 Admin user found in DB:", !!adminUser);
     } catch (dbErr) {
-      console.log("⚠️  MongoDB not available, using environment variables for admin auth");
+      console.log(
+        "⚠️  MongoDB not available, using environment variables for admin auth"
+      );
       console.error("❌ DB Error:", dbErr.message);
       useEnvAuth = true;
     }
-    
+
     let isValidAdmin = false;
-    
+
     if (adminUser && adminUser.password) {
       console.log("🔐 Checking against database admin user...");
       // Check against database admin user
@@ -913,31 +994,35 @@ app.post("/api/admin/login", async (req, res) => {
       // Check against environment variables
       const envUsername = process.env.ADMIN_USER;
       const envPassword = process.env.ADMIN_PASS;
-      
+
       console.log("🔑 Environment check:", {
         hasEnvUsername: !!envUsername,
         hasEnvPassword: !!envPassword,
-        usernameMatch: username === envUsername
+        usernameMatch: username === envUsername,
       });
-      
+
       if (envUsername && envPassword) {
-        isValidAdmin = (username === envUsername && password === envPassword);
+        isValidAdmin = username === envUsername && password === envPassword;
         console.log("✅ Environment auth result:", isValidAdmin);
       } else {
-        console.error("❌ Environment variables ADMIN_USER and ADMIN_PASS not set");
-        return res.status(500).json({ error: "Admin authentication not configured" });
+        console.error(
+          "❌ Environment variables ADMIN_USER and ADMIN_PASS not set"
+        );
+        return res
+          .status(500)
+          .json({ error: "Admin authentication not configured" });
       }
     }
-    
+
     if (isValidAdmin) {
       console.log("🎉 Admin authentication successful!");
       const token = jwt.sign(
-        { 
-          admin: true, 
-          role: 'admin',
-          id: adminUser?._id || 'admin'
-        }, 
-        process.env.JWT_SECRET || "fallback-jwt-secret", 
+        {
+          admin: true,
+          role: "admin",
+          id: adminUser?._id || "admin",
+        },
+        process.env.JWT_SECRET || "fallback-jwt-secret",
         { expiresIn: "7d" }
       );
       res.json({ token, message: "Admin login successful" });
@@ -953,11 +1038,11 @@ app.post("/api/admin/login", async (req, res) => {
 
 app.get("/api/admin/dashboard", authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
 
-    const users = await User.find().select('-password').lean();
+    const users = await User.find().select("-password").lean();
     const totalUsers = users.length;
     const totalBooks = await Book.countDocuments();
     const totalPayments = await Payment.countDocuments();
@@ -981,151 +1066,187 @@ app.get("/api/admin/dashboard", authenticateToken, async (req, res) => {
   }
 });
 
-app.post("/api/admin/payments/:id/approve", authenticateToken, async (req, res) => {
-  try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: "Admin access required" });
+app.post(
+  "/api/admin/payments/:id/approve",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      await Payment.findByIdAndUpdate(req.params.id, { status: "approved" });
+      res.json({ message: "Payment approved successfully" });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to approve payment" });
     }
-
-    await Payment.findByIdAndUpdate(req.params.id, { status: "approved" });
-    res.json({ message: "Payment approved successfully" });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to approve payment" });
   }
-});
+);
 
-app.post("/api/admin/payments/:id/reject", authenticateToken, async (req, res) => {
-  try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: "Admin access required" });
+app.post(
+  "/api/admin/payments/:id/reject",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      await Payment.findByIdAndUpdate(req.params.id, { status: "rejected" });
+      res.json({ message: "Payment rejected successfully" });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to reject payment" });
     }
-
-    await Payment.findByIdAndUpdate(req.params.id, { status: "rejected" });
-    res.json({ message: "Payment rejected successfully" });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to reject payment" });
   }
-});
+);
 
 // Book management API with file upload
-app.post("/api/admin/books", authenticateToken, upload.fields([
-  { name: 'image', maxCount: 1 },
-  { name: 'pdf', maxCount: 1 }
-]), async (req, res) => {
-  try {
-    console.log("📝 Creating book with files:", {
-      body: req.body,
-      files: req.files ? Object.keys(req.files) : 'No files'
-    });
-    
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: "Admin access required" });
-    }
+app.post(
+  "/api/admin/books",
+  authenticateToken,
+  upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "pdf", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    try {
+      console.log("📝 Creating book with files:", {
+        body: req.body,
+        files: req.files ? Object.keys(req.files) : "No files",
+      });
 
-    const { title, description, category, section, price, priceDiscounted, pages } = req.body;
-    
-    // Upload files to cloud storage
-    let imageUrl = null;
-    let pdfUrl = null;
-    
-    if (req.files?.image) {
-      console.log("📸 Uploading image:", req.files.image[0].originalname);
-      imageUrl = await uploadImage(req.files.image[0]);
-      console.log("✅ Image uploaded:", imageUrl);
-    }
-    
-    if (req.files?.pdf) {
-      console.log("📄 Uploading PDF:", req.files.pdf[0].originalname);
-      pdfUrl = await uploadPdf(req.files.pdf[0]);
-      console.log("✅ PDF uploaded:", pdfUrl);
-    }
-
-    const bookData = {
-      title,
-      description,
-      category,
-      section,
-      price: parseFloat(price),
-      priceDiscounted: priceDiscounted ? parseFloat(priceDiscounted) : null,
-      pages: pages ? parseInt(pages) : null,
-      image: imageUrl,
-      pdfUrl: pdfUrl
-    };
-
-    const book = await Book.create(bookData);
-    res.status(201).json(book);
-  } catch (err) {
-    console.error("❌ Create book error:", err);
-    res.status(500).json({ error: "Failed to create book" });
-  }
-});
-
-app.put("/api/admin/books/:id", authenticateToken, upload.fields([
-  { name: 'image', maxCount: 1 },
-  { name: 'pdf', maxCount: 1 }
-]), async (req, res) => {
-  try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: "Admin access required" });
-    }
-
-    const { title, description, category, section, price, priceDiscounted, pages } = req.body;
-    
-    // Get existing book
-    const existingBook = await Book.findById(req.params.id);
-    if (!existingBook) {
-      return res.status(404).json({ error: "Book not found" });
-    }
-
-    // Upload new files to cloud storage
-    let imageUrl = existingBook.image;
-    let pdfUrl = existingBook.pdfUrl;
-    
-    if (req.files?.image) {
-      // Delete old image if exists
-      if (existingBook.image) {
-        const publicId = getPublicIdFromUrl(existingBook.image);
-        if (publicId) {
-          await deleteFile(publicId);
-        }
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
       }
-      imageUrl = await uploadImage(req.files.image[0]);
-    }
-    
-    if (req.files?.pdf) {
-      // Delete old PDF if exists
-      if (existingBook.pdfUrl) {
-        const publicId = getPublicIdFromUrl(existingBook.pdfUrl);
-        if (publicId) {
-          await deleteFile(publicId);
-        }
+
+      const {
+        title,
+        description,
+        category,
+        section,
+        price,
+        priceDiscounted,
+        pages,
+      } = req.body;
+
+      // Upload files to cloud storage
+      let imageUrl = null;
+      let pdfUrl = null;
+
+      if (req.files?.image) {
+        console.log("📸 Uploading image:", req.files.image[0].originalname);
+        imageUrl = await uploadImage(req.files.image[0]);
+        console.log("✅ Image uploaded:", imageUrl);
       }
-      pdfUrl = await uploadPdf(req.files.pdf[0]);
+
+      if (req.files?.pdf) {
+        console.log("📄 Uploading PDF:", req.files.pdf[0].originalname);
+        pdfUrl = await uploadPdf(req.files.pdf[0]);
+        console.log("✅ PDF uploaded:", pdfUrl);
+      }
+
+      const bookData = {
+        title,
+        description,
+        category,
+        section,
+        price: parseFloat(price),
+        priceDiscounted: priceDiscounted ? parseFloat(priceDiscounted) : null,
+        pages: pages ? parseInt(pages) : null,
+        image: imageUrl,
+        pdfUrl: pdfUrl,
+      };
+
+      const book = await Book.create(bookData);
+      res.status(201).json(book);
+    } catch (err) {
+      console.error("❌ Create book error:", err);
+      res.status(500).json({ error: "Failed to create book" });
     }
-
-    const bookData = {
-      title,
-      description,
-      category,
-      section,
-      price: parseFloat(price),
-      priceDiscounted: priceDiscounted ? parseFloat(priceDiscounted) : null,
-      pages: pages ? parseInt(pages) : null,
-      image: imageUrl,
-      pdfUrl: pdfUrl
-    };
-
-    const book = await Book.findByIdAndUpdate(req.params.id, bookData, { new: true });
-    res.json(book);
-  } catch (err) {
-    console.error("❌ Update book error:", err);
-    res.status(500).json({ error: "Failed to update book" });
   }
-});
+);
+
+app.put(
+  "/api/admin/books/:id",
+  authenticateToken,
+  upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "pdf", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    try {
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const {
+        title,
+        description,
+        category,
+        section,
+        price,
+        priceDiscounted,
+        pages,
+      } = req.body;
+
+      // Get existing book
+      const existingBook = await Book.findById(req.params.id);
+      if (!existingBook) {
+        return res.status(404).json({ error: "Book not found" });
+      }
+
+      // Upload new files to cloud storage
+      let imageUrl = existingBook.image;
+      let pdfUrl = existingBook.pdfUrl;
+
+      if (req.files?.image) {
+        // Delete old image if exists
+        if (existingBook.image) {
+          const publicId = getPublicIdFromUrl(existingBook.image);
+          if (publicId) {
+            await deleteFile(publicId);
+          }
+        }
+        imageUrl = await uploadImage(req.files.image[0]);
+      }
+
+      if (req.files?.pdf) {
+        // Delete old PDF if exists
+        if (existingBook.pdfUrl) {
+          const publicId = getPublicIdFromUrl(existingBook.pdfUrl);
+          if (publicId) {
+            await deleteFile(publicId);
+          }
+        }
+        pdfUrl = await uploadPdf(req.files.pdf[0]);
+      }
+
+      const bookData = {
+        title,
+        description,
+        category,
+        section,
+        price: parseFloat(price),
+        priceDiscounted: priceDiscounted ? parseFloat(priceDiscounted) : null,
+        pages: pages ? parseInt(pages) : null,
+        image: imageUrl,
+        pdfUrl: pdfUrl,
+      };
+
+      const book = await Book.findByIdAndUpdate(req.params.id, bookData, {
+        new: true,
+      });
+      res.json(book);
+    } catch (err) {
+      console.error("❌ Update book error:", err);
+      res.status(500).json({ error: "Failed to update book" });
+    }
+  }
+);
 
 app.delete("/api/admin/books/:id", authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -1141,7 +1262,7 @@ app.delete("/api/admin/books/:id", authenticateToken, async (req, res) => {
         await deleteFile(publicId);
       }
     }
-    
+
     if (book.pdfUrl) {
       const publicId = getPublicIdFromUrl(book.pdfUrl);
       if (publicId) {
@@ -1160,7 +1281,7 @@ app.delete("/api/admin/books/:id", authenticateToken, async (req, res) => {
 // Get all books for admin
 app.get("/api/admin/books", authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -1175,11 +1296,14 @@ app.get("/api/admin/books", authenticateToken, async (req, res) => {
 // User management endpoints
 app.get("/api/admin/users", authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
 
-    const users = await User.find().select('-password').sort({ createdAt: -1 }).lean();
+    const users = await User.find()
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ users });
   } catch (err) {
     console.error("❌ Get users error:", err);
@@ -1189,12 +1313,12 @@ app.get("/api/admin/users", authenticateToken, async (req, res) => {
 
 app.put("/api/admin/users/:id/role", authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
 
     const { role } = req.body;
-    if (!['user', 'admin'].includes(role)) {
+    if (!["user", "admin"].includes(role)) {
       return res.status(400).json({ error: "Invalid role" });
     }
 
@@ -1202,7 +1326,7 @@ app.put("/api/admin/users/:id/role", authenticateToken, async (req, res) => {
       req.params.id,
       { role },
       { new: true }
-    ).select('-password');
+    ).select("-password");
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -1217,12 +1341,12 @@ app.put("/api/admin/users/:id/role", authenticateToken, async (req, res) => {
 
 app.put("/api/admin/users/:id/status", authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
 
     const { isActive } = req.body;
-    if (typeof isActive !== 'boolean') {
+    if (typeof isActive !== "boolean") {
       return res.status(400).json({ error: "isActive must be a boolean" });
     }
 
@@ -1230,7 +1354,7 @@ app.put("/api/admin/users/:id/status", authenticateToken, async (req, res) => {
       req.params.id,
       { isActive },
       { new: true }
-    ).select('-password');
+    ).select("-password");
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -1245,7 +1369,7 @@ app.put("/api/admin/users/:id/status", authenticateToken, async (req, res) => {
 
 app.delete("/api/admin/users/:id", authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -1273,26 +1397,32 @@ app.get("/favicon.ico", (req, res) => res.status(204).end());
 // ─── ERROR HANDLING ──────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error("💥 Uncaught Error:", err);
-  res.status(500).json({ error: "Internal Server Error", message: err.message });
+  res
+    .status(500)
+    .json({ error: "Internal Server Error", message: err.message });
 });
 
 // ─── SERVER START ────────────────────────────────────────────────────────────
 console.log("🔧 Server startup configuration:", {
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT || 5000,
-  isProduction: process.env.NODE_ENV === "production"
+  isProduction: process.env.NODE_ENV === "production",
 });
 
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 5000;
   console.log(`🚀 Starting development server on port ${PORT}...`);
-  app.listen(PORT, () => {
-    console.log(`✅ MERN API server listening at http://localhost:${PORT}`);
-    console.log("📝 Admin login available at: http://localhost:5000/api/admin/login");
-    console.log("🔗 Health check: http://localhost:5000/api/health");
-  }).on('error', (err) => {
-    console.error("❌ Server startup error:", err);
-  });
+  app
+    .listen(PORT, () => {
+      console.log(`✅ MERN API server listening at http://localhost:${PORT}`);
+      console.log(
+        "📝 Admin login available at: http://localhost:5000/api/admin/login"
+      );
+      console.log("🔗 Health check: http://localhost:5000/api/health");
+    })
+    .on("error", (err) => {
+      console.error("❌ Server startup error:", err);
+    });
 } else {
   console.log("🚀 Production mode: Exporting app for serverless deployment");
   module.exports = app;
