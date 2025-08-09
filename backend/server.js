@@ -978,16 +978,13 @@ app.get("/api/pdf-proxy", authenticateToken, async (req, res) => {
       isAdmin: isAdmin
     });
 
-    // Admin gets automatic access to all books
+    // Check access permissions
     if (isAdmin) {
       console.log("✅ PDF Proxy: Admin access granted");
-    }
-    // Check if book is free
-    else if (book.isFree === true) {
+    } else if (book.isFree === true) {
       console.log("✅ PDF Proxy: Free book access granted");
-    }
-    // Regular users need approved payment for non-free books
-    else {
+    } else {
+      // Regular users need approved payment for non-free books
       console.log("🔍 PDF Proxy: Checking for approved payment...");
       const payment = await Payment.findOne({
         user: userId,
@@ -1044,6 +1041,79 @@ app.get("/api/pdf-proxy", authenticateToken, async (req, res) => {
   } catch (err) {
     console.error("❌ PDF Proxy Error:", err);
     res.status(500).json({ error: "Failed to proxy PDF" });
+  }
+});
+
+// Free PDF endpoint (no authentication required for free books)
+app.get("/api/free-pdf-proxy", async (req, res) => {
+  try {
+    const { url } = req.query;
+
+    if (!url) {
+      return res.status(400).json({ error: "PDF URL is required" });
+    }
+
+    // Validate that it's a Cloudinary URL
+    if (!url.includes("res.cloudinary.com")) {
+      return res.status(400).json({ error: "Invalid PDF URL" });
+    }
+
+    console.log("🆓 Free PDF Request:", url);
+
+    // Find the book associated with this PDF URL and verify it's free
+    const book = await Book.findOne({ pdfUrl: url });
+    
+    if (!book) {
+      console.log("❌ Free PDF: Book not found for URL:", url);
+      return res.status(404).json({ error: "Book not found" });
+    }
+
+    // Only allow access to free books through this endpoint
+    if (book.isFree !== true) {
+      console.log("❌ Free PDF: Book is not free:", book.title);
+      return res.status(403).json({ error: "This book requires authentication" });
+    }
+
+    console.log("✅ Free PDF: Access granted for free book:", book.title);
+
+    // Fetch the PDF directly
+    const response = await fetch(url);
+
+    console.log("📊 Free PDF Response:", {
+      status: response.status,
+      statusText: response.statusText,
+      contentType: response.headers.get("content-type"),
+    });
+
+    if (!response.ok) {
+      return res.status(response.status).json({ error: "Failed to fetch PDF" });
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    console.log(
+      "✅ Free PDF: Successfully fetched PDF, size:",
+      buffer.length,
+      "bytes"
+    );
+
+    // Set appropriate headers with security measures
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "inline");
+    res.setHeader(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, private"
+    );
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+
+    res.send(buffer);
+  } catch (err) {
+    console.error("❌ Free PDF Error:", err);
+    res.status(500).json({ error: "Failed to fetch PDF" });
   }
 });
 
