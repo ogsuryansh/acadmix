@@ -311,11 +311,24 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Auth routes
-app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+// Auth routes (compute callbackURL per request to avoid prod/dev mismatch)
+app.get("/api/auth/google", (req, res, next) => {
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+  const host = req.get("host");
+  const baseUrl = `${protocol}://${host}`;
+  const callbackURL = process.env.GOOGLE_CALLBACK_URL || `${baseUrl}/api/auth/google/callback`;
+  return passport.authenticate("google", { scope: ["profile", "email"], callbackURL })(req, res, next);
+});
 
-app.get("/api/auth/google/callback", 
-  passport.authenticate("google", { failureRedirect: "/login" }),
+app.get(
+  "/api/auth/google/callback",
+  (req, res, next) => {
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+    const host = req.get("host");
+    const baseUrl = `${protocol}://${host}`;
+    const callbackURL = process.env.GOOGLE_CALLBACK_URL || `${baseUrl}/api/auth/google/callback`;
+    return passport.authenticate("google", { failureRedirect: "/login", callbackURL })(req, res, next);
+  },
   async (req, res) => {
     try {
       const token = generateToken(req.user);
