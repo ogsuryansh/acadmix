@@ -36,7 +36,25 @@ const bcrypt = require("bcryptjs");
 const rateLimit = require("express-rate-limit");
 const QRCode = require("qrcode");
 const path = require("path");
-const adminConfig = require("./config/admin");
+// Import admin config with fallback
+let adminConfig;
+try {
+  adminConfig = require("./config/admin");
+  console.log("✅ Admin config loaded successfully");
+} catch (err) {
+  console.warn("⚠️  Admin config not found, using defaults:", err.message);
+  adminConfig = {
+    dashboard: { paymentsLimit: 50 },
+    upload: {
+      maxImageSize: 5 * 1024 * 1024,
+      maxPdfSize: 50 * 1024 * 1024,
+      allowedImageTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'],
+      allowedPdfTypes: ['application/pdf'],
+    },
+    payment: { testAmount: 100, currency: 'INR' },
+    ui: { paginationLimit: 20, refreshInterval: 30000 }
+  };
+}
 
 const User = require("./models/User");
 const Book = require("./models/Book");
