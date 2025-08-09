@@ -1746,6 +1746,5 @@ if (process.env.NODE_ENV !== "production") {
     });
 } else {
   console.log("🚀 Production mode: Exporting app for serverless deployment");
-  module.exports = app;
-  module.exports.handler = serverless(app);
+  module.exports = serverless(app);
 }
