@@ -166,7 +166,12 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
         console.log('🌐 Fetching PDF from proxy...');
         const authToken = localStorage.getItem('token') || localStorage.getItem('adminToken');
         
-        const response = await fetch(`https://api.acadmix.shop/api/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`, {
+        // Use the same dynamic API base URL logic as the rest of the application
+        const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+          (isDevelopment ? 'http://localhost:5000/api' : 'https://api.acadmix.shop/api');
+        
+        const response = await fetch(`${API_BASE_URL}/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${authToken}`,

@@ -23,6 +23,10 @@ const bookSchema = new mongoose.Schema({
     type: String,
     enum: ['Yes', 'No'],
     default: 'No'
+  },
+  isFree: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 

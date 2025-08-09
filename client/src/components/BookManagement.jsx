@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { 
   Upload, 
   FileText, 
@@ -33,9 +33,17 @@ const BookManagement = () => {
     image: null,
     pdf: null,
     imagePreview: null,
-    pdfName: null
+    pdfName: null,
+    isFree: false
   });
   const queryClient = useQueryClient();
+
+  // Fetch admin configuration
+  const { data: adminConfig } = useQuery({
+    queryKey: ['admin-config'],
+    queryFn: () => api.get('/admin/config').then(res => res.data),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   // Create book mutation
   const createBook = useMutation({
@@ -90,7 +98,8 @@ const BookManagement = () => {
       image: null,
       pdf: null,
       imagePreview: null,
-      pdfName: null
+      pdfName: null,
+      isFree: false
     });
   };
 
@@ -105,8 +114,9 @@ const BookManagement = () => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast.error('Image size should be less than 5MB');
+      const maxImageSize = adminConfig?.upload?.maxImageSize || 5 * 1024 * 1024; // 5MB default
+      if (file.size > maxImageSize) {
+        toast.error(`Image size should be less than ${Math.round(maxImageSize / (1024 * 1024))}MB`);
         return;
       }
       
@@ -126,8 +136,9 @@ const BookManagement = () => {
   const handlePdfUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 50 * 1024 * 1024) { // 50MB limit
-        toast.error('PDF size should be less than 50MB');
+      const maxPdfSize = adminConfig?.upload?.maxPdfSize || 50 * 1024 * 1024; // 50MB default
+      if (file.size > maxPdfSize) {
+        toast.error(`PDF size should be less than ${Math.round(maxPdfSize / (1024 * 1024))}MB`);
         return;
       }
       
@@ -176,6 +187,7 @@ const BookManagement = () => {
     submitData.append('price', formData.price);
     submitData.append('priceDiscounted', formData.priceDiscounted);
     submitData.append('pages', formData.pages);
+    submitData.append('isFree', formData.isFree);
     
     if (formData.image) {
       submitData.append('image', formData.image);
@@ -205,7 +217,8 @@ const BookManagement = () => {
       image: null,
       pdf: null,
       imagePreview: book.image || null,
-      pdfName: book.pdfUrl ? 'Current PDF' : null
+      pdfName: book.pdfUrl ? 'Current PDF' : null,
+      isFree: book.isFree || false
     });
     setShowAddModal(true);
   };
@@ -365,6 +378,40 @@ const BookManagement = () => {
                     />
                   </div>
                 </div>
+
+                {/* Free Book Toggle */}
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="isFree"
+                    name="isFree"
+                    checked={formData.isFree}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      isFree: e.target.checked
+                    }))}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="isFree" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Mark as free for all users
+                  </label>
+                </div>
+                {formData.isFree && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          This book will be available for free to all users and will appear in their "My Books" section.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* File Uploads */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

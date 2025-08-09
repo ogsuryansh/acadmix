@@ -113,7 +113,11 @@ document.addEventListener("DOMContentLoaded", function () {
 const urlParams = new URLSearchParams(window.location.search);
 const bookId = urlParams.get("id");
 
-fetch(`https://api.acadmix.shop/api/book/${bookId}/secure-pdf`)
+// Use dynamic API base URL logic
+const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_BASE_URL = isDevelopment ? 'http://localhost:5000/api' : 'https://api.acadmix.shop/api';
+
+fetch(`${API_BASE_URL}/book/${bookId}/secure-pdf`)
   .then((res) => res.json())
   .then((data) => {
     if (!data.url) {

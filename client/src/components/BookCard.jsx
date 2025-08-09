@@ -1,13 +1,33 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { BookOpen, Lock, CheckCircle, Clock, XCircle, ArrowRight, Star, Eye } from 'lucide-react';
 import AdvancedPDFViewer from './AdvancedPDFViewer';
 import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 const BookCard = ({ book }) => {
   const [showPDF, setShowPDF] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
+
+  const handleBuyNow = (e) => {
+    e.preventDefault();
+    
+    if (!user) {
+      toast.error('Please log in to purchase this book');
+      navigate('/login');
+      return;
+    }
+    
+    // Check if payment is pending
+    if (book.paymentStatus === 'pending') {
+      toast.error('Payment is already pending for this book. Please wait for admin approval.');
+      return;
+    }
+    
+    navigate(`/payment/${book._id}`);
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -23,6 +43,13 @@ const BookCard = ({ book }) => {
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
             <CheckCircle className="h-3 w-3 mr-1" />
             Admin Access
+          </span>
+        );
+      case 'free':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 border border-green-200 dark:border-green-800">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Free
           </span>
         );
       case 'pending':
@@ -94,13 +121,21 @@ const BookCard = ({ book }) => {
             
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
-                <span className="text-lg font-bold text-gray-900 dark:text-white">
-                  ₹{book.price}
-                </span>
-                {book.priceDiscounted && book.priceDiscounted !== book.price && (
-                  <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
-                    ₹{book.priceDiscounted}
+                {book.isFree || book.paymentStatus === 'free' ? (
+                  <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                    Free
                   </span>
+                ) : (
+                  <>
+                    <span className="text-lg font-bold text-gray-900 dark:text-white">
+                      ₹{book.price}
+                    </span>
+                    {book.priceDiscounted && book.priceDiscounted !== book.price && (
+                      <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
+                        ₹{book.priceDiscounted}
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
               
@@ -117,7 +152,7 @@ const BookCard = ({ book }) => {
             </div>
             
             <div className="flex items-center justify-between">
-              {(book.paymentStatus === 'approved' || book.paymentStatus === 'admin_access' || isAdmin) ? (
+              {(book.paymentStatus === 'approved' || book.paymentStatus === 'admin_access' || book.paymentStatus === 'free' || isAdmin) ? (
                 <div className="flex items-center space-x-2 w-full">
                   {book.pdfUrl && (
                     <button
@@ -136,14 +171,24 @@ const BookCard = ({ book }) => {
                     <ArrowRight className="h-4 w-4 ml-1 group-hover/link:translate-x-1 transition-transform" />
                   </Link>
                 </div>
+              ) : book.paymentStatus === 'pending' ? (
+                <div className="flex items-center justify-center w-full">
+                  <button
+                    disabled
+                    className="flex items-center justify-center w-full text-sm text-gray-500 dark:text-gray-400 font-medium px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
+                  >
+                    <Clock className="h-4 w-4 mr-2" />
+                    Payment Pending
+                  </button>
+                </div>
               ) : (
-                <Link
-                  to={`/payment/${book._id}`}
+                <button
+                  onClick={handleBuyNow}
                   className="group/link flex items-center justify-center w-full text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors px-4 py-2 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 border border-primary-200 dark:border-primary-800"
                 >
                   Buy Now
                   <ArrowRight className="h-4 w-4 ml-1 group-hover/link:translate-x-1 transition-transform" />
-                </Link>
+                </button>
               )}
             </div>
           </div>

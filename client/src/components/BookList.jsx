@@ -96,7 +96,7 @@ const BookList = ({ onEditBook }) => {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="card p-4">
           <div className="flex items-center">
             <BookOpen className="h-8 w-8 text-blue-500 mr-3" />
@@ -113,7 +113,7 @@ const BookList = ({ onEditBook }) => {
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Total Value</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                ₹{books.reduce((sum, book) => sum + (book.price || 0), 0)}
+                ₹{books.reduce((sum, book) => sum + (book.isFree ? 0 : (book.price || 0)), 0)}
               </p>
             </div>
           </div>
@@ -138,6 +138,20 @@ const BookList = ({ onEditBook }) => {
               <p className="text-sm text-gray-600 dark:text-gray-400">With Images</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {books.filter(book => book.image).length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-4">
+          <div className="flex items-center">
+            <div className="h-8 w-8 bg-green-500 rounded-lg flex items-center justify-center mr-3">
+              <span className="text-white font-bold text-sm">F</span>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Free Books</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {books.filter(book => book.isFree).length}
               </p>
             </div>
           </div>
@@ -211,13 +225,21 @@ const BookList = ({ onEditBook }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 dark:text-white">
-                      ₹{book.price}
+                      {book.isFree ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 border border-green-200 dark:border-green-800">
+                          Free
+                        </span>
+                      ) : (
+                        <>
+                          ₹{book.price}
+                          {book.priceDiscounted && book.priceDiscounted !== book.price && (
+                            <div className="text-sm text-gray-500 dark:text-gray-400 line-through">
+                              ₹{book.priceDiscounted}
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
-                    {book.priceDiscounted && book.priceDiscounted !== book.price && (
-                      <div className="text-sm text-gray-500 dark:text-gray-400 line-through">
-                        ₹{book.priceDiscounted}
-                      </div>
-                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex space-x-2">

@@ -21,9 +21,14 @@ const PDFViewer = ({ pdfUrl, onClose, title }) => {
           const token = localStorage.getItem('token');
           let response;
           
+          // Use the same dynamic API base URL logic as the rest of the application
+          const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+            (isDevelopment ? 'http://localhost:5000/api' : 'https://api.acadmix.shop/api');
+          
           if (token) {
             // Try authenticated proxy first
-            response = await fetch(`https://api.acadmix.shop/api/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`, {
+            response = await fetch(`${API_BASE_URL}/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }
@@ -33,7 +38,7 @@ const PDFViewer = ({ pdfUrl, onClose, title }) => {
           // If no token or authenticated request failed, try test endpoint
           if (!token || !response?.ok) {
             console.log('Trying test PDF endpoint...');
-            response = await fetch(`https://api.acadmix.shop/api/test-pdf?url=${encodeURIComponent(pdfUrl)}`);
+            response = await fetch(`${API_BASE_URL}/test-pdf?url=${encodeURIComponent(pdfUrl)}`);
           }
           
           if (!response.ok) {
@@ -214,8 +219,13 @@ const PDFViewer = ({ pdfUrl, onClose, title }) => {
                             const token = localStorage.getItem('token');
                             let response;
                             
+                            // Use the same dynamic API base URL logic as the rest of the application
+                            const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+                              (isDevelopment ? 'http://localhost:5000/api' : 'https://api.acadmix.shop/api');
+                            
                             if (token) {
-                              response = await fetch(`https://api.acadmix.shop/api/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`, {
+                              response = await fetch(`${API_BASE_URL}/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`, {
                                 headers: {
                                   'Authorization': `Bearer ${token}`
                                 }
@@ -224,7 +234,7 @@ const PDFViewer = ({ pdfUrl, onClose, title }) => {
                             
                             if (!token || !response?.ok) {
                               console.log('Trying test PDF endpoint...');
-                              response = await fetch(`https://api.acadmix.shop/api/test-pdf?url=${encodeURIComponent(pdfUrl)}`);
+                              response = await fetch(`${API_BASE_URL}/test-pdf?url=${encodeURIComponent(pdfUrl)}`);
                             }
                             
                             if (!response.ok) {

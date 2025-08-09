@@ -27,6 +27,7 @@ const bcrypt = require("bcryptjs");
 const rateLimit = require("express-rate-limit");
 const QRCode = require("qrcode");
 const path = require("path");
+const adminConfig = require("./config/admin");
 
 const User = require("./models/User");
 const Book = require("./models/Book");
@@ -634,6 +635,61 @@ app.post("/api/auth/reset-password", async (req, res) => {
   }
 });
 
+// Get user's purchased books (approved payments only)
+app.get("/api/user/purchased-books", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const isAdmin = req.user.role === "admin";
+
+    if (isAdmin) {
+      // Admin gets access to all books
+      const allBooks = await Book.find({}).sort({ createdAt: -1 });
+      const booksWithAccess = allBooks.map(book => ({
+        ...book.toObject(),
+        paymentStatus: "admin_access",
+        canRead: true
+      }));
+      return res.json(booksWithAccess);
+    }
+
+    // Get approved payments for the user
+    const approvedPayments = await Payment.find({ 
+      user: userId, 
+      status: "approved" 
+    }).populate('book');
+
+    const purchasedBooks = approvedPayments.map(payment => ({
+      ...payment.book.toObject(),
+      paymentStatus: "approved",
+      canRead: true,
+      paymentId: payment._id,
+      purchasedAt: payment.approvedAt || payment.submittedAt
+    }));
+
+    // Get free books for all users
+    const freeBooks = await Book.find({ isFree: true }).sort({ createdAt: -1 });
+    const freeBooksWithAccess = freeBooks.map(book => ({
+      ...book.toObject(),
+      paymentStatus: "free",
+      canRead: true,
+      isFree: true
+    }));
+
+    // Combine purchased and free books, removing duplicates
+    const allUserBooks = [...purchasedBooks, ...freeBooksWithAccess];
+    
+    // Remove duplicates based on book ID (if a user has purchased a book that's also free)
+    const uniqueBooks = allUserBooks.filter((book, index, self) => 
+      index === self.findIndex(b => b._id.toString() === book._id.toString())
+    );
+
+    res.json(uniqueBooks);
+  } catch (err) {
+    console.error("❌ Error fetching purchased books:", err);
+    res.status(500).json({ error: "Failed to fetch purchased books" });
+  }
+});
+
 // Books API
 app.get("/api/books", async (req, res) => {
   try {
@@ -645,12 +701,27 @@ app.get("/api/books", async (req, res) => {
     }
 
     const books = await Book.find(query).sort({ createdAt: -1 });
-    const userId = req.user?.id;
-    const isAdmin = req.user?.role === "admin";
-
+    
+    // Check for authentication token
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+    let userId = null;
+    let isAdmin = false;
     let payments = [];
-    if (userId && !isAdmin) {
-      payments = await Payment.find({ user: userId }).lean();
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-jwt-secret");
+        userId = decoded.id;
+        isAdmin = decoded.role === "admin" || decoded.admin;
+        
+        if (userId && !isAdmin) {
+          payments = await Payment.find({ user: userId }).lean();
+        }
+      } catch (err) {
+        // Token is invalid, continue without user context
+        console.log("Invalid token in books API:", err.message);
+      }
     }
 
     const booksWithAccess = books.map((book) => {
@@ -660,10 +731,13 @@ app.get("/api/books", async (req, res) => {
 
       const userPayment = userPayments[0];
 
+      // Check if book is free
+      const isFreeBook = book.isFree === true;
+
       return {
         ...book.toObject(),
-        canRead: isAdmin || userPayment?.status === "approved",
-        paymentStatus: isAdmin ? "admin_access" : userPayment?.status || null,
+        canRead: isAdmin || userPayment?.status === "approved" || isFreeBook,
+        paymentStatus: isAdmin ? "admin_access" : isFreeBook ? "free" : userPayment?.status || null,
         pdfUrl: book.pdfUrl || null,
       };
     });
@@ -692,16 +766,23 @@ app.get("/api/book/:id/secure-pdf", authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const isAdmin = req.user.role === "admin";
 
+    // Get the book first to check if it's free
+    const book = await Book.findById(bookId);
+    if (!book || !book.pdfUrl) {
+      return res.status(404).json({ error: "Book or PDF not found" });
+    }
+
     // Admin gets automatic access to all books
     if (isAdmin) {
-      const book = await Book.findById(bookId);
-      if (!book || !book.pdfUrl) {
-        return res.status(404).json({ error: "Book or PDF not found" });
-      }
       return res.json({ url: book.pdfUrl });
     }
 
-    // Regular users need approved payment
+    // Check if book is free
+    if (book.isFree === true) {
+      return res.json({ url: book.pdfUrl });
+    }
+
+    // Regular users need approved payment for non-free books
     const payment = await Payment.findOne({
       user: userId,
       book: bookId,
@@ -714,15 +795,52 @@ app.get("/api/book/:id/secure-pdf", authenticateToken, async (req, res) => {
         .json({ error: "Access denied. Payment not found." });
     }
 
-    const book = await Book.findById(bookId);
-    if (!book || !book.pdfUrl) {
-      return res.status(404).json({ error: "Book or PDF not found" });
-    }
-
     res.json({ url: book.pdfUrl });
   } catch (err) {
     console.error("❌ Secure PDF Fetch Error:", err);
     res.status(500).json({ error: "Failed to fetch secure PDF" });
+  }
+});
+
+// Temporary debug endpoint to mark a book as free (for testing)
+app.post("/api/debug/mark-book-free", async (req, res) => {
+  try {
+    const { pdfUrl } = req.body;
+    
+    if (!pdfUrl) {
+      return res.status(400).json({ error: "PDF URL is required" });
+    }
+
+    // Find the book by PDF URL
+    const book = await Book.findOne({ pdfUrl: pdfUrl });
+    
+    if (!book) {
+      return res.status(404).json({ error: "Book not found for this PDF URL" });
+    }
+
+    // Mark the book as free
+    book.isFree = true;
+    await book.save();
+
+    console.log("✅ Debug: Book marked as free:", {
+      id: book._id,
+      title: book.title,
+      pdfUrl: book.pdfUrl,
+      isFree: book.isFree
+    });
+
+    res.json({ 
+      success: true, 
+      message: "Book marked as free successfully",
+      book: {
+        id: book._id,
+        title: book.title,
+        isFree: book.isFree
+      }
+    });
+  } catch (err) {
+    console.error("❌ Debug mark book free error:", err);
+    res.status(500).json({ error: "Failed to mark book as free" });
   }
 });
 
@@ -748,6 +866,49 @@ app.get("/api/pdf-proxy", authenticateToken, async (req, res) => {
     if (!url.includes("res.cloudinary.com")) {
       console.log("❌ PDF Proxy: Invalid URL (not Cloudinary)");
       return res.status(400).json({ error: "Invalid PDF URL" });
+    }
+
+    const userId = req.user.id;
+    const isAdmin = req.user.role === "admin";
+
+    // Find the book associated with this PDF URL
+    const book = await Book.findOne({ pdfUrl: url });
+    
+    if (!book) {
+      console.log("❌ PDF Proxy: Book not found for URL:", url);
+      return res.status(404).json({ error: "Book not found" });
+    }
+
+    console.log("📖 Found book:", {
+      id: book._id,
+      title: book.title,
+      isFree: book.isFree,
+      userRole: req.user?.role,
+      isAdmin: isAdmin
+    });
+
+    // Admin gets automatic access to all books
+    if (isAdmin) {
+      console.log("✅ PDF Proxy: Admin access granted");
+    }
+    // Check if book is free
+    else if (book.isFree === true) {
+      console.log("✅ PDF Proxy: Free book access granted");
+    }
+    // Regular users need approved payment for non-free books
+    else {
+      console.log("🔍 PDF Proxy: Checking for approved payment...");
+      const payment = await Payment.findOne({
+        user: userId,
+        book: book._id,
+        status: "approved",
+      });
+
+      if (!payment) {
+        console.log("❌ PDF Proxy: Access denied - no approved payment found for user:", userId, "book:", book._id);
+        return res.status(403).json({ error: "Access denied. Payment not found." });
+      }
+      console.log("✅ PDF Proxy: Payment-based access granted");
     }
 
     console.log("📥 Fetching PDF from Cloudinary:", url);
@@ -1046,9 +1207,65 @@ app.get("/api/admin/dashboard", authenticateToken, async (req, res) => {
     const totalUsers = users.length;
     const totalBooks = await Book.countDocuments();
     const totalPayments = await Payment.countDocuments();
+    
+    // Calculate total revenue
+    const approvedPayments = await Payment.find({ status: "approved" }).lean();
+    const totalRevenue = approvedPayments.reduce((sum, payment) => {
+      return sum + (payment.amount || 0);
+    }, 0);
+
+    // Calculate growth percentages (comparing current month vs previous month)
+    const now = new Date();
+    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+
+    // User growth calculation
+    const currentMonthUsers = await User.countDocuments({ createdAt: { $gte: currentMonth } });
+    const previousMonthUsers = await User.countDocuments({ 
+      createdAt: { $gte: previousMonth, $lt: currentMonth } 
+    });
+    const userGrowth = previousMonthUsers > 0 
+      ? Math.round(((currentMonthUsers - previousMonthUsers) / previousMonthUsers) * 100)
+      : currentMonthUsers > 0 ? 100 : 0;
+
+    // Book growth calculation
+    const currentMonthBooks = await Book.countDocuments({ createdAt: { $gte: currentMonth } });
+    const previousMonthBooks = await Book.countDocuments({ 
+      createdAt: { $gte: previousMonth, $lt: currentMonth } 
+    });
+    const bookGrowth = previousMonthBooks > 0 
+      ? Math.round(((currentMonthBooks - previousMonthBooks) / previousMonthBooks) * 100)
+      : currentMonthBooks > 0 ? 100 : 0;
+
+    // Payment growth calculation
+    const currentMonthPayments = await Payment.countDocuments({ submittedAt: { $gte: currentMonth } });
+    const previousMonthPayments = await Payment.countDocuments({ 
+      submittedAt: { $gte: previousMonth, $lt: currentMonth } 
+    });
+    const paymentGrowth = previousMonthPayments > 0 
+      ? Math.round(((currentMonthPayments - previousMonthPayments) / previousMonthPayments) * 100)
+      : currentMonthPayments > 0 ? 100 : 0;
+
+    // Revenue growth calculation
+    const currentMonthRevenue = approvedPayments
+      .filter(payment => new Date(payment.approvedAt || payment.submittedAt) >= currentMonth)
+      .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+    
+    const previousMonthRevenue = approvedPayments
+      .filter(payment => {
+        const paymentDate = new Date(payment.approvedAt || payment.submittedAt);
+        return paymentDate >= previousMonth && paymentDate < currentMonth;
+      })
+      .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+    
+    const revenueGrowth = previousMonthRevenue > 0 
+      ? Math.round(((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100)
+      : currentMonthRevenue > 0 ? 100 : 0;
+
     const payments = await Payment.find()
       .sort({ submittedAt: -1 })
-      .limit(50)
+      .limit(adminConfig.dashboard.paymentsLimit)
       .populate("user", "name email")
       .populate("book", "title")
       .lean();
@@ -1058,6 +1275,11 @@ app.get("/api/admin/dashboard", authenticateToken, async (req, res) => {
       totalUsers,
       totalBooks,
       totalPayments,
+      totalRevenue,
+      userGrowth,
+      bookGrowth,
+      paymentGrowth,
+      revenueGrowth,
       payments,
     });
   } catch (err) {
@@ -1127,6 +1349,7 @@ app.post(
         price,
         priceDiscounted,
         pages,
+        isFree,
       } = req.body;
 
       // Upload files to cloud storage
@@ -1155,6 +1378,7 @@ app.post(
         pages: pages ? parseInt(pages) : null,
         image: imageUrl,
         pdfUrl: pdfUrl,
+        isFree: isFree === 'true' || isFree === true,
       };
 
       const book = await Book.create(bookData);
@@ -1187,6 +1411,7 @@ app.put(
         price,
         priceDiscounted,
         pages,
+        isFree,
       } = req.body;
 
       // Get existing book
@@ -1231,6 +1456,7 @@ app.put(
         pages: pages ? parseInt(pages) : null,
         image: imageUrl,
         pdfUrl: pdfUrl,
+        isFree: isFree === 'true' || isFree === true,
       };
 
       const book = await Book.findByIdAndUpdate(req.params.id, bookData, {
@@ -1387,6 +1613,25 @@ app.delete("/api/admin/users/:id", authenticateToken, async (req, res) => {
   } catch (err) {
     console.error("❌ Delete user error:", err);
     res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+
+// Get admin configuration
+app.get("/api/admin/config", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    res.json({
+      upload: adminConfig.upload,
+      payment: adminConfig.payment,
+      ui: adminConfig.ui,
+      dashboard: adminConfig.dashboard
+    });
+  } catch (err) {
+    console.error("❌ Admin config error:", err);
+    res.status(500).json({ error: "Failed to fetch admin config" });
   }
 });
 
