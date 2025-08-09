@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, Target, GraduationCap, Brain, Zap, ArrowRight, Star, Users, Clock } from 'lucide-react';
+import { BookOpen, Target, GraduationCap, Brain, Zap, ArrowRight, Star, Users, Clock, User, BookMarked, TrendingUp } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import BookCard from '../components/BookCard';
 
 const Class11 = () => {
+  const { user } = useAuth();
   const { data: books, isLoading } = useQuery({
     queryKey: ['books', 'class11'],
     queryFn: () => api.get('/books?section=class11').then(res => res.data),
@@ -43,6 +45,13 @@ const Class11 = () => {
     { number: '24/7', label: 'Support', icon: Clock },
   ];
 
+  const userProgress = [
+    { label: 'Books Completed', value: '8', icon: BookMarked, color: 'text-blue-500' },
+    { label: 'Progress', value: '75%', icon: TrendingUp, color: 'text-green-500' },
+    { label: 'Tests Taken', value: '3', icon: Target, color: 'text-yellow-500' },
+    { label: 'Time Spent', value: '45h', icon: Clock, color: 'text-purple-500' },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Hero Section */}
@@ -55,23 +64,95 @@ const Class11 = () => {
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center animate-fade-in">
-            <div className="flex items-center justify-center mb-6">
-              <GraduationCap className="h-8 w-8 text-yellow-400 mr-2" />
-              <span className="text-lg font-semibold text-yellow-400">Class 11 Foundation</span>
-            </div>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 text-shadow-lg">
-              Class 11 <span className="gradient-text bg-gradient-to-r from-white to-yellow-200 bg-clip-text text-transparent">Study Materials</span>
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 text-primary-100">
-              Build a Strong Foundation for NEET & JEE Success
-            </p>
-            <p className="text-lg mb-12 text-primary-200 max-w-3xl mx-auto leading-relaxed">
-              Comprehensive study materials for Class 11 students preparing for NEET and JEE entrance exams.
-              Build a strong foundation with our expert-curated content.
-            </p>
+            {user ? (
+              // Logged-in user content
+              <>
+                <div className="flex items-center justify-center mb-6">
+                  <User className="h-8 w-8 text-yellow-400 mr-2" />
+                  <span className="text-lg font-semibold text-yellow-400">Your Class 11 Journey</span>
+                </div>
+                <h1 className="text-4xl md:text-6xl font-bold mb-6 text-shadow-lg">
+                  Continue Your <span className="gradient-text bg-gradient-to-r from-white to-yellow-200 bg-clip-text text-transparent">Foundation</span>
+                </h1>
+                <p className="text-xl md:text-2xl mb-8 text-primary-100">
+                  Keep building your strong base for NEET & JEE
+                </p>
+                <p className="text-lg mb-12 text-primary-200 max-w-3xl mx-auto leading-relaxed">
+                  You're making great progress! Continue with your personalized study materials 
+                  and track your learning journey.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <button className="group bg-white text-primary-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center">
+                    Continue Reading
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                  <button className="group border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-primary-600 transition-all duration-300 transform hover:scale-105 flex items-center justify-center">
+                    Take Practice Test
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+              </>
+            ) : (
+              // Non-logged-in user content
+              <>
+                <div className="flex items-center justify-center mb-6">
+                  <GraduationCap className="h-8 w-8 text-yellow-400 mr-2" />
+                  <span className="text-lg font-semibold text-yellow-400">Class 11 Foundation</span>
+                </div>
+                <h1 className="text-4xl md:text-6xl font-bold mb-6 text-shadow-lg">
+                  Class 11 <span className="gradient-text bg-gradient-to-r from-white to-yellow-200 bg-clip-text text-transparent">Study Materials</span>
+                </h1>
+                <p className="text-xl md:text-2xl mb-8 text-primary-100">
+                  Build a Strong Foundation for NEET & JEE Success
+                </p>
+                <p className="text-lg mb-12 text-primary-200 max-w-3xl mx-auto leading-relaxed">
+                  Comprehensive study materials for Class 11 students preparing for NEET and JEE entrance exams.
+                  Build a strong foundation with our expert-curated content.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <button className="group bg-white text-primary-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center">
+                    Start Learning
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                  <button className="group border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-primary-600 transition-all duration-300 transform hover:scale-105 flex items-center justify-center">
+                    Join Now
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </section>
+
+      {/* User Progress Section for logged-in users */}
+      {user && (
+        <section className="py-12 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Your Class 11 Progress
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                Track your foundation building journey
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {userProgress.map((stat, index) => (
+                <div key={index} className="text-center animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                  <div className="flex justify-center mb-3">
+                    <div className="p-3 bg-primary-200 dark:bg-primary-800 rounded-full">
+                      <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                    </div>
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{stat.value}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Stats Section */}
       <section className="py-12 bg-white dark:bg-gray-800">
@@ -100,7 +181,7 @@ const Class11 = () => {
               Why Choose Our <span className="gradient-text">Class 11</span> Materials?
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Designed specifically for Class 11 students to build a strong foundation
+              {user ? 'Personalized learning experience tailored to your progress' : 'Comprehensive study materials designed for success'}
             </p>
           </div>
           
@@ -122,144 +203,105 @@ const Class11 = () => {
         </div>
       </section>
 
-      {/* Content Section */}
+      {/* NEET Books Section */}
       <section className="py-16 bg-white dark:bg-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12 animate-fade-in">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              {user ? 'Your NEET Study Materials' : 'NEET Study Materials'}
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-400">
+              {user ? 'Continue with your NEET preparation' : 'Comprehensive materials for NEET preparation'}
+            </p>
+          </div>
+
           {isLoading ? (
-            <div className="flex justify-center py-12">
+            <div className="flex justify-center">
               <div className="spinner h-12 w-12"></div>
             </div>
           ) : (
-            <div className="space-y-16">
-              {/* NEET Section */}
-              <section className="animate-fade-in">
-                <div className="flex items-center mb-8">
-                  <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full mr-4">
-                    <Target className="h-8 w-8 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">NEET Preparation</h2>
-                    <p className="text-gray-600 dark:text-gray-400">Comprehensive materials for medical entrance</p>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {neetBooks.slice(0, 8).map((book, index) => (
+                <div key={book._id} className="animate-scale-in h-full" style={{ animationDelay: `${index * 0.1}s` }}>
+                  <BookCard book={book} />
                 </div>
-                
-                {neetBooks.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {neetBooks.map((book, index) => (
-                      <div key={book._id} className="animate-scale-in h-full" style={{ animationDelay: `${index * 0.1}s` }}>
-                        <BookCard book={book} />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-16 card border-dashed border-2 border-gray-300 dark:border-gray-600">
-                    <BookOpen className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No NEET Materials Yet</h3>
-                    <p className="text-gray-500 dark:text-gray-400">We're working on adding comprehensive NEET materials for Class 11.</p>
-                  </div>
-                )}
-              </section>
-
-              {/* JEE Section */}
-              <section className="animate-fade-in">
-                <div className="flex items-center mb-8">
-                  <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full mr-4">
-                    <Target className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">JEE Preparation</h2>
-                    <p className="text-gray-600 dark:text-gray-400">Advanced materials for engineering entrance</p>
-                  </div>
-                </div>
-                
-                {jeeBooks.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {jeeBooks.map((book, index) => (
-                      <div key={book._id} className="animate-scale-in h-full" style={{ animationDelay: `${index * 0.1}s` }}>
-                        <BookCard book={book} />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-16 card border-dashed border-2 border-gray-300 dark:border-gray-600">
-                    <BookOpen className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No JEE Materials Yet</h3>
-                    <p className="text-gray-500 dark:text-gray-400">We're working on adding comprehensive JEE materials for Class 11.</p>
-                  </div>
-                )}
-              </section>
-
-              {/* Study Tips */}
-              <section className="card p-8 animate-fade-in">
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    Study Tips for Class 11
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">Expert advice to maximize your learning potential</p>
-                </div>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <div className="flex items-start">
-                      <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-full mr-4 mt-1">
-                        <Target className="h-4 w-4 text-red-600 dark:text-red-400" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-white mb-3">For NEET Aspirants:</h4>
-                        <ul className="text-gray-600 dark:text-gray-400 space-y-2 text-sm">
-                          <li className="flex items-start">
-                            <ArrowRight className="h-4 w-4 text-primary-600 dark:text-primary-400 mr-2 mt-0.5 flex-shrink-0" />
-                            Focus on NCERT textbooks thoroughly
-                          </li>
-                          <li className="flex items-start">
-                            <ArrowRight className="h-4 w-4 text-primary-600 dark:text-primary-400 mr-2 mt-0.5 flex-shrink-0" />
-                            Practice biology diagrams regularly
-                          </li>
-                          <li className="flex items-start">
-                            <ArrowRight className="h-4 w-4 text-primary-600 dark:text-primary-400 mr-2 mt-0.5 flex-shrink-0" />
-                            Build strong foundation in physics concepts
-                          </li>
-                          <li className="flex items-start">
-                            <ArrowRight className="h-4 w-4 text-primary-600 dark:text-primary-400 mr-2 mt-0.5 flex-shrink-0" />
-                            Master chemical bonding and organic chemistry
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-start">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-full mr-4 mt-1">
-                        <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-white mb-3">For JEE Aspirants:</h4>
-                        <ul className="text-gray-600 dark:text-gray-400 space-y-2 text-sm">
-                          <li className="flex items-start">
-                            <ArrowRight className="h-4 w-4 text-primary-600 dark:text-primary-400 mr-2 mt-0.5 flex-shrink-0" />
-                            Strengthen mathematical fundamentals
-                          </li>
-                          <li className="flex items-start">
-                            <ArrowRight className="h-4 w-4 text-primary-600 dark:text-primary-400 mr-2 mt-0.5 flex-shrink-0" />
-                            Practice problem-solving daily
-                          </li>
-                          <li className="flex items-start">
-                            <ArrowRight className="h-4 w-4 text-primary-600 dark:text-primary-400 mr-2 mt-0.5 flex-shrink-0" />
-                            Focus on mechanics and calculus
-                          </li>
-                          <li className="flex items-start">
-                            <ArrowRight className="h-4 w-4 text-primary-600 dark:text-primary-400 mr-2 mt-0.5 flex-shrink-0" />
-                            Develop logical thinking skills
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
+              ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* JEE Books Section */}
+      <section className="py-16 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12 animate-fade-in">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              {user ? 'Your JEE Study Materials' : 'JEE Study Materials'}
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-400">
+              {user ? 'Continue with your JEE preparation' : 'Comprehensive materials for JEE preparation'}
+            </p>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center">
+              <div className="spinner h-12 w-12"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {jeeBooks.slice(0, 8).map((book, index) => (
+                <div key={book._id} className="animate-scale-in h-full" style={{ animationDelay: `${index * 0.1}s` }}>
+                  <BookCard book={book} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 gradient-bg text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="absolute top-0 left-0 w-full h-full">
+          <div className="absolute top-10 right-10 w-24 h-24 bg-white/10 rounded-full animate-float"></div>
+          <div className="absolute bottom-10 left-10 w-16 h-16 bg-white/10 rounded-full animate-float" style={{ animationDelay: '1.5s' }}></div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+          <div className="animate-fade-in">
+            {user ? (
+              <>
+                <h2 className="text-3xl md:text-4xl font-bold mb-6 text-shadow">
+                  Keep Building Your Foundation!
+                </h2>
+                <p className="text-xl mb-10 text-primary-100 max-w-2xl mx-auto leading-relaxed">
+                  Your dedication to learning is creating a strong base for your future success.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <button className="group bg-white text-primary-600 px-10 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-lg inline-flex items-center">
+                    Continue Learning
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                  <button className="group border-2 border-white text-white px-10 py-4 rounded-xl font-semibold hover:bg-white hover:text-primary-600 transition-all duration-300 transform hover:scale-105 text-lg inline-flex items-center">
+                    Take Practice Test
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="text-3xl md:text-4xl font-bold mb-6 text-shadow">
+                  Ready to Start Your Foundation?
+                </h2>
+                <p className="text-xl mb-10 text-primary-100 max-w-2xl mx-auto leading-relaxed">
+                  Join thousands of students building their foundation for NEET & JEE success
+                </p>
+                <button className="group bg-white text-primary-600 px-10 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-lg inline-flex items-center">
+                  Get Started Today
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </section>
     </div>

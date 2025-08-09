@@ -14,6 +14,7 @@ import Payment from './pages/Payment';
 import Admin from './pages/Admin';
 import AdminLogin from './pages/AdminLogin';
 import AuthCallback from './pages/AuthCallback';
+import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 
@@ -44,6 +45,14 @@ function App() {
                   <Route path="/register" element={<Register />} />
                   <Route path="/admin-login" element={<AdminLogin />} />
                   <Route path="/auth-callback" element={<AuthCallback />} />
+                  <Route 
+                    path="/profile" 
+                    element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    } 
+                  />
                   <Route 
                     path="/payment/:bookId" 
                     element={

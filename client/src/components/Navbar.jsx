@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Menu, X, BookOpen, User, LogOut, Sparkles } from 'lucide-react';
+import { Menu, X, BookOpen, User, LogOut, Sparkles, Home, BookMarked, Target, Settings } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 
 const Navbar = () => {
@@ -9,13 +9,21 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
 
-  const navigation = [
+  const publicNavigation = [
     { name: 'Home', href: '/' },
     { name: 'Class 11', href: '/class11' },
     { name: 'Class 12', href: '/class12' },
     { name: 'Tests', href: '/tests' },
   ];
 
+  const userNavigation = [
+    { name: 'Dashboard', href: '/', icon: Home },
+    { name: 'My Books', href: '/class11', icon: BookMarked },
+    { name: 'Practice Tests', href: '/tests', icon: Target },
+    { name: 'Class 12', href: '/class12', icon: BookOpen },
+  ];
+
+  const navigation = user ? userNavigation : publicNavigation;
   const isActive = (path) => location.pathname === path;
 
   return (
@@ -38,12 +46,13 @@ const Navbar = () => {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 flex items-center ${
                   isActive(item.href)
                     ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 shadow-sm'
                     : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
                 }`}
               >
+                {item.icon && <item.icon className="h-4 w-4 mr-2" />}
                 {item.name}
               </Link>
             ))}
@@ -71,6 +80,13 @@ const Navbar = () => {
                     Admin Panel
                   </Link>
                 )}
+                <Link
+                  to="/profile"
+                  className="text-sm text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors duration-200 flex items-center"
+                >
+                  <Settings className="h-4 w-4 mr-1" />
+                  Settings
+                </Link>
                 <button
                   onClick={logout}
                   className="flex items-center text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200 transform hover:scale-105"
@@ -91,7 +107,7 @@ const Navbar = () => {
                   to="/register"
                   className="btn-primary text-sm"
                 >
-                  Register
+                  Get Started
                 </Link>
               </div>
             )}
@@ -123,13 +139,14 @@ const Navbar = () => {
             <Link
               key={item.name}
               to={item.href}
-              className={`block px-3 py-2 rounded-lg text-base font-medium transition-all duration-200 transform hover:scale-105 ${
+              className={`block px-3 py-2 rounded-lg text-base font-medium transition-all duration-200 transform hover:scale-105 flex items-center ${
                 isActive(item.href)
                   ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
                   : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
               }`}
               onClick={() => setIsOpen(false)}
             >
+              {item.icon && <item.icon className="h-5 w-5 mr-3" />}
               {item.name}
             </Link>
           ))}
@@ -153,6 +170,14 @@ const Navbar = () => {
                   Admin Panel
                 </Link>
               )}
+              <Link
+                to="/profile"
+                className="block px-3 py-2 text-base text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors duration-200 flex items-center"
+                onClick={() => setIsOpen(false)}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Link>
               <button
                 onClick={() => {
                   logout();
@@ -178,7 +203,7 @@ const Navbar = () => {
                 className="block px-3 py-2 text-base btn-primary text-center"
                 onClick={() => setIsOpen(false)}
               >
-                Register
+                Get Started
               </Link>
             </div>
           )}
