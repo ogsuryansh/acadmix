@@ -62,7 +62,7 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: [
-          "'self'",
+          "'self'", 
           "'unsafe-inline'",
           "https://apis.google.com",
           "https://cdnjs.cloudflare.com",
