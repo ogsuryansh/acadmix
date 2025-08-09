@@ -129,18 +129,15 @@ app.options('*', (req, res) => {
   const origin = req.headers.origin;
   console.log("🔧 CORS Preflight request from:", origin);
   
-  if (!origin || allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
-    console.log("✅ CORS Preflight approved for:", origin);
-    return res.status(200).end();
-  } else {
-    console.warn("❌ CORS Preflight blocked for:", origin);
-    return res.status(403).json({ error: 'CORS not allowed' });
-  }
+  // Set CORS headers for preflight
+  res.setHeader('Access-Control-Allow-Origin', origin || 'https://acadmix.shop');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  
+  console.log("✅ CORS Preflight response sent for:", origin);
+  return res.status(200).end();
 });
 
 app.use(
@@ -1731,32 +1728,6 @@ if (process.env.NODE_ENV !== "production") {
     });
 } else {
   console.log("🚀 Production mode: Exporting app for serverless deployment");
-  
-  // Additional CORS handling for serverless environments
-  const handler = serverless(app);
-  
   module.exports = app;
-  module.exports.handler = async (event, context) => {
-    console.log("🌐 Serverless request:", {
-      method: event.httpMethod,
-      origin: event.headers?.origin || event.headers?.Origin,
-      path: event.path,
-      stage: event.requestContext?.stage
-    });
-    
-    // Set CORS headers for serverless response
-    const result = await handler(event, context);
-    
-    if (result && result.headers) {
-      const origin = event.headers?.origin || event.headers?.Origin;
-      if (!origin || allowedOrigins.includes(origin)) {
-        result.headers['Access-Control-Allow-Origin'] = origin || '*';
-        result.headers['Access-Control-Allow-Credentials'] = 'true';
-        result.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH';
-        result.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept, Origin';
-      }
-    }
-    
-    return result;
-  };
+  module.exports.handler = serverless(app);
 }
