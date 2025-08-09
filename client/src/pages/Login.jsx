@@ -39,6 +39,12 @@ const Login = () => {
     const googleAuthUrl = isDevelopment 
       ? 'http://localhost:5000/api/auth/google'
       : 'https://api.acadmix.shop/api/auth/google';
+    
+    console.log('🔍 Debug Info:');
+    console.log('Hostname:', window.location.hostname);
+    console.log('Is Development:', isDevelopment);
+    console.log('Google Auth URL:', googleAuthUrl);
+    
     window.location.href = googleAuthUrl;
   };
 
