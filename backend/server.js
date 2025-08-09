@@ -69,10 +69,14 @@ const {
 } = require("./utils/cloudStorage");
 
 // ─── EXPRESS APP ─────────────────────────────────────────────────────────────
+console.log("🔧 Creating Express app...");
 const app = express();
+console.log("✅ Express app created successfully");
 app.set("trust proxy", 1);
+console.log("✅ Trust proxy set");
 
 // ─── SECURITY MIDDLEWARE ─────────────────────────────────────────────────────
+console.log("🔧 Setting up security middleware...");
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -115,6 +119,7 @@ app.use(
     },
   })
 );
+console.log("✅ Security middleware set up");
 
 // ─── RATE LIMITING ──────────────────────────────────────────────────────────
 const limiter = rateLimit({
@@ -122,7 +127,9 @@ const limiter = rateLimit({
   max: 100, // limit each IP to 100 requests per windowMs
   message: { error: "Too many requests from this IP" },
 });
+console.log("🔧 Setting up rate limiter...");
 app.use("/api/", limiter);
+console.log("✅ Rate limiter set up");
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
@@ -257,8 +264,16 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // ─── ROUTES ────────────────────────────────────────────────────────────────
-const paymentRoutes = require("./routes/payment");
-app.use("/api", paymentRoutes);
+console.log("🔧 Loading payment routes...");
+try {
+  const paymentRoutes = require("./routes/payment");
+  console.log("✅ Payment routes loaded successfully");
+  app.use("/api", paymentRoutes);
+  console.log("✅ Payment routes mounted at /api");
+} catch (err) {
+  console.error("❌ Error loading payment routes:", err);
+  throw err;
+}
 
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser((id, done) =>
