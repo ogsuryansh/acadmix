@@ -1,4 +1,5 @@
 const isProd = process.env.NODE_ENV === "production";
+const DEFAULT_FRONTEND_ORIGIN = isProd ? "https://acadmix.shop" : "http://localhost:5173";
 
 require("dotenv").config();
 console.log("🔑 ENV Check:", {
@@ -332,15 +333,18 @@ app.get(
   async (req, res) => {
     try {
       const token = generateToken(req.user);
-      const redirectUrl = isProd 
-        ? `https://acadmix.shop/auth-callback?token=${token}`
-        : `http://localhost:5173/auth-callback?token=${token}`;
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+      const host = req.get("host");
+      const requestOrigin = `${protocol}://${host}`;
+      const configuredFrontend = process.env.FRONTEND_ORIGIN || DEFAULT_FRONTEND_ORIGIN;
+      const frontendOrigin = isProd ? configuredFrontend : DEFAULT_FRONTEND_ORIGIN;
+      const redirectUrl = `${frontendOrigin}/auth-callback?token=${token}`;
       res.redirect(redirectUrl);
     } catch (err) {
       console.error("❌ Google OAuth callback error:", err);
-      const errorUrl = isProd 
-        ? `https://acadmix.shop/login?error=oauth_failed`
-        : `http://localhost:5173/login?error=oauth_failed`;
+      const configuredFrontend = process.env.FRONTEND_ORIGIN || DEFAULT_FRONTEND_ORIGIN;
+      const frontendOrigin = isProd ? configuredFrontend : DEFAULT_FRONTEND_ORIGIN;
+      const errorUrl = `${frontendOrigin}/login?error=oauth_failed`;
       res.redirect(errorUrl);
     }
   }
