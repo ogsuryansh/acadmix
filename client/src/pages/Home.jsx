@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { BookOpen, Users, Award, Clock, ArrowRight, Star, Zap, Target, User, BookMarked, TrendingUp, Calendar } from 'lucide-react';
+import { BookOpen, Users, Award, Clock, ArrowRight, Star, Zap, Target, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import BookCard from '../components/BookCard';
@@ -48,13 +48,6 @@ const Home = () => {
     { number: '95%', label: 'Success Rate', icon: Target },
     { number: '500+', label: 'Study Materials', icon: BookOpen },
     { number: '24/7', label: 'Support', icon: Zap },
-  ];
-
-  const userStats = [
-    { number: '12', label: 'Books Read', icon: BookMarked },
-    { number: '85%', label: 'Progress', icon: TrendingUp },
-    { number: '5', label: 'Tests Taken', icon: Target },
-    { number: '30', label: 'Days Active', icon: Calendar },
   ];
 
   return (
@@ -139,35 +132,6 @@ const Home = () => {
           </div>
         </div>
       </section>
-
-      {/* User-specific stats section for logged-in users */}
-      {user && (
-        <section className="py-12 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Your Learning Progress
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Track your journey to success
-              </p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              {userStats.map((stat, index) => (
-                <div key={index} className="text-center animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                  <div className="flex justify-center mb-3">
-                    <div className="p-3 bg-primary-200 dark:bg-primary-800 rounded-full">
-                      <stat.icon className="h-6 w-6 text-primary-700 dark:text-primary-300" />
-                    </div>
-                  </div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{stat.number}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       <section className="py-12 bg-white dark:bg-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

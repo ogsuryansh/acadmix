@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import Home from './pages/Home';
 import Class11 from './pages/Class11';
 import Class12 from './pages/Class12';
@@ -14,7 +15,10 @@ import Payment from './pages/Payment';
 import Admin from './pages/Admin';
 import AdminLogin from './pages/AdminLogin';
 import AuthCallback from './pages/AuthCallback';
-import Profile from './pages/Profile';
+import MyBooks from './pages/MyBooks';
+import RefundPolicy from './pages/RefundPolicy';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 
@@ -33,9 +37,9 @@ function App() {
       <ThemeProvider>
         <Router>
           <AuthProvider>
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 flex flex-col">
               <Navbar />
-              <main className="pt-16 animate-fade-in">
+              <main className="flex-1 pt-16 animate-fade-in">
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/class11" element={<Class11 />} />
@@ -45,11 +49,14 @@ function App() {
                   <Route path="/register" element={<Register />} />
                   <Route path="/admin-login" element={<AdminLogin />} />
                   <Route path="/auth-callback" element={<AuthCallback />} />
+                  <Route path="/refund" element={<RefundPolicy />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
                   <Route 
-                    path="/profile" 
+                    path="/my-books" 
                     element={
                       <ProtectedRoute>
-                        <Profile />
+                        <MyBooks />
                       </ProtectedRoute>
                     } 
                   />
@@ -71,6 +78,7 @@ function App() {
                   />
                 </Routes>
               </main>
+              <Footer />
             </div>
             <Toaster 
               position="top-right"

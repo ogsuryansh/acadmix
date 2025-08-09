@@ -36,9 +36,28 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.log('🔍 API Error Debug:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      method: error.config?.method,
+      pathname: window.location.pathname,
+      timestamp: new Date().toISOString()
+    });
+    
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      console.log('🚨 401 Unauthorized - Authentication failed');
+      // Only redirect to login if we're not already on login page
+      const currentPath = window.location.pathname;
+      if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
+        console.log('🔄 Redirecting to login page...');
+        localStorage.removeItem('token');
+        localStorage.removeItem('isAdmin');
+        // Use a more graceful redirect
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 100);
+      }
     }
     return Promise.reject(error);
   }

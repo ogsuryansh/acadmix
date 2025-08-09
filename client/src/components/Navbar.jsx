@@ -18,8 +18,9 @@ const Navbar = () => {
 
   const userNavigation = [
     { name: 'Dashboard', href: '/', icon: Home },
-    { name: 'My Books', href: '/class11', icon: BookMarked },
-    { name: 'Practice Tests', href: '/tests', icon: Target },
+    { name: 'My Books', href: '/my-books', icon: BookMarked },
+    { name: 'Tests', href: '/tests', icon: Target },
+    { name: 'Class 11', href: '/class11', icon: BookOpen },
     { name: 'Class 12', href: '/class12', icon: BookOpen },
   ];
 
@@ -80,13 +81,6 @@ const Navbar = () => {
                     Admin Panel
                   </Link>
                 )}
-                <Link
-                  to="/profile"
-                  className="text-sm text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors duration-200 flex items-center"
-                >
-                  <Settings className="h-4 w-4 mr-1" />
-                  Settings
-                </Link>
                 <button
                   onClick={logout}
                   className="flex items-center text-sm text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200 transform hover:scale-105"
@@ -170,14 +164,6 @@ const Navbar = () => {
                   Admin Panel
                 </Link>
               )}
-              <Link
-                to="/profile"
-                className="block px-3 py-2 text-base text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors duration-200 flex items-center"
-                onClick={() => setIsOpen(false)}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Link>
               <button
                 onClick={() => {
                   logout();

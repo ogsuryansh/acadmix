@@ -56,6 +56,13 @@ const Admin = () => {
     enabled: activeTab === 'payment-config',
   });
 
+  // Admin configuration query
+  const { data: adminConfig } = useQuery({
+    queryKey: ['admin-config'],
+    queryFn: () => api.get('/admin/config').then(res => res.data),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   // Payment configuration update mutation
   const updatePaymentConfig = useMutation({
     mutationFn: (config) => api.put('/admin/payment-config', config),
@@ -124,8 +131,8 @@ const Admin = () => {
       icon: Users,
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-100 dark:bg-blue-900/20',
-      change: '+12%',
-      changeType: 'positive'
+      change: dashboardData?.userGrowth ? `${dashboardData.userGrowth >= 0 ? '+' : ''}${dashboardData.userGrowth}%` : '+0%',
+      changeType: dashboardData?.userGrowth >= 0 ? 'positive' : 'negative'
     },
     {
       name: 'Total Books',
@@ -133,8 +140,8 @@ const Admin = () => {
       icon: BookOpen,
       color: 'text-green-600 dark:text-green-400',
       bgColor: 'bg-green-100 dark:bg-green-900/20',
-      change: '+8%',
-      changeType: 'positive'
+      change: dashboardData?.bookGrowth ? `${dashboardData.bookGrowth >= 0 ? '+' : ''}${dashboardData.bookGrowth}%` : '+0%',
+      changeType: dashboardData?.bookGrowth >= 0 ? 'positive' : 'negative'
     },
     {
       name: 'Total Payments',
@@ -142,8 +149,8 @@ const Admin = () => {
       icon: CreditCard,
       color: 'text-purple-600 dark:text-purple-400',
       bgColor: 'bg-purple-100 dark:bg-purple-900/20',
-      change: '+23%',
-      changeType: 'positive'
+      change: dashboardData?.paymentGrowth ? `${dashboardData.paymentGrowth >= 0 ? '+' : ''}${dashboardData.paymentGrowth}%` : '+0%',
+      changeType: dashboardData?.paymentGrowth >= 0 ? 'positive' : 'negative'
     },
     {
       name: 'Revenue',
@@ -151,8 +158,8 @@ const Admin = () => {
       icon: DollarSign,
       color: 'text-yellow-600 dark:text-yellow-400',
       bgColor: 'bg-yellow-100 dark:bg-yellow-900/20',
-      change: '+15%',
-      changeType: 'positive'
+      change: dashboardData?.revenueGrowth ? `${dashboardData.revenueGrowth >= 0 ? '+' : ''}${dashboardData.revenueGrowth}%` : '+0%',
+      changeType: dashboardData?.revenueGrowth >= 0 ? 'positive' : 'negative'
     },
   ];
 
@@ -620,12 +627,12 @@ const Admin = () => {
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                     <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Test QR Code</h3>
                     <p className="text-sm text-blue-800 dark:text-blue-200 mb-4">
-                      Test the current configuration with a sample payment of ₹100
+                      Test the current configuration with a sample payment of ₹{adminConfig?.payment?.testAmount || 100}
                     </p>
                     <div className="flex items-center space-x-3">
                       <button
                         onClick={() => {
-                          const testUpiLink = `upi://pay?pa=${paymentConfigData?.config?.upiId}&pn=${encodeURIComponent(paymentConfigData?.config?.payeeName)}&am=100&cu=INR`;
+                          const testUpiLink = `upi://pay?pa=${paymentConfigData?.config?.upiId}&pn=${encodeURIComponent(paymentConfigData?.config?.payeeName)}&am=${adminConfig?.payment?.testAmount || 100}&cu=INR`;
                           navigator.clipboard.writeText(testUpiLink);
                           toast.success('Test UPI link copied to clipboard!');
                         }}
@@ -634,7 +641,7 @@ const Admin = () => {
                         Copy Test UPI Link
                       </button>
                       <span className="text-sm text-blue-700 dark:text-blue-300">
-                        Amount: ₹100
+                        Amount: ₹{adminConfig?.payment?.testAmount || 100}
                       </span>
                     </div>
                   </div>

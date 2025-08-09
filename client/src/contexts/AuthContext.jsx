@@ -22,11 +22,18 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('token');
     const isAdmin = localStorage.getItem('isAdmin');
     
+    console.log('🔍 AuthContext: Checking authentication state', {
+      hasToken: !!token,
+      isAdmin: isAdmin === 'true',
+      pathname: window.location.pathname
+    });
+    
     if (token) {
       // Set token in API headers
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
       if (isAdmin === 'true') {
+        console.log('👤 Setting admin user');
         // For admin users, create a mock user object
         setUser({
           id: 'admin',
@@ -36,12 +43,15 @@ export const AuthProvider = ({ children }) => {
         });
         setLoading(false);
       } else {
+        console.log('🔍 Verifying token with /auth/me');
         // Verify token and get user info for regular users
         api.get('/auth/me')
           .then(response => {
+            console.log('✅ Token verified, user loaded:', response.data.user);
             setUser(response.data.user);
           })
-          .catch(() => {
+          .catch((error) => {
+            console.error('❌ Token verification failed:', error);
             localStorage.removeItem('token');
             localStorage.removeItem('isAdmin');
             delete api.defaults.headers.common['Authorization'];
@@ -51,6 +61,7 @@ export const AuthProvider = ({ children }) => {
           });
       }
     } else {
+      console.log('🔍 No token found, user not authenticated');
       setLoading(false);
     }
   }, []);

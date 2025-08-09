@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, Target, GraduationCap, Brain, Zap, ArrowRight, Star, Users, Clock, User, BookMarked, TrendingUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { BookOpen, Target, GraduationCap, Brain, Zap, ArrowRight, Star, Users, Clock, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import BookCard from '../components/BookCard';
@@ -45,13 +46,6 @@ const Class11 = () => {
     { number: '24/7', label: 'Support', icon: Clock },
   ];
 
-  const userProgress = [
-    { label: 'Books Completed', value: '8', icon: BookMarked, color: 'text-blue-500' },
-    { label: 'Progress', value: '75%', icon: TrendingUp, color: 'text-green-500' },
-    { label: 'Tests Taken', value: '3', icon: Target, color: 'text-yellow-500' },
-    { label: 'Time Spent', value: '45h', icon: Clock, color: 'text-purple-500' },
-  ];
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Hero Section */}
@@ -82,14 +76,20 @@ const Class11 = () => {
                   and track your learning journey.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <button className="group bg-white text-primary-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center">
+                  <Link
+                    to="/class11"
+                    className="group bg-white text-primary-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center"
+                  >
                     Continue Reading
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                  <button className="group border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-primary-600 transition-all duration-300 transform hover:scale-105 flex items-center justify-center">
+                  </Link>
+                  <Link
+                    to="/tests"
+                    className="group border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-primary-600 transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
+                  >
                     Take Practice Test
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </button>
+                  </Link>
                 </div>
               </>
             ) : (
@@ -110,49 +110,26 @@ const Class11 = () => {
                   Build a strong foundation with our expert-curated content.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <button className="group bg-white text-primary-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center">
+                  <Link
+                    to="/class11"
+                    className="group bg-white text-primary-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center"
+                  >
                     Start Learning
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                  <button className="group border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-primary-600 transition-all duration-300 transform hover:scale-105 flex items-center justify-center">
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="group border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-primary-600 transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
+                  >
                     Join Now
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </button>
+                  </Link>
                 </div>
               </>
             )}
           </div>
         </div>
       </section>
-
-      {/* User Progress Section for logged-in users */}
-      {user && (
-        <section className="py-12 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Your Class 11 Progress
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Track your foundation building journey
-              </p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              {userProgress.map((stat, index) => (
-                <div key={index} className="text-center animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                  <div className="flex justify-center mb-3">
-                    <div className="p-3 bg-primary-200 dark:bg-primary-800 rounded-full">
-                      <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                    </div>
-                  </div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{stat.value}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Stats Section */}
       <section className="py-12 bg-white dark:bg-gray-800">
@@ -277,14 +254,20 @@ const Class11 = () => {
                   Your dedication to learning is creating a strong base for your future success.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <button className="group bg-white text-primary-600 px-10 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-lg inline-flex items-center">
-                    Continue Learning
-                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                  <button className="group border-2 border-white text-white px-10 py-4 rounded-xl font-semibold hover:bg-white hover:text-primary-600 transition-all duration-300 transform hover:scale-105 text-lg inline-flex items-center">
+                  <Link
+                    to="/tests"
+                    className="group bg-white text-primary-600 px-10 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-lg inline-flex items-center"
+                  >
                     Take Practice Test
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </button>
+                  </Link>
+                  <Link
+                    to="/class12"
+                    className="group border-2 border-white text-white px-10 py-4 rounded-xl font-semibold hover:bg-white hover:text-primary-600 transition-all duration-300 transform hover:scale-105 text-lg inline-flex items-center"
+                  >
+                    Explore Advanced Topics
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
                 </div>
               </>
             ) : (
@@ -295,10 +278,13 @@ const Class11 = () => {
                 <p className="text-xl mb-10 text-primary-100 max-w-2xl mx-auto leading-relaxed">
                   Join thousands of students building their foundation for NEET & JEE success
                 </p>
-                <button className="group bg-white text-primary-600 px-10 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-lg inline-flex items-center">
+                <Link
+                  to="/register"
+                  className="group bg-white text-primary-600 px-10 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-lg inline-flex items-center"
+                >
                   Get Started Today
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </button>
+                </Link>
               </>
             )}
           </div>
