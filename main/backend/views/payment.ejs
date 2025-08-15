@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment for <%= book.title %></title>
+    <style>
+      :root {
+        --primary: #2563eb;
+        --primary-dark: #1e40af;
+        --primary-light: #3b82f6;
+        --success: #22c55e;
+        --background: #f0f4f8;
+        --card-bg: #fff;
+        --shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
+        --border-radius: 16px;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: var(--background);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 1rem;
+      }
+      .container {
+        width: 100%;
+        max-width: 480px;
+        background: var(--card-bg);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        animation: fadeIn 0.5s;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px);}
+        to { opacity: 1; transform: translateY(0);}
+      }
+      header {
+        background: linear-gradient(90deg, var(--primary), var(--primary-light));
+        color: #fff;
+        padding: 1.2rem 1rem 1rem 1rem;
+        text-align: center;
+      }
+      header h2 {
+        margin: 0;
+        font-size: 1.3rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+      }
+      .content {
+        padding: 1.5rem 1.2rem 1.2rem 1.2rem;
+      }
+      .amount {
+        font-size: 1.15rem;
+        margin-bottom: 1rem;
+        color: var(--primary-dark);
+        text-align: center;
+        font-weight: 600;
+      }
+      .qr {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 1.2rem;
+      }
+      .qr img {
+        width: 200px;
+        max-width: 80%;
+        border: 2.5px solid var(--primary-light);
+        border-radius: 12px;
+        box-shadow: 0 2px 8px #2563eb22;
+        background: #fff;
+      }
+      .upi-link {
+        display: inline-block;
+        padding: 0.7rem 1.3rem;
+        background: linear-gradient(90deg, var(--primary), var(--primary-light));
+        color: #fff;
+        text-decoration: none;
+        border-radius: 7px;
+        font-weight: 600;
+        font-size: 1.05rem;
+        margin-bottom: 1.2rem;
+        box-shadow: 0 2px 8px #2563eb22;
+        transition: background 0.2s, transform 0.2s;
+      }
+      .upi-link:hover {
+        background: linear-gradient(90deg, var(--primary-dark), var(--primary));
+        transform: translateY(-2px) scale(1.01);
+      }
+      form {
+        margin-top: 1.2rem;
+      }
+      form label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--primary-dark);
+        font-weight: 500;
+        font-size: 1rem;
+      }
+      form input[type="text"] {
+        width: 100%;
+        padding: 0.7rem 0.8rem;
+        margin-bottom: 1rem;
+        border: 1.5px solid #dbeafe;
+        border-radius: 7px;
+        font-size: 1rem;
+        background: #f8fafc;
+        color: #222;
+        transition: border 0.2s, box-shadow 0.2s;
+        outline: none;
+      }
+      form input[type="text"]:focus {
+        border: 1.5px solid var(--primary);
+        box-shadow: 0 0 0 2px #2563eb22;
+        background: #fff;
+      }
+      form button {
+        width: 100%;
+        padding: 0.85rem;
+        background: linear-gradient(90deg, var(--success), #16a34a);
+        color: #fff;
+        border: none;
+        border-radius: 7px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 2px 8px #22c55e22;
+        letter-spacing: 1px;
+        transition: background 0.2s, transform 0.2s;
+      }
+      form button:hover {
+        background: linear-gradient(90deg, #16a34a, var(--success));
+        transform: translateY(-2px) scale(1.01);
+      }
+      .support {
+        margin-top: 1.5rem;
+        font-size: 0.97rem;
+        color: #666;
+        text-align: center;
+        background: #f3f6fa;
+        border-radius: 7px;
+        padding: 0.7rem 0.5rem 0.6rem 0.5rem;
+        margin-bottom: 0.2rem;
+      }
+      .support strong {
+        color: var(--primary-dark);
+      }
+      @media (max-width: 500px) {
+        .container {
+          padding: 0;
+          max-width: 99vw;
+        }
+        .content {
+          padding: 1rem 0.3rem 0.7rem 0.3rem;
+        }
+        .qr img {
+          width: 140px;
+        }
+        header h2 {
+          font-size: 1.05rem;
+        }
+        .amount {
+          font-size: 1rem;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- upiLink and qrDataUrl are passed in from your route handler -->
+    <div class="container">
+      <header>
+        <h2>Payment for: <%= book.title %></h2>
+      </header>
+
+      <div class="content">
+        <p class="amount">Amount: ₹<%= book.priceDiscounted %></p>
+
+        <% if (typeof user !== 'undefined' && user) { %>
+          <p style="text-align:center; font-size: 0.97rem; color: #555;">
+            Logged in as <strong><%= user.name %></strong>
+          </p>
+        <% } %>
+
+        <div class="qr">
+          <img src="<%= qrDataUrl %>" alt="Scan QR to Pay" />
+        </div>
+
+        <div class="upi" style="text-align: center;">
+          <a href="<%= upiLink %>" class="upi-link" target="_blank">
+            👉 Pay ₹<%= book.priceDiscounted %> via UPI
+          </a>
+        </div>
+
+        <form action="/api/payment/submit" method="POST">
+          <input type="hidden" name="bookId" value="<%= book._id %>" />
+          <label for="utr">Enter UTR / Transaction ID:</label>
+          <input
+            type="text"
+            id="utr"
+            name="utr"
+            placeholder="e.g., 1234567890"
+            required
+          />
+          <button type="submit">Submit Payment</button>
+        </form>
+
+        <div class="support">
+          <p>Need help? Contact <strong>students4396@okhdfcbank</strong></p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

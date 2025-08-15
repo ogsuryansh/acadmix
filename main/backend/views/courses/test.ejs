@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tests | Acadmix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/client/css/main.css">
+</head>
+<body>
+  <header>
+    <h1>Tests Courses</h1>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-button active" data-target="NEET">NEET</button>
+    <button class="tab-button" data-target="JEE">JEE</button>
+  </div>
+
+  <div id="card-container">
+    <!-- Cards will be injected here -->
+    <div class="coming-soon">📚 Loading content...</div>
+  </div>
+
+  <script>
+    let PAGE_SECTION = "test";
+    let currentTrack = "NEET";
+    const API_BASE = 'https://api.acadmix.shop';
+
+    function fetchAndRenderCards() {
+      fetch(`${API_BASE}/api/books`)
+        .then(res => res.json())
+        .then(cards => {
+          const container = document.getElementById("card-container");
+          container.innerHTML = "";
+
+          const filteredCards = cards.filter(card =>
+            card.section === PAGE_SECTION && card.track === currentTrack
+          );
+
+          if (filteredCards.length === 0) {
+            container.innerHTML = `<div class="coming-soon">📚 ${currentTrack} Content Coming Soon</div>`;
+            return;
+          }
+
+          const cardsWrapper = document.createElement("div");
+          cardsWrapper.className = "cards";
+
+          filteredCards.forEach(card => {
+            const cardEl = document.createElement("div");
+            cardEl.className = "card";
+            cardEl.innerHTML = `
+              <div class="card-image">
+                <img src="${card.imageUrl}" alt="${card.title}" />
+                <div class="badge">${card.badge || ""}</div>
+              </div>
+              <div class="card-body">
+                <div class="category">${card.category}</div>
+                <h3 class="card-title">${card.title}</h3>
+                <div class="price">
+                  <span class="original">₹${card.priceOriginal}</span>
+                  <span class="discount">₹${card.priceDiscounted}</span>
+                </div>
+                <div class="demo">${card.demo || "No Demo"}</div>
+                <a href="#" class="btn-buy">Buy Now</a>
+              </div>
+            `;
+            cardsWrapper.appendChild(cardEl);
+          });
+
+          container.appendChild(cardsWrapper);
+        })
+        .catch(err => {
+          console.error("Error fetching cards:", err);
+          document.getElementById("card-container").innerHTML =
+            "<p>Error loading materials</p>";
+        });
+    }
+
+    // Initial fetch
+    fetchAndRenderCards();
+
+    // Tab switching
+    document.addEventListener('DOMContentLoaded', () => {
+      const buttons = document.querySelectorAll('.tab-button');
+      buttons.forEach(button => {
+        button.addEventListener('click', () => {
+          buttons.forEach(btn => btn.classList.remove('active'));
+          button.classList.add('active');
+          currentTrack = button.dataset.target;
+          fetchAndRenderCards();
+        });
+      });
+    });
+  </script>
+</body>
+</html>

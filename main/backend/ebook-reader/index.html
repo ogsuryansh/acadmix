@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes"
+    />
+    <title>Acadmix eBook Reader</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #2563eb;
+        --primary-dark: #1e40af;
+        --primary-light: #3b82f6;
+        --background: #f2f4f8;
+        --card-bg: #fff;
+        --shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
+        --border-radius: 16px;
+        --toolbar-blur: 18px;
+        --toolbar-bg: rgba(37, 99, 235, 0.18);
+        --toolbar-border: rgba(37, 99, 235, 0.18);
+      }
+      body {
+        margin: 0;
+        font-family: "Inter", "Segoe UI", Arial, sans-serif;
+        background: var(--background);
+        overflow: hidden;
+        padding-bottom: 0;
+      }
+      #pdf-container {
+        height: 100vh;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        box-sizing: border-box;
+        padding: 20px;
+        display: block;
+        text-align: center;
+        padding-bottom: 90px;
+      }
+      .pdf-frame {
+        display: inline-block;
+        background: var(--card-bg);
+        padding: 10px;
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+        transition: box-shadow 0.3s;
+        position: relative;
+        min-width: 0;
+      }
+      canvas {
+        display: block;
+        border-radius: 8px;
+        transition: opacity 0.3s, box-shadow 0.3s;
+        background: #fff;
+        box-shadow: 0 2px 12px #2563eb22;
+        margin: 0 auto;
+      }
+      /* Frosted glass toolbar */
+      .toolbar {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--toolbar-bg);
+        box-shadow: 0 5px 15px rgba(37, 99, 235, 0.13);
+        border-top: 1.5px solid var(--toolbar-border);
+        border-radius: 18px 18px 0 0;
+        padding: 14px 24px 10px 24px;
+        z-index: 9999;
+        min-width: 320px;
+        max-width: 98vw;
+        width: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 7px;
+        backdrop-filter: blur(var(--toolbar-blur));
+        -webkit-backdrop-filter: blur(var(--toolbar-blur));
+        transition: background 0.3s;
+      }
+      .toolbar-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        justify-content: center;
+      }
+      .toolbar button {
+        background: var(--primary-dark);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 7px 15px;
+        font-size: 15px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s, transform 0.2s;
+        box-shadow: 0 2px 8px #2563eb22;
+        letter-spacing: 0.5px;
+        outline: none;
+      }
+      .toolbar button:hover,
+      .toolbar button:focus {
+        background: var(--primary-light);
+        color: #fff;
+        transform: translateY(-2px) scale(1.04);
+      }
+      .toolbar span {
+        color: #e0e7ff;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+      }
+      /* Mobile Responsive */
+      @media (max-width: 600px) {
+        #pdf-container {
+          padding: 6px;
+          padding-bottom: 110px;
+        }
+        .toolbar {
+          min-width: 0;
+          left: 0;
+          right: 0;
+          transform: none;
+          border-radius: 12px 12px 0 0;
+          padding: 8px 2vw 6px 2vw;
+          max-width: 100vw;
+        }
+        .toolbar-row {
+          gap: 7px;
+        }
+        .toolbar button {
+          font-size: 13px;
+          padding: 7px 10px;
+        }
+        .toolbar span {
+          font-size: 13px;
+        }
+        .pdf-frame {
+          padding: 4px;
+          border-radius: 10px;
+          max-width: 100vw;
+          overflow-x: auto;
+        }
+        canvas {
+          border-radius: 5px;
+          width: auto !important;
+          min-width: 100vw !important;
+          max-width: none !important;
+          height: auto !important;
+          display: block;
+        }
+      }
+    </style>
+  </head>
+  <body oncontextmenu="return false">
+    <div id="pdf-container">
+      <div class="pdf-frame">
+        <canvas id="pdf-render"></canvas>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="toolbar-row">
+        <button class="btn-prev">⬅ Prev</button>
+        <span>
+          Page <span id="page_num" class="highlight">1</span> of
+          <span id="page_count">--</span>
+        </span>
+        <button class="btn-next">Next ➡</button>
+      </div>
+      <div class="toolbar-row">
+        <button class="btn-zoom-out">➖ Zoom</button>
+        <button class="btn-fit-width">↔️ Fit Width</button>
+        <button class="btn-zoom-in">➕ Zoom</button>
+      </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+    <script src="/reader-assets/script.js"></script>
+  </body>
+</html>

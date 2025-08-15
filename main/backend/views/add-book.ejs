@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title><%= editMode ? 'Edit Book' : 'Add New Book' %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1e40af;
+      --primary-light: #3b82f6;
+      --background: #f0f4f8;
+      --card-bg: #fff;
+      --text: #222;
+      --shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
+      --border-radius: 16px;
+    }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: var(--background);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      background: var(--card-bg);
+      width: 100%;
+      max-width: 440px;
+      padding: 2.2rem 1.5rem 2rem 1.5rem;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      margin: 1.5rem;
+      animation: fadeIn 0.5s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+    h1 {
+      font-size: 1.7rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      color: var(--primary-dark);
+      letter-spacing: 1px;
+      font-weight: 700;
+    }
+    form label {
+      display: block;
+      margin-bottom: 1.1rem;
+      color: var(--primary-dark);
+      font-weight: 500;
+      font-size: 1rem;
+    }
+    form input[type="text"],
+    form input[type="number"],
+    form select {
+      width: 100%;
+      padding: 0.6rem 0.7rem;
+      margin-top: 0.3rem;
+      border: 1.5px solid #dbeafe;
+      border-radius: 7px;
+      box-sizing: border-box;
+      font-size: 1rem;
+      background: #f8fafc;
+      color: var(--text);
+      transition: border 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+    form input[type="text"]:focus,
+    form input[type="number"]:focus,
+    form select:focus {
+      border: 1.5px solid var(--primary);
+      box-shadow: 0 0 0 2px #2563eb22;
+      background: #fff;
+    }
+    form button {
+      width: 100%;
+      padding: 0.85rem;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 1.5rem;
+      box-shadow: 0 2px 8px #2563eb22;
+      transition: background 0.2s, transform 0.2s;
+      letter-spacing: 1px;
+    }
+    form button:hover {
+      background: linear-gradient(90deg, var(--primary-dark), var(--primary));
+      transform: translateY(-2px) scale(1.01);
+    }
+    .error {
+      color: #ef4444;
+      margin-bottom: 1rem;
+      text-align: center;
+      font-weight: 600;
+      background: #fee2e2;
+      border-radius: 6px;
+      padding: 0.5rem 0.7rem;
+      font-size: 1rem;
+    }
+    @media (max-width: 600px) {
+      .container {
+        padding: 1.2rem 0.5rem 1.2rem 0.5rem;
+        max-width: 98vw;
+      }
+      h1 {
+        font-size: 1.2rem;
+      }
+      form label {
+        font-size: 0.98rem;
+      }
+      form button {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1><%= editMode ? 'Edit Book' : 'Add New Book' %></h1>
+
+    <% if (error) { %>
+      <p class="error"><%= error %></p>
+    <% } %>
+
+    <form action="<%= editMode ? '/api/admin/books/' + bookId + '/edit' : '/api/admin/books/new' %>" method="POST">
+      <label>
+        Title
+        <input type="text" name="title" required value="<%= title || '' %>">
+      </label>
+
+      <label>
+        Category
+        <select name="category" required>
+          <% categories.forEach(cat => { %>
+            <option value="<%= cat %>" <%= category === cat ? 'selected' : '' %>><%= cat %></option>
+          <% }) %>
+        </select>
+      </label>
+
+      <label>
+        Section (where to display)
+        <select name="section" required>
+          <% sections.forEach(sec => { %>
+            <option value="<%= sec %>" <%= section === sec ? 'selected' : '' %>><%= sec.charAt(0).toUpperCase() + sec.slice(1) %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>
+        Track (NEET or JEE)
+        <select name="track" required>
+          <option value="">-- Select Track --</option>
+          <option value="NEET" <%= track === 'NEET' ? 'selected' : '' %>>NEET</option>
+          <option value="JEE" <%= track === 'JEE' ? 'selected' : '' %>>JEE</option>
+        </select>
+      </label>
+
+      <label>
+        Page Count
+        <input type="number" name="pageCount" min="1" required value="<%= pageCount || '' %>">
+      </label>
+
+      <label>
+        Original Price
+        <input type="number" name="priceOriginal" min="0" required value="<%= priceOriginal || '' %>">
+      </label>
+
+      <label>
+        Discounted Price
+        <input type="number" name="priceDiscounted" min="0" required value="<%= priceDiscounted || '' %>">
+      </label>
+
+      <label>
+        Badge Text (e.g. “90% OFF”)
+        <input type="text" name="badge" required value="<%= badge || '' %>">
+      </label>
+
+      <label>
+        Demo Available?
+        <select name="demo" required>
+          <option value="Yes" <%= demo === 'Yes' ? 'selected' : '' %>>Yes</option>
+          <option value="No" <%= !demo || demo === 'No' ? 'selected' : '' %>>No</option>
+        </select>
+      </label>
+
+      <label>
+        Image URL
+        <input type="text" name="imageUrl" placeholder="https://example.com/book.jpg" required value="<%= imageUrl || '' %>">
+      </label>
+      <label>
+        PDF URL (hosted externally)
+        <input type="text" name="pdfPath" placeholder="https://yourhost.com/book.pdf" value="<%= pdfPath || '' %>">
+      </label>
+
+      <button type="submit"><%= editMode ? 'Update Book' : 'Add Book' %></button>
+    </form>
+  </div>
+</body>
+</html>
