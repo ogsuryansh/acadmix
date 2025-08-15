@@ -1,0 +1,43 @@
+# Node.js
+node_modules/
+public/backend/node_modules/
+public/client/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+public/backend/dist/
+public/backend/build/
+public/client/dist/
+public/client/build/
+
+# Environment variables
+.env
+.env.*
+public/backend/.env
+public/client/.env
+
+# Logs
+logs/
+*.log
+public/backend/logs/
+public/client/logs/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor junk
+.vscode/
+.idea/
+*.swp
+
+# Coverage
+coverage/
+public/backend/coverage/
+public/client/coverage/
+
+# Misc
+public/backend/.cache/
+public/client/.cache/
