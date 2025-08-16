@@ -36,6 +36,7 @@ const bcrypt = require("bcryptjs");
 const rateLimit = require("express-rate-limit");
 const QRCode = require("qrcode");
 const path = require("path");
+const fs = require("fs");
 // Import admin config with fallback
 let adminConfig;
 try {
@@ -207,15 +208,25 @@ app.use(async (req, res, next) => {
 });
 
 // ─── SESSIONS & PASSPORT ──────────────────────────────────────────────────────
+// Configure session store based on environment
+let sessionStore;
+try {
+  sessionStore = MongoStore.create({
+    mongoUrl: process.env.MONGO_URI,
+    ttl: 14 * 24 * 60 * 60, // 14 days
+  });
+  console.log("✅ MongoDB session store configured");
+} catch (err) {
+  console.warn("⚠️  MongoDB session store failed, using memory store:", err.message);
+  sessionStore = undefined;
+}
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "fallback-secret",
     resave: false,
     saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URI,
-      ttl: 14 * 24 * 60 * 60, // 14 days
-    }),
+    store: sessionStore,
     cookie: {
       httpOnly: true,
       secure: isProd,
@@ -1843,7 +1854,18 @@ app.get("/api/admin/config", authenticateToken, async (req, res) => {
 });
 
 // ─── STATIC FILES ────────────────────────────────────────────────────────────
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+// Only serve static files in development or if uploads directory exists
+try {
+  const uploadsPath = path.join(__dirname, "..", "uploads");
+  if (fs.existsSync(uploadsPath)) {
+    app.use("/uploads", express.static(uploadsPath));
+    console.log("✅ Static file serving enabled for uploads");
+  } else {
+    console.log("⚠️  Uploads directory not found, static file serving disabled");
+  }
+} catch (err) {
+  console.warn("⚠️  Static file serving disabled:", err.message);
+}
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
 // ─── ERROR HANDLING ──────────────────────────────────────────────────────────
@@ -1862,6 +1884,11 @@ console.log("🔧 Server startup configuration:", {
   allowedOrigins: allowedOrigins
 });
 
+// Always export the serverless function for Vercel
+console.log("🚀 Exporting app for serverless deployment");
+module.exports = serverless(app);
+
+// Only start the server in development mode
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 5000;
   console.log(`🚀 Starting development server on port ${PORT}...`);
@@ -1876,11 +1903,4 @@ if (process.env.NODE_ENV !== "production") {
     .on("error", (err) => {
       console.error("❌ Server startup error:", err);
     });
-} else {
-  console.log("🚀 Production mode: Exporting app for serverless deployment");
-  console.log("🔧 CORS configuration for production:", {
-    allowedOrigins: allowedOrigins,
-    isProd: isProd
-  });
-  module.exports = serverless(app);
 }

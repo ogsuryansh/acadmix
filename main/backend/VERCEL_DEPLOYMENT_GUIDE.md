@@ -91,3 +91,13 @@ After deployment, test these endpoints:
 - MongoDB connection is handled with retry logic
 - CORS is configured for production domains
 - Rate limiting is enabled for API endpoints
+- Session store gracefully falls back to memory store if MongoDB is unavailable
+- Static file serving is conditionally enabled based on directory existence
+- Serverless function is always exported for Vercel compatibility
+
+## Recent Fixes
+
+1. **Serverless Export**: Fixed to always export serverless function regardless of environment
+2. **Session Store**: Added graceful fallback for MongoDB session store
+3. **Static Files**: Added conditional static file serving
+4. **Error Handling**: Enhanced error handling for serverless deployment
