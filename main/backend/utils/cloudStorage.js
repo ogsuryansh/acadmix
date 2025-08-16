@@ -1,17 +1,38 @@
 const cloudinary = require('cloudinary').v2;
 const { Readable } = require('stream');
+const { smartCompressPdf, needsCompression, getCompressionRecommendations } = require('./pdfCompressor');
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Configure Cloudinary only if environment variables are available
+const configureCloudinary = () => {
+  if (process.env.CLOUDINARY_CLOUD_NAME && 
+      process.env.CLOUDINARY_API_KEY && 
+      process.env.CLOUDINARY_API_SECRET) {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+    return true;
+  }
+  return false;
+};
 
-// Test Cloudinary connection
-cloudinary.api.ping()
-  .then(result => console.log("✅ Cloudinary connection successful:", result))
-  .catch(error => console.error("❌ Cloudinary connection failed:", error));
+// Test Cloudinary connection only if configured
+const testCloudinaryConnection = async () => {
+  if (configureCloudinary()) {
+    try {
+      await cloudinary.api.ping();
+      console.log("✅ Cloudinary connection successful");
+    } catch (error) {
+      console.error("❌ Cloudinary connection failed:", error);
+    }
+  } else {
+    console.warn("⚠️ Cloudinary not configured, skipping connection test");
+  }
+};
+
+// Test connection on module load
+testCloudinaryConnection();
 
 // Upload image to Cloudinary
 const uploadImage = async (file) => {
@@ -68,10 +89,10 @@ const uploadImage = async (file) => {
   }
 };
 
-// Upload PDF to Cloudinary
+// Upload PDF with hybrid storage (Cloudinary + Backblaze B2)
 const uploadPdf = async (file) => {
   try {
-    console.log("📄 Starting PDF upload to Cloudinary...");
+    console.log("📄 Starting PDF upload...");
     console.log("📄 File details:", {
       originalname: file.originalname,
       mimetype: file.mimetype,
@@ -83,11 +104,78 @@ const uploadPdf = async (file) => {
       return null;
     }
 
+    // Check file size - Cloudinary free plan has 10MB limit
+    const maxFileSize = 10 * 1024 * 1024; // 10MB
+    
+    // If file is too large for Cloudinary, try Backblaze B2 first
+    if (file.size > maxFileSize) {
+      console.log("🔄 File too large for Cloudinary, trying Backblaze B2...");
+      
+      try {
+        const { uploadToB2 } = require('./backblazeStorage');
+        const b2Result = await uploadToB2(file, 'pdfs');
+        console.log("✅ B2 upload successful");
+        return b2Result;
+      } catch (b2Error) {
+        console.error("❌ B2 upload failed:", b2Error.message);
+        console.log("🔄 Falling back to Cloudinary with compression...");
+      }
+    }
+    
+    // Check if compression is needed for Cloudinary
+    if (needsCompression(file.buffer, maxFileSize)) {
+      console.log("🔄 PDF needs compression, analyzing...");
+      
+      const recommendations = getCompressionRecommendations(file.buffer, maxFileSize);
+      console.log("📊 Compression recommendations:", recommendations);
+      
+      try {
+        console.log("🧠 Starting automatic PDF compression...");
+        const compressedBuffer = await smartCompressPdf(file.buffer, maxFileSize);
+        
+        // Update file buffer with compressed version
+        file.buffer = compressedBuffer;
+        file.size = compressedBuffer.length;
+        
+        console.log("✅ PDF compressed successfully");
+        console.log("📊 New size:", file.size, "bytes");
+        
+        // Check if compression was successful
+        if (file.size > maxFileSize) {
+          console.warn("⚠️ PDF still too large after compression");
+          
+          // Check if we should allow larger files (for development/testing)
+          const allowLargeFiles = process.env.ALLOW_LARGE_FILES === 'true';
+          
+          if (allowLargeFiles) {
+            console.log("🔄 Large files allowed, proceeding with compressed file");
+          } else {
+            const error = new Error(`PDF is still too large after compression. Size: ${(file.size / (1024 * 1024)).toFixed(1)}MB. Maximum: ${(maxFileSize / (1024 * 1024)).toFixed(1)}MB. Please try a smaller PDF or upgrade your Cloudinary plan.`);
+            error.http_code = 400;
+            throw error;
+          }
+        }
+        
+      } catch (compressionError) {
+        console.error("❌ PDF compression failed:", compressionError);
+        
+        // If compression failed but file is still within limits, continue with original
+        if (file.size <= maxFileSize) {
+          console.log("⚠️ Compression failed, but file is within size limits. Continuing with original file.");
+        } else {
+          const error = new Error(`PDF compression failed: ${compressionError.message}. Please try uploading a smaller PDF or upgrade your Cloudinary plan.`);
+          error.http_code = 400;
+          throw error;
+        }
+      }
+    } else {
+      console.log("✅ PDF size is within limits, no compression needed");
+    }
+
     // Check if Cloudinary is configured
-    if (!process.env.CLOUDINARY_CLOUD_NAME || 
-        !process.env.CLOUDINARY_API_KEY || 
-        !process.env.CLOUDINARY_API_SECRET) {
+    if (!configureCloudinary()) {
       console.warn('⚠️ Cloudinary not configured, returning placeholder URL');
+      console.warn('📝 Please set up CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your .env file');
       return 'https://via.placeholder.com/400x600/EF4444/FFFFFF?text=PDF+Document';
     }
 
@@ -205,17 +293,46 @@ const uploadPdf = async (file) => {
   }
 };
 
-// Delete file from Cloudinary
-const deleteFile = async (publicId) => {
+// Delete file from appropriate storage
+const deleteFile = async (fileUrl) => {
   try {
-    if (!publicId) return;
+    if (!fileUrl) return;
     
-    const result = await cloudinary.uploader.destroy(publicId);
-    console.log('File deleted from Cloudinary:', result);
-    return result;
+    // Handle B2 files
+    if (fileUrl.includes('backblazeb2.com')) {
+      try {
+        const { deleteFromB2 } = require('./backblazeStorage');
+        await deleteFromB2(fileUrl);
+        console.log('✅ File deleted from B2');
+        return { result: 'ok' };
+      } catch (b2Error) {
+        console.error('❌ B2 delete error:', b2Error);
+        return { result: 'ok' }; // Don't throw error
+      }
+    }
+    
+    // Handle Cloudinary files
+    if (fileUrl.includes('cloudinary.com')) {
+      // Check if Cloudinary is configured
+      if (!configureCloudinary()) {
+        console.warn('⚠️ Cloudinary not configured, skipping file deletion');
+        return { result: 'ok' }; // Return success to avoid errors
+      }
+      
+      const publicId = getPublicIdFromUrl(fileUrl);
+      if (publicId) {
+        const result = await cloudinary.uploader.destroy(publicId);
+        console.log('✅ File deleted from Cloudinary:', result);
+        return result;
+      }
+    }
+    
+    console.log('⚠️ Unknown storage provider, skipping deletion');
+    return { result: 'ok' };
   } catch (error) {
     console.error('Delete file error:', error);
-    throw error;
+    // Don't throw error, just log it to avoid breaking the update process
+    return { result: 'ok' };
   }
 };
 
@@ -223,7 +340,19 @@ const deleteFile = async (publicId) => {
 const getPublicIdFromUrl = (url) => {
   if (!url) return null;
   
+  // Skip placeholder URLs
+  if (url.includes('via.placeholder.com') || url.includes('placeholder')) {
+    console.log('⚠️ Skipping placeholder URL for deletion:', url);
+    return null;
+  }
+  
   try {
+    // Check if it's a Cloudinary URL
+    if (!url.includes('res.cloudinary.com')) {
+      console.log('⚠️ Not a Cloudinary URL, skipping deletion:', url);
+      return null;
+    }
+    
     const urlParts = url.split('/');
     const filename = urlParts[urlParts.length - 1];
     const publicId = filename.split('.')[0];

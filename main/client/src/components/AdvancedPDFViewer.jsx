@@ -145,6 +145,11 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
         setError(null);
         console.log('📚 Loading PDF:', pdfUrl);
 
+        // Check if this is a placeholder URL
+        if (pdfUrl.includes('via.placeholder.com') || pdfUrl.includes('placeholder')) {
+          throw new Error('PDF not available - this appears to be a placeholder. The actual PDF may not have been uploaded successfully.');
+        }
+
         // Load PDF.js if not already loaded
         if (!window.pdfjsLib) {
           console.log('📥 Loading PDF.js library...');
