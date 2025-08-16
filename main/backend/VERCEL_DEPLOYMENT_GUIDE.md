@@ -104,3 +104,6 @@ After deployment, test these endpoints:
 5. **Database Connection**: Added timeout and lazy loading for MongoDB connection
 6. **Request Logging**: Added request logging for debugging
 7. **CORS**: Simplified CORS configuration for better compatibility
+8. **Lazy Loading**: Implemented lazy loading of modules to prevent timeout during startup
+9. **Timeout Configuration**: Increased function timeout to 60 seconds
+10. **Lightweight Endpoints**: Added endpoints that don't require database connection

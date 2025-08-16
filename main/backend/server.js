@@ -37,37 +37,39 @@ const rateLimit = require("express-rate-limit");
 const QRCode = require("qrcode");
 const path = require("path");
 const fs = require("fs");
-// Import admin config with fallback
-let adminConfig;
-try {
-  adminConfig = require("./config/admin");
-  console.log("✅ Admin config loaded successfully");
-} catch (err) {
-  console.warn("⚠️  Admin config not found, using defaults:", err.message);
-  adminConfig = {
-    dashboard: { paymentsLimit: 50 },
-    upload: {
-      maxImageSize: 5 * 1024 * 1024,
-      maxPdfSize: 50 * 1024 * 1024,
-      allowedImageTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'],
-      allowedPdfTypes: ['application/pdf'],
-    },
-    payment: { testAmount: 100, currency: 'INR' },
-    ui: { paginationLimit: 20, refreshInterval: 30000 }
-  };
-}
+// Lazy load modules to prevent timeout during serverless startup
+let adminConfig, User, Book, Payment, MongoStore, upload, cloudStorage;
 
-const User = require("./models/User");
-const Book = require("./models/Book");
-const Payment = require("./models/Payment");
-const MongoStore = require("connect-mongo");
-const upload = require("./middleware/upload");
-const {
-  uploadImage,
-  uploadPdf,
-  deleteFile,
-  getPublicIdFromUrl,
-} = require("./utils/cloudStorage");
+function loadModules() {
+  if (!adminConfig) {
+    try {
+      adminConfig = require("./config/admin");
+      console.log("✅ Admin config loaded successfully");
+    } catch (err) {
+      console.warn("⚠️  Admin config not found, using defaults:", err.message);
+      adminConfig = {
+        dashboard: { paymentsLimit: 50 },
+        upload: {
+          maxImageSize: 5 * 1024 * 1024,
+          maxPdfSize: 50 * 1024 * 1024,
+          allowedImageTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'],
+          allowedPdfTypes: ['application/pdf'],
+        },
+        payment: { testAmount: 100, currency: 'INR' },
+        ui: { paginationLimit: 20, refreshInterval: 30000 }
+      };
+    }
+  }
+  
+  if (!User) User = require("./models/User");
+  if (!Book) Book = require("./models/Book");
+  if (!Payment) Payment = require("./models/Payment");
+  if (!MongoStore) MongoStore = require("connect-mongo");
+  if (!upload) upload = require("./middleware/upload");
+  if (!cloudStorage) {
+    cloudStorage = require("./utils/cloudStorage");
+  }
+}
 
 // ─── EXPRESS APP ─────────────────────────────────────────────────────────────
 console.log("🔧 Creating Express app...");
@@ -208,6 +210,12 @@ connectToDB()
 // Only connect to DB on first request in serverless environment
 let dbConnected = false;
 app.use(async (req, res, next) => {
+  // Load modules on first request
+  loadModules();
+  
+  // Load payment routes on first request
+  loadPaymentRoutes();
+  
   if (!dbConnected) {
     try {
       // Add timeout to prevent hanging
@@ -231,18 +239,25 @@ app.use(async (req, res, next) => {
 // ─── SESSIONS & PASSPORT ──────────────────────────────────────────────────────
 // Configure session store based on environment
 let sessionStore;
-try {
-  sessionStore = MongoStore.create({
-    mongoUrl: process.env.MONGO_URI,
-    ttl: 14 * 24 * 60 * 60, // 14 days
-  });
-  console.log("✅ MongoDB session store configured");
-} catch (err) {
-  console.warn("⚠️  MongoDB session store failed, using memory store:", err.message);
-  sessionStore = undefined;
+function setupSessionStore() {
+  if (!sessionStore) {
+    try {
+      sessionStore = MongoStore.create({
+        mongoUrl: process.env.MONGO_URI,
+        ttl: 14 * 24 * 60 * 60, // 14 days
+      });
+      console.log("✅ MongoDB session store configured");
+    } catch (err) {
+      console.warn("⚠️  MongoDB session store failed, using memory store:", err.message);
+      sessionStore = undefined;
+    }
+  }
 }
 
-app.use(
+app.use((req, res, next) => {
+  // Setup session store on first request
+  setupSessionStore();
+  
   session({
     secret: process.env.SESSION_SECRET || "fallback-secret",
     resave: false,
@@ -254,30 +269,38 @@ app.use(
       sameSite: isProd ? "none" : "lax",
       ...(isProd && { domain: ".acadmix.shop" }),
     },
-  })
-);
+  })(req, res, next);
+});
 
 app.use(passport.initialize());
 app.use(passport.session());
 
 // ─── ROUTES ────────────────────────────────────────────────────────────────
-console.log("🔧 Loading payment routes...");
-try {
-  const paymentRoutes = require("./routes/payment");
-  console.log("✅ Payment routes loaded successfully");
-  app.use("/api", paymentRoutes);
-  console.log("✅ Payment routes mounted at /api");
-} catch (err) {
-  console.error("❌ Error loading payment routes:", err);
-  throw err;
+// Lazy load payment routes
+let paymentRoutesLoaded = false;
+function loadPaymentRoutes() {
+  if (!paymentRoutesLoaded) {
+    console.log("🔧 Loading payment routes...");
+    try {
+      const paymentRoutes = require("./routes/payment");
+      console.log("✅ Payment routes loaded successfully");
+      app.use("/api", paymentRoutes);
+      console.log("✅ Payment routes mounted at /api");
+      paymentRoutesLoaded = true;
+    } catch (err) {
+      console.error("❌ Error loading payment routes:", err);
+      throw err;
+    }
+  }
 }
 
 passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser((id, done) =>
+passport.deserializeUser((id, done) => {
+  loadModules(); // Ensure User model is loaded
   User.findById(id)
     .then((u) => done(null, u))
-    .catch((e) => done(e))
-);
+    .catch((e) => done(e));
+});
 
 passport.use(
   new GoogleStrategy(
@@ -290,6 +313,7 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        loadModules(); // Ensure User model is loaded
         let user = await User.findOne({ googleId: profile.id });
 
         if (!user) {
@@ -398,17 +422,18 @@ const authenticateToken = async (req, res, next) => {
 
 // ─── API ROUTES ──────────────────────────────────────────────────────────────
 
-// Root endpoint
+// Root endpoint - no database required
 app.get("/", (req, res) => {
   res.json({
     message: "Acadmix Backend API",
     status: "running",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || "development"
+    environment: process.env.NODE_ENV || "development",
+    serverless: true
   });
 });
 
-// Health check
+// Health check - no database required
 app.get("/api/health", (req, res) => {
   console.log("🏥 Health check request from:", req.headers.origin);
   res.json({
@@ -416,11 +441,21 @@ app.get("/api/health", (req, res) => {
     message: "Server is running",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development",
+    serverless: true,
     cors: {
       origin: req.headers.origin,
       allowedOrigins: allowedOrigins,
       production: isProd
     }
+  });
+});
+
+// Simple ping endpoint for testing
+app.get("/api/ping", (req, res) => {
+  res.json({ 
+    pong: true, 
+    timestamp: new Date().toISOString(),
+    serverless: true
   });
 });
 
