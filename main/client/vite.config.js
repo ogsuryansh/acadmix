@@ -3,10 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [
-    react({
-      // Enable React 19 compiler properly
-      jsxRuntime: 'automatic',
-    })
+    react()
   ],
   server: {
     port: 5173,
@@ -27,8 +24,5 @@ export default defineConfig({
     },
     assetsInlineLimit: 0,
   },
-  // Add React 19 specific optimizations
-  optimizeDeps: {
-    include: ['react', 'react-dom']
-  }
+
 })

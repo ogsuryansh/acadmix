@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../services/api';
@@ -18,8 +18,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Memoize the login function to prevent unnecessary re-renders
-  const login = useCallback(async (email, password) => {
+  const login = async (email, password) => {
     try {
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
@@ -34,10 +33,9 @@ export const AuthProvider = ({ children }) => {
       toast.error(error.response?.data?.error || 'Login failed');
       throw error;
     }
-  }, [navigate]);
+  };
 
-  // Memoize the register function
-  const register = useCallback(async (name, email, password) => {
+  const register = async (name, email, password) => {
     try {
       const response = await api.post('/auth/register', { name, email, password });
       const { token, user } = response.data;
@@ -52,10 +50,9 @@ export const AuthProvider = ({ children }) => {
       toast.error(error.response?.data?.error || 'Registration failed');
       throw error;
     }
-  }, [navigate]);
+  };
 
-  // Memoize the googleLogin function
-  const googleLogin = useCallback(async (token) => {
+  const googleLogin = async (token) => {
     try {
       localStorage.setItem('token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -69,17 +66,16 @@ export const AuthProvider = ({ children }) => {
       toast.error('Google login failed');
       throw error;
     }
-  }, []);
+  };
 
-  // Memoize the logout function
-  const logout = useCallback(() => {
+  const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('isAdmin');
     delete api.defaults.headers.common['Authorization'];
     setUser(null);
     toast.success('Logged out successfully');
     navigate('/');
-  }, [navigate]);
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
