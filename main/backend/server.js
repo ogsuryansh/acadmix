@@ -41,33 +41,73 @@ const fs = require("fs");
 let adminConfig, User, Book, Payment, MongoStore, upload, cloudStorage;
 
 function loadModules() {
-  if (!adminConfig) {
-    try {
-      adminConfig = require("./config/admin");
-      console.log("✅ Admin config loaded successfully");
-    } catch (err) {
-      console.warn("⚠️  Admin config not found, using defaults:", err.message);
-      adminConfig = {
-        dashboard: { paymentsLimit: 50 },
-        upload: {
-          maxImageSize: 5 * 1024 * 1024,
-          maxPdfSize: 50 * 1024 * 1024,
-          allowedImageTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'],
-          allowedPdfTypes: ['application/pdf'],
-        },
-        payment: { testAmount: 100, currency: 'INR' },
-        ui: { paginationLimit: 20, refreshInterval: 30000 }
-      };
-    }
-  }
+  const requestId = Math.random().toString(36).substring(7);
+  console.log(`📦 [${requestId}] loadModules() - Starting module loading...`);
   
-  if (!User) User = require("./models/User");
-  if (!Book) Book = require("./models/Book");
-  if (!Payment) Payment = require("./models/Payment");
-  if (!MongoStore) MongoStore = require("connect-mongo");
-  if (!upload) upload = require("./middleware/upload");
-  if (!cloudStorage) {
-    cloudStorage = require("./utils/cloudStorage");
+  try {
+    if (!adminConfig) {
+      console.log(`⚙️ [${requestId}] Loading admin config...`);
+      try {
+        adminConfig = require("./config/admin");
+        console.log(`✅ [${requestId}] Admin config loaded successfully`);
+      } catch (err) {
+        console.warn(`⚠️ [${requestId}] Admin config not found, using defaults:`, err.message);
+        adminConfig = {
+          dashboard: { paymentsLimit: 50 },
+          upload: {
+            maxImageSize: 5 * 1024 * 1024,
+            maxPdfSize: 50 * 1024 * 1024,
+            allowedImageTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'],
+            allowedPdfTypes: ['application/pdf'],
+          },
+          payment: { testAmount: 100, currency: 'INR' },
+          ui: { paginationLimit: 20, refreshInterval: 30000 }
+        };
+      }
+    } else {
+      console.log(`✅ [${requestId}] Admin config already loaded`);
+    }
+    
+    if (!User) {
+      console.log(`👤 [${requestId}] Loading User model...`);
+      User = require("./models/User");
+      console.log(`✅ [${requestId}] User model loaded`);
+    }
+    
+    if (!Book) {
+      console.log(`📚 [${requestId}] Loading Book model...`);
+      Book = require("./models/Book");
+      console.log(`✅ [${requestId}] Book model loaded`);
+    }
+    
+    if (!Payment) {
+      console.log(`💳 [${requestId}] Loading Payment model...`);
+      Payment = require("./models/Payment");
+      console.log(`✅ [${requestId}] Payment model loaded`);
+    }
+    
+    if (!MongoStore) {
+      console.log(`🗄️ [${requestId}] Loading MongoStore...`);
+      MongoStore = require("connect-mongo");
+      console.log(`✅ [${requestId}] MongoStore loaded`);
+    }
+    
+    if (!upload) {
+      console.log(`📤 [${requestId}] Loading upload middleware...`);
+      upload = require("./middleware/upload");
+      console.log(`✅ [${requestId}] Upload middleware loaded`);
+    }
+    
+    if (!cloudStorage) {
+      console.log(`☁️ [${requestId}] Loading cloudStorage...`);
+      cloudStorage = require("./utils/cloudStorage");
+      console.log(`✅ [${requestId}] CloudStorage loaded`);
+    }
+    
+    console.log(`✅ [${requestId}] loadModules() - All modules loaded successfully`);
+  } catch (error) {
+    console.error(`💥 [${requestId}] loadModules() - Error:`, error);
+    throw error;
   }
 }
 
@@ -171,30 +211,73 @@ app.options('*', cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Request logging middleware
+// Enhanced request logging middleware
 app.use((req, res, next) => {
-  console.log(`📨 ${req.method} ${req.path} - ${new Date().toISOString()}`);
+  const startTime = Date.now();
+  const requestId = Math.random().toString(36).substring(7);
+  
+  console.log(`🚀 [${requestId}] ${req.method} ${req.path} - Started at ${new Date().toISOString()}`);
+  console.log(`📋 [${requestId}] Headers:`, {
+    origin: req.headers.origin,
+    'user-agent': req.headers['user-agent']?.substring(0, 50) + '...',
+    'content-type': req.headers['content-type'],
+    authorization: req.headers.authorization ? 'Present' : 'Missing'
+  });
+  
+  // Override res.end to log response time
+  const originalEnd = res.end;
+  res.end = function(...args) {
+    const duration = Date.now() - startTime;
+    console.log(`✅ [${requestId}] ${req.method} ${req.path} - Completed in ${duration}ms - Status: ${res.statusCode}`);
+    originalEnd.apply(this, args);
+  };
+  
   next();
 });
 
 // ─── MONGO CONNECTION ─────────────────────────────────────────────────────────
 async function connectToDB() {
-  if (global._mongoConn) return global._mongoConn;
+  const requestId = Math.random().toString(36).substring(7);
+  console.log(`🗄️ [${requestId}] connectToDB() - Starting database connection...`);
+  
+  if (global._mongoConn) {
+    console.log(`✅ [${requestId}] Database connection already exists, returning existing connection`);
+    return global._mongoConn;
+  }
+  
   if (!global._mongoPromise) {
+    console.log(`🔌 [${requestId}] Creating new database connection promise...`);
+    console.log(`🔗 [${requestId}] MongoDB URI: ${process.env.MONGO_URI ? 'Set' : 'Not set'}`);
+    
     global._mongoPromise = mongoose
       .connect(process.env.MONGO_URI, {
         serverSelectionTimeoutMS: 5000,
         connectTimeoutMS: 10000,
         socketTimeoutMS: 45000,
       })
+      .then((connection) => {
+        console.log(`✅ [${requestId}] MongoDB connection established successfully`);
+        return connection;
+      })
       .catch((err) => {
-        console.error("❌ MongoDB Connection Error:", err.message);
+        console.error(`❌ [${requestId}] MongoDB Connection Error:`, err.message);
+        console.error(`❌ [${requestId}] MongoDB Connection Error Details:`, err);
         global._mongoPromise = null;
         throw err;
       });
+  } else {
+    console.log(`⏳ [${requestId}] Database connection promise already exists, waiting...`);
   }
-  global._mongoConn = await global._mongoPromise;
-  return global._mongoConn;
+  
+  try {
+    console.log(`⏱️ [${requestId}] Awaiting database connection...`);
+    global._mongoConn = await global._mongoPromise;
+    console.log(`✅ [${requestId}] Database connection completed successfully`);
+    return global._mongoConn;
+  } catch (error) {
+    console.error(`💥 [${requestId}] Database connection failed:`, error);
+    throw error;
+  }
 }
 
 // Initialize MongoDB connection on startup (non-blocking)
@@ -209,67 +292,127 @@ connectToDB()
 
 // Only connect to DB on first request in serverless environment
 let dbConnected = false;
+let middlewareProcessing = false;
+
 app.use(async (req, res, next) => {
-  // Load modules on first request
-  loadModules();
+  const requestId = Math.random().toString(36).substring(7);
+  console.log(`🔧 [${requestId}] DB Middleware - Starting...`);
   
-  // Load payment routes on first request
-  loadPaymentRoutes();
-  
-  if (!dbConnected) {
-    try {
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Database connection timeout')), 10000);
-      });
-      
-      const connectionPromise = connectToDB();
-      await Promise.race([connectionPromise, timeoutPromise]);
-      
-      dbConnected = true;
-      console.log("✅ Database connected on first request");
-    } catch (err) {
-      console.error("❌ DB Connection Error:", err);
-      return res.status(500).json({ error: "Database connection failed", details: err.message });
-    }
+  // Prevent multiple simultaneous middleware executions
+  if (middlewareProcessing) {
+    console.log(`⏳ [${requestId}] Middleware already processing, skipping...`);
+    return next();
   }
-  next();
+  
+  middlewareProcessing = true;
+  
+  try {
+    // Load modules on first request
+    console.log(`📦 [${requestId}] Loading modules...`);
+    loadModules();
+    console.log(`✅ [${requestId}] Modules loaded successfully`);
+    
+    // Load payment routes on first request
+    console.log(`🛣️ [${requestId}] Loading payment routes...`);
+    loadPaymentRoutes();
+    console.log(`✅ [${requestId}] Payment routes loaded successfully`);
+    
+    if (!dbConnected) {
+      console.log(`🔌 [${requestId}] Database not connected, attempting connection...`);
+      try {
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Database connection timeout')), 10000);
+        });
+        
+        console.log(`⏱️ [${requestId}] Starting database connection with 10s timeout...`);
+        const connectionPromise = connectToDB();
+        await Promise.race([connectionPromise, timeoutPromise]);
+        
+        dbConnected = true;
+        console.log(`✅ [${requestId}] Database connected successfully on first request`);
+      } catch (err) {
+        console.error(`❌ [${requestId}] DB Connection Error:`, err);
+        middlewareProcessing = false;
+        return res.status(500).json({ error: "Database connection failed", details: err.message });
+      }
+    } else {
+      console.log(`✅ [${requestId}] Database already connected, skipping connection`);
+    }
+    
+    console.log(`✅ [${requestId}] DB Middleware - Completed successfully`);
+    middlewareProcessing = false;
+    next();
+  } catch (error) {
+    console.error(`💥 [${requestId}] DB Middleware - Error:`, error);
+    middlewareProcessing = false;
+    return res.status(500).json({ error: "Middleware error", details: error.message });
+  }
 });
 
 // ─── SESSIONS & PASSPORT ──────────────────────────────────────────────────────
 // Configure session store based on environment
 let sessionStore;
 function setupSessionStore() {
+  const requestId = Math.random().toString(36).substring(7);
+  
   if (!sessionStore) {
+    console.log(`🔐 [${requestId}] setupSessionStore() - Creating session store...`);
     try {
+      console.log(`🗄️ [${requestId}] Creating MongoStore with TTL: 14 days`);
       sessionStore = MongoStore.create({
         mongoUrl: process.env.MONGO_URI,
         ttl: 14 * 24 * 60 * 60, // 14 days
       });
-      console.log("✅ MongoDB session store configured");
+      console.log(`✅ [${requestId}] MongoDB session store configured successfully`);
     } catch (err) {
-      console.warn("⚠️  MongoDB session store failed, using memory store:", err.message);
+      console.warn(`⚠️ [${requestId}] MongoDB session store failed, using memory store:`, err.message);
+      console.warn(`⚠️ [${requestId}] Session store error details:`, err);
       sessionStore = undefined;
     }
+  } else {
+    console.log(`✅ [${requestId}] Session store already configured, skipping...`);
   }
 }
 
 app.use((req, res, next) => {
-  // Setup session store on first request
-  setupSessionStore();
+  const requestId = Math.random().toString(36).substring(7);
+  console.log(`🔐 [${requestId}] Session middleware - Starting...`);
   
-  session({
-    secret: process.env.SESSION_SECRET || "fallback-secret",
-    resave: false,
-    saveUninitialized: false,
-    store: sessionStore,
-    cookie: {
-      httpOnly: true,
+  try {
+    // Setup session store on first request
+    console.log(`🔧 [${requestId}] Setting up session store...`);
+    setupSessionStore();
+    console.log(`✅ [${requestId}] Session store setup completed`);
+    
+    console.log(`🍪 [${requestId}] Creating session with config:`, {
+      secret: process.env.SESSION_SECRET ? 'Set' : 'Using fallback',
+      resave: false,
+      saveUninitialized: false,
+      store: sessionStore ? 'MongoStore' : 'Memory',
       secure: isProd,
       sameSite: isProd ? "none" : "lax",
-      ...(isProd && { domain: ".acadmix.shop" }),
-    },
-  })(req, res, next);
+      domain: isProd ? ".acadmix.shop" : "undefined"
+    });
+    
+    session({
+      secret: process.env.SESSION_SECRET || "fallback-secret",
+      resave: false,
+      saveUninitialized: false,
+      store: sessionStore,
+      cookie: {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? "none" : "lax",
+        ...(isProd && { domain: ".acadmix.shop" }),
+      },
+    })(req, res, next);
+    
+    console.log(`✅ [${requestId}] Session middleware - Completed successfully`);
+  } catch (error) {
+    console.error(`💥 [${requestId}] Session middleware - Error:`, error);
+    next(error);
+  }
 });
 
 app.use(passport.initialize());
@@ -279,18 +422,27 @@ app.use(passport.session());
 // Lazy load payment routes
 let paymentRoutesLoaded = false;
 function loadPaymentRoutes() {
+  const requestId = Math.random().toString(36).substring(7);
+  
   if (!paymentRoutesLoaded) {
-    console.log("🔧 Loading payment routes...");
+    console.log(`🛣️ [${requestId}] loadPaymentRoutes() - Starting payment routes loading...`);
     try {
+      console.log(`📄 [${requestId}] Requiring payment routes module...`);
       const paymentRoutes = require("./routes/payment");
-      console.log("✅ Payment routes loaded successfully");
+      console.log(`✅ [${requestId}] Payment routes module loaded successfully`);
+      
+      console.log(`🔗 [${requestId}] Mounting payment routes at /api...`);
       app.use("/api", paymentRoutes);
-      console.log("✅ Payment routes mounted at /api");
+      console.log(`✅ [${requestId}] Payment routes mounted successfully at /api`);
+      
       paymentRoutesLoaded = true;
+      console.log(`✅ [${requestId}] loadPaymentRoutes() - Payment routes loading completed`);
     } catch (err) {
-      console.error("❌ Error loading payment routes:", err);
+      console.error(`❌ [${requestId}] Error loading payment routes:`, err);
       throw err;
     }
+  } else {
+    console.log(`✅ [${requestId}] Payment routes already loaded, skipping...`);
   }
 }
 
@@ -424,24 +576,31 @@ const authenticateToken = async (req, res, next) => {
 
 // Root endpoint - no database required
 app.get("/", (req, res) => {
+  const requestId = Math.random().toString(36).substring(7);
+  console.log(`🏠 [${requestId}] Root endpoint - Responding immediately`);
+  
   res.json({
     message: "Acadmix Backend API",
     status: "running",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development",
-    serverless: true
+    serverless: true,
+    requestId: requestId
   });
 });
 
 // Health check - no database required
 app.get("/api/health", (req, res) => {
-  console.log("🏥 Health check request from:", req.headers.origin);
+  const requestId = Math.random().toString(36).substring(7);
+  console.log(`🏥 [${requestId}] Health check request from:`, req.headers.origin);
+  
   res.json({
     status: "OK",
     message: "Server is running",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development",
     serverless: true,
+    requestId: requestId,
     cors: {
       origin: req.headers.origin,
       allowedOrigins: allowedOrigins,
@@ -452,10 +611,14 @@ app.get("/api/health", (req, res) => {
 
 // Simple ping endpoint for testing
 app.get("/api/ping", (req, res) => {
+  const requestId = Math.random().toString(36).substring(7);
+  console.log(`🏓 [${requestId}] Ping endpoint - Responding immediately`);
+  
   res.json({ 
     pong: true, 
     timestamp: new Date().toISOString(),
-    serverless: true
+    serverless: true,
+    requestId: requestId
   });
 });
 
@@ -514,6 +677,7 @@ app.get(
 
 app.post("/api/auth/login", async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -555,6 +719,7 @@ app.post("/api/auth/login", async (req, res) => {
 
 app.post("/api/auth/register", async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
@@ -608,6 +773,7 @@ app.post("/api/auth/register", async (req, res) => {
 // Get current user profile
 app.get("/api/auth/me", authenticateToken, async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const user = await User.findById(req.user.id).select("-password");
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -622,6 +788,7 @@ app.get("/api/auth/me", authenticateToken, async (req, res) => {
 // Update user profile
 app.put("/api/auth/profile", authenticateToken, async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const { name, email } = req.body;
     const updates = {};
 
@@ -652,6 +819,7 @@ app.put("/api/auth/profile", authenticateToken, async (req, res) => {
 // Change password
 app.put("/api/auth/change-password", authenticateToken, async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
@@ -699,6 +867,7 @@ app.post("/api/auth/logout", authenticateToken, (req, res) => {
 // Forgot password (send reset email)
 app.post("/api/auth/forgot-password", async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const { email } = req.body;
 
     if (!email) {
@@ -736,6 +905,7 @@ app.post("/api/auth/forgot-password", async (req, res) => {
 // Reset password
 app.post("/api/auth/reset-password", async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const { token, newPassword } = req.body;
 
     if (!token || !newPassword) {
@@ -774,6 +944,7 @@ app.post("/api/auth/reset-password", async (req, res) => {
 // Get user's purchased books (approved payments only)
 app.get("/api/user/purchased-books", authenticateToken, async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const userId = req.user.id;
     const isAdmin = req.user.role === "admin";
 
@@ -886,19 +1057,49 @@ app.get("/api/books", async (req, res) => {
   }
 });
 
-app.get("/api/books/:section", async (req, res) => {
+// Public endpoint to fetch individual book by ID (must come before /:section route)
+app.get("/api/books/:id", async (req, res) => {
   try {
     loadModules(); // Ensure models are loaded
-    const { section } = req.params;
-    const books = await Book.find({ section }).sort({ createdAt: -1 });
-    res.json(books);
+    const { id } = req.params;
+    
+    // Check if the ID is a valid MongoDB ObjectId
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ error: "Invalid book ID format" });
+    }
+    
+    const book = await Book.findById(id);
+    
+    if (!book) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+    
+    // Return book details without sensitive information
+    const bookData = {
+      _id: book._id,
+      title: book.title,
+      description: book.description,
+      category: book.category,
+      section: book.section,
+      price: book.price,
+      priceDiscounted: book.priceDiscounted,
+      pages: book.pages,
+      image: book.image,
+      isFree: book.isFree,
+      shareCount: book.shareCount,
+      createdAt: book.createdAt,
+      updatedAt: book.updatedAt
+    };
+    
+    res.json(bookData);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch books" });
+    console.error("❌ Error fetching book:", err);
+    res.status(500).json({ error: "Failed to fetch book" });
   }
 });
 
-// Public endpoint to fetch individual book by ID
-app.get("/api/books/:id", async (req, res) => {
+// Route for books by section (must come after /:id route)
+app.get("/api/books/section/:section", async (req, res) => {
   try {
     loadModules(); // Ensure models are loaded
     const { id } = req.params;
@@ -941,6 +1142,7 @@ app.get("/api/books/:id", async (req, res) => {
 // Endpoint to increment share count
 app.post("/api/books/:id/share", async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const { id } = req.params;
     
     // Check if the ID is a valid MongoDB ObjectId
@@ -968,6 +1170,7 @@ app.post("/api/books/:id/share", async (req, res) => {
 // Secure PDF endpoint
 app.get("/api/book/:id/secure-pdf", authenticateToken, async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const bookId = req.params.id;
     const userId = req.user.id;
     const isAdmin = req.user.role === "admin";
@@ -1011,6 +1214,7 @@ app.get("/api/book/:id/secure-pdf", authenticateToken, async (req, res) => {
 // Temporary debug endpoint to mark a book as free (for testing)
 app.post("/api/debug/mark-book-free", async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const { pdfUrl } = req.body;
     
     if (!pdfUrl) {
@@ -1053,6 +1257,7 @@ app.post("/api/debug/mark-book-free", async (req, res) => {
 // PDF Proxy endpoint for Cloudinary PDFs
 app.get("/api/pdf-proxy", authenticateToken, async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     console.log("🔍 PDF Proxy Request:", {
       url: req.query.url,
       user: req.user,
@@ -1162,6 +1367,7 @@ app.get("/api/pdf-proxy", authenticateToken, async (req, res) => {
 // Free PDF endpoint (no authentication required for free books)
 app.get("/api/free-pdf-proxy", async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const { url } = req.query;
 
     if (!url) {
@@ -1328,6 +1534,7 @@ app.get("/api/test-pdf-url", async (req, res) => {
 // Make existing PDF public endpoint
 app.post("/api/make-pdf-public", async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const { url } = req.body;
 
     if (!url) {
@@ -1385,6 +1592,7 @@ app.post("/api/admin/login", async (req, res) => {
   });
 
   try {
+    loadModules(); // Ensure models are loaded
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -1475,6 +1683,7 @@ app.post("/api/admin/login", async (req, res) => {
 
 app.get("/api/admin/dashboard", authenticateToken, async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
@@ -1569,6 +1778,7 @@ app.post(
   authenticateToken,
   async (req, res) => {
     try {
+      loadModules(); // Ensure models are loaded
       if (req.user.role !== "admin") {
         return res.status(403).json({ error: "Admin access required" });
       }
@@ -1586,6 +1796,7 @@ app.post(
   authenticateToken,
   async (req, res) => {
     try {
+      loadModules(); // Ensure models are loaded
       if (req.user.role !== "admin") {
         return res.status(403).json({ error: "Admin access required" });
       }
@@ -1820,6 +2031,7 @@ app.get("/api/admin/books", authenticateToken, async (req, res) => {
 // User management endpoints
 app.get("/api/admin/users", authenticateToken, async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
@@ -1837,6 +2049,7 @@ app.get("/api/admin/users", authenticateToken, async (req, res) => {
 
 app.put("/api/admin/users/:id/role", authenticateToken, async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
@@ -1865,6 +2078,7 @@ app.put("/api/admin/users/:id/role", authenticateToken, async (req, res) => {
 
 app.put("/api/admin/users/:id/status", authenticateToken, async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
@@ -1893,6 +2107,7 @@ app.put("/api/admin/users/:id/status", authenticateToken, async (req, res) => {
 
 app.delete("/api/admin/users/:id", authenticateToken, async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
@@ -1917,6 +2132,7 @@ app.delete("/api/admin/users/:id", authenticateToken, async (req, res) => {
 // Get admin configuration
 app.get("/api/admin/config", authenticateToken, async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
@@ -1950,10 +2166,24 @@ app.get("/favicon.ico", (req, res) => res.status(204).end());
 
 // ─── ERROR HANDLING ──────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error("💥 Uncaught Error:", err);
+  const requestId = Math.random().toString(36).substring(7);
+  console.error(`💥 [${requestId}] Uncaught Error:`, err);
+  console.error(`💥 [${requestId}] Error stack:`, err.stack);
+  console.error(`💥 [${requestId}] Request details:`, {
+    method: req.method,
+    path: req.path,
+    headers: req.headers,
+    body: req.body
+  });
+  
   res
     .status(500)
-    .json({ error: "Internal Server Error", message: err.message });
+    .json({ 
+      error: "Internal Server Error", 
+      message: err.message,
+      requestId: requestId,
+      timestamp: new Date().toISOString()
+    });
 });
 
 // ─── SERVER START ────────────────────────────────────────────────────────────
@@ -1966,7 +2196,16 @@ console.log("🔧 Server startup configuration:", {
 
 // Always export the serverless function for Vercel
 console.log("🚀 Exporting app for serverless deployment");
-module.exports = serverless(app);
+console.log("🔧 Serverless configuration:", {
+  NODE_ENV: process.env.NODE_ENV,
+  isProduction: process.env.NODE_ENV === "production",
+  serverlessExport: true
+});
+
+const serverlessHandler = serverless(app);
+console.log("✅ Serverless handler created successfully");
+
+module.exports = serverlessHandler;
 
 // Only start the server in development mode
 if (process.env.NODE_ENV !== "production") {
@@ -1983,4 +2222,6 @@ if (process.env.NODE_ENV !== "production") {
     .on("error", (err) => {
       console.error("❌ Server startup error:", err);
     });
+} else {
+  console.log("🌐 Production mode: Serverless function exported, no local server started");
 }
