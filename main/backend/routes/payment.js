@@ -32,7 +32,21 @@ router.get("/payment/:bookId", authenticateToken, async (req, res) => {
     if (!book) return res.status(404).json({ error: "Book not found" });
 
     const config = getPaymentConfig();
-    const amount = book.priceDiscounted || book.price;
+    
+    // Calculate the amount to charge
+    let amount;
+    if (book.isFree) {
+      amount = 0;
+    } else if (book.priceDiscounted && book.priceDiscounted > 0) {
+      // Use discounted price if available and greater than 0
+      amount = book.priceDiscounted;
+    } else if (book.price && book.price > 0) {
+      // Fall back to regular price
+      amount = book.price;
+    } else {
+      // If no valid price, set to 0 (free)
+      amount = 0;
+    }
     
     // Generate QR code
     const qrCode = await generateQRCode(amount, config.upiId, config.payeeName);
@@ -87,6 +101,26 @@ router.post("/payment/submit", authenticateToken, async (req, res) => {
     const book = await Book.findById(bookId);
     if (!book) {
       return res.status(404).json({ error: "Book not found" });
+    }
+
+    // Validate the payment amount matches the book price
+    let expectedAmount;
+    if (book.isFree) {
+      expectedAmount = 0;
+    } else if (book.priceDiscounted && book.priceDiscounted > 0) {
+      expectedAmount = book.priceDiscounted;
+    } else if (book.price && book.price > 0) {
+      expectedAmount = book.price;
+    } else {
+      expectedAmount = 0;
+    }
+
+    if (parseFloat(amount) !== expectedAmount) {
+      return res.status(400).json({ 
+        error: `Payment amount mismatch. Expected: ₹${expectedAmount}, Received: ₹${amount}`,
+        expectedAmount,
+        receivedAmount: amount
+      });
     }
 
     const config = getPaymentConfig();

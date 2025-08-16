@@ -11,6 +11,7 @@ import {
   FileText,
   Image as ImageIcon
 } from 'lucide-react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 
@@ -101,7 +102,7 @@ const BookList = ({ onEditBook }) => {
           <div className="flex items-center">
             <BookOpen className="h-8 w-8 text-blue-500 mr-3" />
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Books</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Books</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{books.length}</p>
             </div>
           </div>
@@ -109,11 +110,11 @@ const BookList = ({ onEditBook }) => {
         
         <div className="card p-4">
           <div className="flex items-center">
-            <DollarSign className="h-8 w-8 text-green-500 mr-3" />
+            <Tag className="h-8 w-8 text-green-500 mr-3" />
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Value</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">NEET Books</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                ₹{books.reduce((sum, book) => sum + (book.isFree ? 0 : (book.price || 0)), 0)}
+                {books.filter(book => book.category === 'NEET').length}
               </p>
             </div>
           </div>
@@ -121,11 +122,11 @@ const BookList = ({ onEditBook }) => {
         
         <div className="card p-4">
           <div className="flex items-center">
-            <FileText className="h-8 w-8 text-purple-500 mr-3" />
+            <Tag className="h-8 w-8 text-purple-500 mr-3" />
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">With PDFs</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">JEE Books</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {books.filter(book => book.pdfUrl).length}
+                {books.filter(book => book.category === 'JEE').length}
               </p>
             </div>
           </div>
@@ -133,23 +134,21 @@ const BookList = ({ onEditBook }) => {
         
         <div className="card p-4">
           <div className="flex items-center">
-            <ImageIcon className="h-8 w-8 text-orange-500 mr-3" />
+            <DollarSign className="h-8 w-8 text-yellow-500 mr-3" />
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">With Images</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Paid Books</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {books.filter(book => book.image).length}
+                {books.filter(book => !book.isFree).length}
               </p>
             </div>
           </div>
         </div>
-
+        
         <div className="card p-4">
           <div className="flex items-center">
-            <div className="h-8 w-8 bg-green-500 rounded-lg flex items-center justify-center mr-3">
-              <span className="text-white font-bold text-sm">F</span>
-            </div>
+            <BookOpen className="h-8 w-8 text-green-500 mr-3" />
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Free Books</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Free Books</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {books.filter(book => book.isFree).length}
               </p>
@@ -159,59 +158,145 @@ const BookList = ({ onEditBook }) => {
       </div>
 
       {/* Books Table */}
-      <div className="card">
+      <div className="card overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">All Books</h3>
         </div>
         
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="block md:hidden p-4 space-y-4">
+          {books.map((book) => (
+            <div key={book._id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+              <div className="flex items-start space-x-3">
+                {book.image ? (
+                  <img
+                    className="h-16 w-16 rounded-lg object-cover flex-shrink-0"
+                    src={book.image}
+                    alt={book.title}
+                  />
+                ) : (
+                  <div className="h-16 w-16 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                    <BookOpen className="h-8 w-8 text-gray-400" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    {book.title}
+                  </h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">
+                    {book.description}
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {getCategoryBadge(book.category)}
+                    {getSectionBadge(book.section)}
+                    {book.isFree ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 border border-green-200 dark:border-green-800">
+                        Free
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                        {book.priceDiscounted && book.priceDiscounted !== book.price ? (
+                          <div className="text-center">
+                            <div className="text-green-600 font-semibold text-sm">₹{book.priceDiscounted}</div>
+                            <div className="text-xs text-gray-500 line-through">₹{book.price}</div>
+                          </div>
+                        ) : (
+                          `₹${book.price}`
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="flex space-x-2">
+                      {book.image && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400">
+                          <ImageIcon className="h-3 w-3 mr-1" />
+                          Image
+                        </span>
+                      )}
+                      {book.pdfUrl && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400">
+                          <FileText className="h-3 w-3 mr-1" />
+                          PDF
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => onEditBook(book)}
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 transition-colors p-1"
+                        title="Edit Book"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(book)}
+                        disabled={deleteBook.isPending}
+                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 transition-colors p-1 disabled:opacity-50"
+                        title="Delete Book"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto table-responsive">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[200px]">
                   Book
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[80px]">
                   Category
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[80px]">
                   Section
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[100px]">
                   Price
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[80px]">
                   Files
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[100px]">
                   Created
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[80px]">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
               {books.map((book) => (
-                <tr key={book._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
+                <tr key={book._id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-start">
                       {book.image ? (
                         <img
-                          className="h-12 w-12 rounded-lg object-cover mr-4"
+                          className="h-12 w-12 rounded-lg object-cover mr-4 flex-shrink-0"
                           src={book.image}
                           alt={book.title}
                         />
                       ) : (
-                        <div className="h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-4">
+                        <div className="h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-4 flex-shrink-0">
                           <BookOpen className="h-6 w-6 text-gray-400" />
                         </div>
                       )}
-                      <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                           {book.title}
                         </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                        <div 
+                          className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xs"
+                          title={book.description.length > 100 ? book.description : ''}
+                        >
                           {book.description}
                         </div>
                       </div>
@@ -231,11 +316,16 @@ const BookList = ({ onEditBook }) => {
                         </span>
                       ) : (
                         <>
-                          ₹{book.price}
-                          {book.priceDiscounted && book.priceDiscounted !== book.price && (
-                            <div className="text-sm text-gray-500 dark:text-gray-400 line-through">
-                              ₹{book.priceDiscounted}
+                          {book.priceDiscounted && book.priceDiscounted !== book.price ? (
+                            <div className="space-y-1">
+                              <div className="text-green-600 font-semibold text-lg">₹{book.priceDiscounted}</div>
+                              <div className="text-xs text-gray-500 line-through">₹{book.price}</div>
+                              <div className="text-xs text-green-600 bg-green-100 dark:bg-green-900/20 px-1 py-0.5 rounded">
+                                SALE
+                              </div>
                             </div>
+                          ) : (
+                            <div className="text-lg">₹{book.price}</div>
                           )}
                         </>
                       )}

@@ -16,6 +16,7 @@ import Admin from './pages/Admin';
 import AdminLogin from './pages/AdminLogin';
 import AuthCallback from './pages/AuthCallback';
 import MyBooks from './pages/MyBooks';
+import BookDetail from './pages/BookDetail';
 import RefundPolicy from './pages/RefundPolicy';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
@@ -27,6 +28,15 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      // Add React 19 compatibility options
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      // Add error handling for React 19
+      throwOnError: false,
+    },
+    mutations: {
+      retry: 1,
+      throwOnError: false,
     },
   },
 });
@@ -52,6 +62,10 @@ function App() {
                   <Route path="/refund" element={<RefundPolicy />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
+                  <Route 
+                    path="/book/:bookId" 
+                    element={<BookDetail />} 
+                  />
                   <Route 
                     path="/my-books" 
                     element={

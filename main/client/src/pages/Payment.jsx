@@ -189,14 +189,20 @@ const Payment = () => {
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{book.description}</p>
                 <div className="mt-3 flex items-center justify-between">
                   <div>
-                    {book.priceDiscounted ? (
+                    {book.priceDiscounted && book.priceDiscounted !== book.price ? (
                       <div className="flex items-center space-x-2">
                         <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">₹{book.priceDiscounted}</span>
                         <span className="text-sm text-gray-500 line-through">₹{book.price}</span>
+                        <span className="text-xs text-green-600 bg-green-100 dark:bg-green-900/20 px-2 py-1 rounded-full">
+                          {Math.round(((book.price - book.priceDiscounted) / book.price) * 100)}% OFF
+                        </span>
                       </div>
                     ) : (
                       <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">₹{book.price}</span>
                     )}
+                    <p className="text-sm text-gray-500 mt-1">
+                      Amount to pay: ₹{amount}
+                    </p>
                   </div>
                   <span className="text-sm text-gray-500 uppercase bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{book.category}</span>
                 </div>
@@ -363,6 +369,26 @@ const Payment = () => {
         {/* Instructions */}
         <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
           <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-3">Payment Instructions:</h3>
+          
+          {/* Price Information */}
+          <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-700">
+            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Pricing Details:</h4>
+            {book.priceDiscounted && book.priceDiscounted !== book.price ? (
+              <div className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+                <p>• Original Price: <span className="line-through">₹{book.price}</span></p>
+                <p>• Discounted Price: <span className="font-semibold text-green-600">₹{book.priceDiscounted}</span></p>
+                <p>• You Save: <span className="font-semibold text-green-600">₹{book.price - book.priceDiscounted}</span></p>
+              </div>
+            ) : (
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                • Book Price: <span className="font-semibold">₹{book.price}</span>
+              </p>
+            )}
+            <p className="text-sm text-blue-800 dark:text-blue-200 mt-2 font-medium">
+              💳 Amount to Pay: ₹{amount}
+            </p>
+          </div>
+          
           <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-2 list-decimal list-inside">
             <li>Scan the QR code or use the UPI ID to make payment</li>
             <li>Pay the exact amount: ₹{amount}</li>

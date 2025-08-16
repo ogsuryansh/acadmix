@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { BookOpen, Users, Award, Clock, ArrowRight, Star, Zap, Target, User } from 'lucide-react';
+import { BookOpen, Users, Award, Clock, ArrowRight, Star, Zap, Target, User, Mail, Phone, MessageCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import BookCard from '../components/BookCard';
@@ -213,6 +213,71 @@ const Home = () => {
               {user ? 'Continue Learning' : 'View All Materials'}
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section className="py-20 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16 animate-fade-in">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              Get in Touch
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-400">
+              Need help? We're here to support your learning journey
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Email */}
+            <div className="text-center p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Mail className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Email Support</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Get quick responses to your questions</p>
+              <a 
+                href="mailto:acadmix.shop@gmail.com" 
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+              >
+                acadmix.shop@gmail.com
+              </a>
+            </div>
+
+            {/* WhatsApp */}
+            <div className="text-center p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Phone className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">WhatsApp</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Instant messaging support</p>
+              <a 
+                href="https://wa.me/212780729301" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium transition-colors"
+              >
+                +212 780729301
+              </a>
+            </div>
+
+            {/* Telegram */}
+            <div className="text-center p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageCircle className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Telegram</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Join our community channel</p>
+              <a 
+                href="https://t.me/preachify" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+              >
+                @preachify
+              </a>
+            </div>
           </div>
         </div>
       </section>

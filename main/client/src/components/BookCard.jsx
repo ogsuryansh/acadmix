@@ -127,12 +127,18 @@ const BookCard = ({ book }) => {
                   </span>
                 ) : (
                   <>
-                    <span className="text-lg font-bold text-gray-900 dark:text-white">
-                      ₹{book.price}
-                    </span>
-                    {book.priceDiscounted && book.priceDiscounted !== book.price && (
-                      <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
-                        ₹{book.priceDiscounted}
+                    {book.priceDiscounted && book.priceDiscounted !== book.price ? (
+                      <>
+                        <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                          ₹{book.priceDiscounted}
+                        </span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
+                          ₹{book.price}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-lg font-bold text-gray-900 dark:text-white">
+                        ₹{book.price}
                       </span>
                     )}
                   </>

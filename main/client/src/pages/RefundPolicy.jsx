@@ -169,14 +169,15 @@ const RefundPolicy = () => {
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               Questions About This Policy?
             </h2>
-            <div className="prose dark:prose-invert max-w-none">
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-4">
+                Contact Us
+              </h3>
+              <p className="text-blue-800 dark:text-blue-200 mb-4">
                 If you have any questions about our refund policy, please contact our support team:
               </p>
-              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-                <li>Email: support@acadmix.com</li>
-                <li>Phone: +91 98765 43210</li>
-                <li>Response Time: Within 24-48 hours</li>
+              <ul className="text-blue-800 dark:text-blue-200 space-y-2 list-disc list-inside">
+                <li>Email: acadmix.shop@gmail.com</li>
               </ul>
             </div>
           </section>

@@ -1,9 +1,5 @@
 import { Link } from 'react-router-dom';
 import { 
-  Facebook, 
-  Twitter, 
-  Instagram, 
-  Linkedin, 
   Mail, 
   Phone, 
   MapPin,
@@ -11,7 +7,8 @@ import {
   Target,
   GraduationCap,
   Shield,
-  FileText
+  FileText,
+  MessageCircle
 } from 'lucide-react';
 
 const Footer = () => {
@@ -37,19 +34,11 @@ const Footer = () => {
   ];
 
   const support = [
-    { name: 'Contact Us', href: '/contact' },
     { name: 'Help Center', href: '/help' },
     { name: 'Privacy Policy', href: '/privacy' },
     { name: 'Terms of Service', href: '/terms' },
     { name: 'Refund Policy', href: '/refund' },
     { name: 'FAQ', href: '/faq' },
-  ];
-
-  const socialLinks = [
-    { name: 'Facebook', icon: Facebook, href: 'https://facebook.com/acadmix' },
-    { name: 'Twitter', icon: Twitter, href: 'https://twitter.com/acadmix' },
-    { name: 'Instagram', icon: Instagram, href: 'https://instagram.com/acadmix' },
-    { name: 'LinkedIn', icon: Linkedin, href: 'https://linkedin.com/company/acadmix' },
   ];
 
   return (
@@ -67,20 +56,6 @@ const Footer = () => {
               Your trusted partner for NEET & JEE preparation. Access comprehensive study materials, 
               practice tests, and expert guidance to excel in your entrance exams.
             </p>
-            <div className="flex space-x-4">
-              {socialLinks.map((social) => (
-                <a
-                  key={social.name}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-primary-400 transition-colors"
-                  title={social.name}
-                >
-                  <social.icon className="h-5 w-5" />
-                </a>
-              ))}
-            </div>
           </div>
 
           {/* Column 2: Quick Links */}
@@ -132,21 +107,21 @@ const Footer = () => {
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <Mail className="h-4 w-4 text-gray-400" />
-                <a href="mailto:support@acadmix.com" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  support@acadmix.com
+                <a href="mailto:acadmix.shop@gmail.com" className="text-gray-400 hover:text-white transition-colors text-sm">
+                  acadmix.shop@gmail.com
                 </a>
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="h-4 w-4 text-gray-400" />
-                <a href="tel:+91-9876543210" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  +91 98765 43210
+                <a href="https://wa.me/212780729301" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors text-sm">
+                  +212 780729301 (WhatsApp)
                 </a>
               </div>
-              <div className="flex items-start space-x-2">
-                <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                <span className="text-gray-400 text-sm">
-                  Mumbai, Maharashtra, India
-                </span>
+              <div className="flex items-center space-x-2">
+                <MessageCircle className="h-4 w-4 text-gray-400" />
+                <a href="https://t.me/preachify" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors text-sm">
+                  @preachify (Telegram)
+                </a>
               </div>
             </div>
             <div className="pt-2">

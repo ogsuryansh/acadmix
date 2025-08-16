@@ -817,6 +817,73 @@ app.get("/api/books/:section", async (req, res) => {
   }
 });
 
+// Public endpoint to fetch individual book by ID
+app.get("/api/books/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if the ID is a valid MongoDB ObjectId
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ error: "Invalid book ID format" });
+    }
+    
+    const book = await Book.findById(id);
+    
+    if (!book) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+    
+    // Return book details without sensitive information
+    const bookData = {
+      _id: book._id,
+      title: book.title,
+      description: book.description,
+      category: book.category,
+      section: book.section,
+      price: book.price,
+      priceDiscounted: book.priceDiscounted,
+      pages: book.pages,
+      image: book.image,
+      isFree: book.isFree,
+      shareCount: book.shareCount,
+      createdAt: book.createdAt,
+      updatedAt: book.updatedAt
+    };
+    
+    res.json(bookData);
+  } catch (err) {
+    console.error("❌ Error fetching book:", err);
+    res.status(500).json({ error: "Failed to fetch book" });
+  }
+});
+
+// Endpoint to increment share count
+app.post("/api/books/:id/share", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if the ID is a valid MongoDB ObjectId
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ error: "Invalid book ID format" });
+    }
+    
+    const book = await Book.findByIdAndUpdate(
+      id,
+      { $inc: { shareCount: 1 } },
+      { new: true }
+    );
+    
+    if (!book) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+    
+    res.json({ success: true, shareCount: book.shareCount });
+  } catch (err) {
+    console.error("❌ Error updating share count:", err);
+    res.status(500).json({ error: "Failed to update share count" });
+  }
+});
+
 // Secure PDF endpoint
 app.get("/api/book/:id/secure-pdf", authenticateToken, async (req, res) => {
   try {

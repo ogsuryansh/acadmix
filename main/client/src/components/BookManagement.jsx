@@ -136,15 +136,29 @@ const BookManagement = () => {
   const handlePdfUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const maxPdfSize = adminConfig?.upload?.maxPdfSize || 50 * 1024 * 1024; // 50MB default
-      if (file.size > maxPdfSize) {
-        toast.error(`PDF size should be less than ${Math.round(maxPdfSize / (1024 * 1024))}MB`);
-        return;
-      }
+      const maxPdfSize = adminConfig?.upload?.maxPdfSize || 100 * 1024 * 1024; // 100MB (will be compressed)
       
       if (file.type !== 'application/pdf') {
         toast.error('Please select a valid PDF file');
         return;
+      }
+
+      // Show file size information
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      const maxSizeMB = (maxPdfSize / (1024 * 1024)).toFixed(1);
+      const cloudinaryLimit = 10; // Cloudinary free plan limit
+      
+      if (file.size > maxPdfSize) {
+        toast.error(`PDF size should be less than ${maxSizeMB}MB`);
+        return;
+      } else if (file.size > cloudinaryLimit * 1024 * 1024) {
+        const excessMB = ((file.size - cloudinaryLimit * 1024 * 1024) / (1024 * 1024)).toFixed(1);
+        toast.success(
+          `PDF selected: ${file.name} (${fileSizeMB}MB). Will be automatically compressed from ${excessMB}MB over Cloudinary limit to fit within ${cloudinaryLimit}MB.`,
+          { duration: 5000 }
+        );
+      } else {
+        toast.success(`PDF selected: ${file.name} (${fileSizeMB}MB)`);
       }
 
       setFormData(prev => ({
@@ -171,14 +185,15 @@ const BookManagement = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (!formData.title || !formData.description || !formData.price) {
-      toast.error('Please fill in all required fields');
+    // Validate pricing
+    if (formData.priceDiscounted && parseFloat(formData.priceDiscounted) > parseFloat(formData.price)) {
+      toast.error('Sale price cannot be higher than regular price');
       return;
     }
-
+    
     const submitData = new FormData();
     submitData.append('title', formData.title);
     submitData.append('description', formData.description);
@@ -320,7 +335,7 @@ const BookManagement = () => {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Price (₹) *
+                      Regular Price (₹) *
                     </label>
                     <input
                       type="number"
@@ -328,14 +343,17 @@ const BookManagement = () => {
                       value={formData.price}
                       onChange={handleInputChange}
                       className="input-field"
-                      placeholder="0"
+                      placeholder="99"
+                      min="0"
+                      step="0.01"
                       required
                     />
+                    <p className="text-xs text-gray-500 mt-1">This is the original price of the book</p>
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Discounted Price (₹)
+                      Sale Price (₹)
                     </label>
                     <input
                       type="number"
@@ -343,8 +361,13 @@ const BookManagement = () => {
                       value={formData.priceDiscounted}
                       onChange={handleInputChange}
                       className="input-field"
-                      placeholder="0"
+                      placeholder="29"
+                      min="0"
+                      step="0.01"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Leave empty if no discount. Users will pay this amount if set.
+                    </p>
                   </div>
                 </div>
 
