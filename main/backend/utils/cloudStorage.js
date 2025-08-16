@@ -31,8 +31,8 @@ const testCloudinaryConnection = async () => {
   }
 };
 
-// Test connection on module load
-testCloudinaryConnection();
+// Don't test connection on module load - make it lazy
+// testCloudinaryConnection();
 
 // Upload image to Cloudinary
 const uploadImage = async (file) => {

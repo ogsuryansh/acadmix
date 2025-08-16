@@ -293,6 +293,7 @@ connectToDB()
 // Only connect to DB on first request in serverless environment
 let dbConnected = false;
 let middlewareProcessing = false;
+let modulesLoaded = false;
 
 app.use(async (req, res, next) => {
   const requestId = Math.random().toString(36).substring(7);
@@ -307,15 +308,25 @@ app.use(async (req, res, next) => {
   middlewareProcessing = true;
   
   try {
-    // Load modules on first request
-    console.log(`📦 [${requestId}] Loading modules...`);
-    loadModules();
-    console.log(`✅ [${requestId}] Modules loaded successfully`);
+    // Load modules only once
+    if (!modulesLoaded) {
+      console.log(`📦 [${requestId}] Loading modules...`);
+      loadModules();
+      modulesLoaded = true;
+      console.log(`✅ [${requestId}] Modules loaded successfully`);
+    } else {
+      console.log(`✅ [${requestId}] Modules already loaded, skipping...`);
+    }
     
-    // Load payment routes on first request
-    console.log(`🛣️ [${requestId}] Loading payment routes...`);
-    loadPaymentRoutes();
-    console.log(`✅ [${requestId}] Payment routes loaded successfully`);
+    // Load payment routes only once
+    if (!paymentRoutesLoaded) {
+      console.log(`🛣️ [${requestId}] Loading payment routes...`);
+      loadPaymentRoutes();
+      paymentRoutesLoaded = true;
+      console.log(`✅ [${requestId}] Payment routes loaded successfully`);
+    } else {
+      console.log(`✅ [${requestId}] Payment routes already loaded, skipping...`);
+    }
     
     if (!dbConnected) {
       console.log(`🔌 [${requestId}] Database not connected, attempting connection...`);
