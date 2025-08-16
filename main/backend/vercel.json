@@ -1,9 +1,22 @@
 {
   "version": 2,
+  "buildCommand": "cd main/backend && npm install",
+  "outputDirectory": "main/backend",
   "builds": [
-    { "src": "server.js", "use": "@vercel/node" }
+    { 
+      "src": "main/backend/server.js", 
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["main/backend/**"]
+      }
+    }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "/server.js" }
-  ]
+    { "src": "/(.*)", "dest": "/main/backend/server.js" }
+  ],
+  "functions": {
+    "main/backend/server.js": {
+      "maxDuration": 30
+    }
+  }
 }
