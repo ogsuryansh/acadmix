@@ -9,7 +9,7 @@ const adminConfig = {
   // File upload limits
   upload: {
     maxImageSize: process.env.MAX_IMAGE_SIZE || 5 * 1024 * 1024, // 5MB
-    maxPdfSize: process.env.MAX_PDF_SIZE || 50 * 1024 * 1024, // 50MB
+    maxPdfSize: process.env.MAX_PDF_SIZE || 100 * 1024 * 1024, // 100MB (will be compressed to 10MB)
     allowedImageTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'],
     allowedPdfTypes: ['application/pdf'],
   },

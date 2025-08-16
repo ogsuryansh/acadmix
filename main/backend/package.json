@@ -20,6 +20,7 @@
   "license": "ISC",
   "description": "Acadmix Backend API",
   "dependencies": {
+    "axios": "^1.11.0",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^1.41.3",
     "connect-mongo": "^5.1.0",
@@ -29,12 +30,14 @@
     "express-rate-limit": "^7.1.5",
     "express-session": "^1.18.1",
     "express-validator": "^7.0.1",
+    "form-data": "^4.0.4",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.16.0",
     "multer": "^2.0.1",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
+    "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
     "serverless-http": "^3.2.0"
   },
