@@ -829,6 +829,7 @@ app.get("/api/user/purchased-books", authenticateToken, async (req, res) => {
 // Books API
 app.get("/api/books", async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const { section } = req.query;
     let query = {};
 
@@ -887,6 +888,7 @@ app.get("/api/books", async (req, res) => {
 
 app.get("/api/books/:section", async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const { section } = req.params;
     const books = await Book.find({ section }).sort({ createdAt: -1 });
     res.json(books);
@@ -898,6 +900,7 @@ app.get("/api/books/:section", async (req, res) => {
 // Public endpoint to fetch individual book by ID
 app.get("/api/books/:id", async (req, res) => {
   try {
+    loadModules(); // Ensure models are loaded
     const { id } = req.params;
     
     // Check if the ID is a valid MongoDB ObjectId
@@ -1599,12 +1602,16 @@ app.post(
 app.post(
   "/api/admin/books",
   authenticateToken,
-  upload.fields([
-    { name: "image", maxCount: 1 },
-    { name: "pdf", maxCount: 1 },
-  ]),
+  (req, res, next) => {
+    loadModules(); // Ensure upload middleware is loaded
+    upload.fields([
+      { name: "image", maxCount: 1 },
+      { name: "pdf", maxCount: 1 },
+    ])(req, res, next);
+  },
   async (req, res) => {
     try {
+      loadModules(); // Ensure cloudStorage is loaded
       console.log("📝 Creating book with files:", {
         body: req.body,
         files: req.files ? Object.keys(req.files) : "No files",
@@ -1631,13 +1638,13 @@ app.post(
 
       if (req.files?.image) {
         console.log("📸 Uploading image:", req.files.image[0].originalname);
-        imageUrl = await uploadImage(req.files.image[0]);
+        imageUrl = await cloudStorage.uploadImage(req.files.image[0]);
         console.log("✅ Image uploaded:", imageUrl);
       }
 
       if (req.files?.pdf) {
         console.log("📄 Uploading PDF:", req.files.pdf[0].originalname);
-        pdfUrl = await uploadPdf(req.files.pdf[0]);
+        pdfUrl = await cloudStorage.uploadPdf(req.files.pdf[0]);
         console.log("✅ PDF uploaded:", pdfUrl);
       }
 
@@ -1666,12 +1673,16 @@ app.post(
 app.put(
   "/api/admin/books/:id",
   authenticateToken,
-  upload.fields([
-    { name: "image", maxCount: 1 },
-    { name: "pdf", maxCount: 1 },
-  ]),
+  (req, res, next) => {
+    loadModules(); // Ensure upload middleware is loaded
+    upload.fields([
+      { name: "image", maxCount: 1 },
+      { name: "pdf", maxCount: 1 },
+    ])(req, res, next);
+  },
   async (req, res) => {
     try {
+      loadModules(); // Ensure cloudStorage is loaded
       if (req.user.role !== "admin") {
         return res.status(403).json({ error: "Admin access required" });
       }
@@ -1700,23 +1711,23 @@ app.put(
       if (req.files?.image) {
         // Delete old image if exists
         if (existingBook.image) {
-          const publicId = getPublicIdFromUrl(existingBook.image);
+          const publicId = cloudStorage.getPublicIdFromUrl(existingBook.image);
           if (publicId) {
-            await deleteFile(publicId);
+            await cloudStorage.deleteFile(publicId);
           }
         }
-        imageUrl = await uploadImage(req.files.image[0]);
+        imageUrl = await cloudStorage.uploadImage(req.files.image[0]);
       }
 
       if (req.files?.pdf) {
         // Delete old PDF if exists
         if (existingBook.pdfUrl) {
-          const publicId = getPublicIdFromUrl(existingBook.pdfUrl);
+          const publicId = cloudStorage.getPublicIdFromUrl(existingBook.pdfUrl);
           if (publicId) {
-            await deleteFile(publicId);
+            await cloudStorage.deleteFile(publicId);
           }
         }
-        pdfUrl = await uploadPdf(req.files.pdf[0]);
+        pdfUrl = await cloudStorage.uploadPdf(req.files.pdf[0]);
       }
 
       const bookData = {
@@ -1745,6 +1756,7 @@ app.put(
 
 app.delete("/api/admin/books/:id", authenticateToken, async (req, res) => {
   try {
+    loadModules(); // Ensure cloudStorage is loaded
     if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
@@ -1756,16 +1768,16 @@ app.delete("/api/admin/books/:id", authenticateToken, async (req, res) => {
 
     // Delete files from cloud storage
     if (book.image) {
-      const publicId = getPublicIdFromUrl(book.image);
+      const publicId = cloudStorage.getPublicIdFromUrl(book.image);
       if (publicId) {
-        await deleteFile(publicId);
+        await cloudStorage.deleteFile(publicId);
       }
     }
 
     if (book.pdfUrl) {
-      const publicId = getPublicIdFromUrl(book.pdfUrl);
+      const publicId = cloudStorage.getPublicIdFromUrl(book.pdfUrl);
       if (publicId) {
-        await deleteFile(publicId);
+        await cloudStorage.deleteFile(publicId);
       }
     }
 
@@ -1779,6 +1791,7 @@ app.delete("/api/admin/books/:id", authenticateToken, async (req, res) => {
 
 // Get all books for admin
 app.get("/api/admin/books", authenticateToken, async (req, res) => {
+  loadModules(); // Ensure models are loaded
   console.log("🔍 Admin books request:", {
     method: req.method,
     path: req.path,
