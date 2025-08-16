@@ -169,6 +169,12 @@ app.options('*', cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`📨 ${req.method} ${req.path} - ${new Date().toISOString()}`);
+  next();
+});
+
 // ─── MONGO CONNECTION ─────────────────────────────────────────────────────────
 async function connectToDB() {
   if (global._mongoConn) return global._mongoConn;
@@ -176,6 +182,8 @@ async function connectToDB() {
     global._mongoPromise = mongoose
       .connect(process.env.MONGO_URI, {
         serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
       })
       .catch((err) => {
         console.error("❌ MongoDB Connection Error:", err.message);
@@ -197,14 +205,27 @@ connectToDB()
     console.log("⚠️  Server will start but some features may not work");
   });
 
+// Only connect to DB on first request in serverless environment
+let dbConnected = false;
 app.use(async (req, res, next) => {
-  try {
-    await connectToDB();
-    next();
-  } catch (err) {
-    console.error("❌ DB Connection Error:", err);
-    res.status(500).json({ error: "Database connection failed" });
+  if (!dbConnected) {
+    try {
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Database connection timeout')), 10000);
+      });
+      
+      const connectionPromise = connectToDB();
+      await Promise.race([connectionPromise, timeoutPromise]);
+      
+      dbConnected = true;
+      console.log("✅ Database connected on first request");
+    } catch (err) {
+      console.error("❌ DB Connection Error:", err);
+      return res.status(500).json({ error: "Database connection failed", details: err.message });
+    }
   }
+  next();
 });
 
 // ─── SESSIONS & PASSPORT ──────────────────────────────────────────────────────
@@ -377,6 +398,16 @@ const authenticateToken = async (req, res, next) => {
 
 // ─── API ROUTES ──────────────────────────────────────────────────────────────
 
+// Root endpoint
+app.get("/", (req, res) => {
+  res.json({
+    message: "Acadmix Backend API",
+    status: "running",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || "development"
+  });
+});
+
 // Health check
 app.get("/api/health", (req, res) => {
   console.log("🏥 Health check request from:", req.headers.origin);
@@ -384,6 +415,7 @@ app.get("/api/health", (req, res) => {
     status: "OK",
     message: "Server is running",
     timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || "development",
     cors: {
       origin: req.headers.origin,
       allowedOrigins: allowedOrigins,
