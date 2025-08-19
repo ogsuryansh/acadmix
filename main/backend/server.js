@@ -369,11 +369,26 @@ app.get(
   async (req, res) => {
     try {
       const token = generateToken(req.user);
-      const frontendOrigin = process.env.FRONTEND_ORIGIN || "https://acadmix.shop";
+      
+      // Determine the correct frontend URL based on environment
+      let frontendOrigin;
+      if (process.env.NODE_ENV === "production" || req.get("host")?.includes("vercel.app") || req.get("host")?.includes("acadmix.shop")) {
+        frontendOrigin = "https://acadmix.shop";
+      } else {
+        frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
+      }
+      
       const redirectUrl = `${frontendOrigin}/auth-callback?token=${token}`;
       res.redirect(redirectUrl);
     } catch (err) {
-      const frontendOrigin = process.env.FRONTEND_ORIGIN || "https://acadmix.shop";
+      // Determine the correct frontend URL for error redirect
+      let frontendOrigin;
+      if (process.env.NODE_ENV === "production" || req.get("host")?.includes("vercel.app") || req.get("host")?.includes("acadmix.shop")) {
+        frontendOrigin = "https://acadmix.shop";
+      } else {
+        frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
+      }
+      
       const errorUrl = `${frontendOrigin}/login?error=oauth_failed`;
       res.redirect(errorUrl);
     }
