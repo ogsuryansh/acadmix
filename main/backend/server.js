@@ -68,23 +68,34 @@ app.use(express.json());
 
 // ─── MONGO CONNECTION ─────────────────────────────────────────────────────────
 let mongoConnection = null;
+let mongoConnectionPromise = null;
 
 async function connectToDB() {
   if (mongoConnection) {
     return mongoConnection;
   }
   
+  if (!mongoConnectionPromise) {
+    mongoConnectionPromise = mongoose
+      .connect(process.env.MONGO_URI, {
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
+      })
+      .then((connection) => {
+        mongoConnection = connection;
+        return connection;
+      })
+      .catch((error) => {
+        mongoConnectionPromise = null;
+        throw error;
+      });
+  }
+  
   try {
-    console.log("🔌 Connecting to MongoDB...");
-    mongoConnection = await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-    });
-    console.log("✅ MongoDB connected successfully");
+    mongoConnection = await mongoConnectionPromise;
     return mongoConnection;
   } catch (error) {
-    console.error("❌ MongoDB connection failed:", error.message);
     throw error;
   }
 }
@@ -136,7 +147,6 @@ function setupSessionStore() {
         ttl: 14 * 24 * 60 * 60,
       });
     } catch (err) {
-      console.warn("⚠️ MongoDB session store failed, using memory store");
       sessionStore = undefined;
     }
   }
@@ -158,7 +168,6 @@ app.use((req, res, next) => {
       },
     })(req, res, next);
   } catch (error) {
-    console.error("💥 Session middleware - Error:", error);
     next(error);
   }
 });
@@ -334,24 +343,36 @@ app.get("/api/ping", (req, res) => {
   });
 });
 
-// Database connection middleware - simplified
+// Database connection middleware - only on first request
+let dbMiddlewareInitialized = false;
 app.use(async (req, res, next) => {
-  try {
-    loadModules();
-    
-    if (!paymentRoutesLoaded) {
-      loadPaymentRoutes();
+  if (!dbMiddlewareInitialized) {
+    try {
+      loadModules();
+      
+      if (!paymentRoutesLoaded) {
+        loadPaymentRoutes();
+      }
+      
+      dbMiddlewareInitialized = true;
+    } catch (error) {
+      console.error("💥 Database middleware initialization error:", error);
     }
-    
-    if (!mongoConnection) {
-      await connectToDB();
-    }
-    
-    next();
-  } catch (error) {
-    console.error("💥 Database middleware error:", error);
-    res.status(500).json({ error: "Database connection failed", details: error.message });
   }
+  
+  // Only connect to DB if the request needs it
+  if (req.path.startsWith('/api/') && !req.path.startsWith('/api/health') && !req.path.startsWith('/api/ping')) {
+    try {
+      if (!mongoConnection) {
+        await connectToDB();
+      }
+    } catch (error) {
+      console.error("💥 Database connection error:", error);
+      return res.status(500).json({ error: "Database connection failed", details: error.message });
+    }
+  }
+  
+  next();
 });
 
 // Auth routes
