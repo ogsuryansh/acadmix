@@ -70,9 +70,14 @@ async function connectToDB() {
   if (!mongoConnectionPromise) {
     mongoConnectionPromise = mongoose
       .connect(process.env.MONGO_URI, {
-        serverSelectionTimeoutMS: 5000,
-        connectTimeoutMS: 10000,
-        socketTimeoutMS: 45000,
+        serverSelectionTimeoutMS: 3000, // Reduced from 5000
+        connectTimeoutMS: 5000, // Reduced from 10000
+        socketTimeoutMS: 10000, // Reduced from 45000
+        maxPoolSize: 1, // Limit pool size for serverless
+        minPoolSize: 0, // Start with 0 connections
+        maxIdleTimeMS: 30000, // Close idle connections after 30s
+        bufferCommands: false, // Disable buffering
+        bufferMaxEntries: 0, // Disable buffer max entries
       })
       .then((connection) => {
         mongoConnection = connection;
@@ -88,6 +93,7 @@ async function connectToDB() {
     mongoConnection = await mongoConnectionPromise;
     return mongoConnection;
   } catch (error) {
+    mongoConnectionPromise = null;
     throw error;
   }
 }
@@ -179,10 +185,14 @@ app.use(passport.session());
 
 // Passport configuration
 passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser((id, done) => {
-  User.findById(id)
-    .then((u) => done(null, u))
-    .catch((e) => done(e));
+passport.deserializeUser(async (id, done) => {
+  try {
+    await connectToDB();
+    const user = await User.findById(id).maxTimeMS(5000); // 5 second timeout
+    done(null, user);
+  } catch (error) {
+    done(error);
+  }
 });
 
 passport.use(
@@ -197,12 +207,17 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         await connectToDB();
-        let user = await User.findOne({ googleId: profile.id });
+        
+        // Add timeout to database operations
+        const findOptions = { maxTimeMS: 5000 };
+        
+        let user = await User.findOne({ googleId: profile.id }).maxTimeMS(5000);
 
         if (!user) {
           const existingUser = await User.findOne({
             email: profile.emails?.[0]?.value,
-          });
+          }).maxTimeMS(5000);
+          
           if (existingUser) {
             user = await User.findByIdAndUpdate(
               existingUser._id,
@@ -210,7 +225,7 @@ passport.use(
                 googleId: profile.id,
                 photo: profile.photos?.[0]?.value,
               },
-              { new: true }
+              { new: true, maxTimeMS: 5000 }
             );
           } else {
             user = await User.create({
@@ -230,12 +245,13 @@ passport.use(
               email: profile.emails?.[0]?.value,
               photo: profile.photos?.[0]?.value,
             },
-            { new: true }
+            { new: true, maxTimeMS: 5000 }
           );
         }
 
         done(null, user);
       } catch (err) {
+        console.error('Google OAuth error:', err);
         done(err, null);
       }
     }
@@ -327,12 +343,18 @@ app.get("/api/ping", (req, res) => {
 app.get("/api/test", async (req, res) => {
   try {
     await connectToDB();
+    
+    // Test a simple database operation
+    const userCount = await User.countDocuments().maxTimeMS(3000);
+    
     res.json({
       message: "API is working",
       database: "Connected successfully",
+      userCount: userCount,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
+    console.error('Database test error:', error);
     res.status(500).json({
       message: "API is working",
       database: "Connection failed",
@@ -404,7 +426,7 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    const user = await User.findOne({ email, isActive: true });
+    const user = await User.findOne({ email, isActive: true }).maxTimeMS(5000);
 
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
@@ -448,7 +470,7 @@ app.post("/api/auth/register", async (req, res) => {
       return res.status(400).json({ error: "Password must be at least 6 characters long" });
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email }).maxTimeMS(5000);
     if (existingUser) {
       return res.status(400).json({ error: "User with this email already exists" });
     }
@@ -482,7 +504,7 @@ app.post("/api/auth/register", async (req, res) => {
 app.get("/api/auth/me", authenticateToken, async (req, res) => {
   try {
     await connectToDB();
-    const user = await User.findById(req.user.id).select("-password");
+    const user = await User.findById(req.user.id).select("-password").maxTimeMS(5000);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
