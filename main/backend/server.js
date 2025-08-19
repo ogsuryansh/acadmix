@@ -1,38 +1,30 @@
 require("dotenv").config();
 const express = require("express");
 const serverless = require("serverless-http");
-const cors = require("cors");
 
 const app = express();
 
-// Basic middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Root endpoint
+// Root endpoint - immediate response
 app.get("/", (req, res) => {
   res.json({
     message: "Acadmix Backend API",
     status: "running",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || "development",
     serverless: true
   });
 });
 
-// Health check
+// Health check - immediate response
 app.get("/api/health", (req, res) => {
   res.json({
     status: "OK",
     message: "Server is running",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || "development",
     serverless: true
   });
 });
 
-// Ping endpoint
+// Ping endpoint - immediate response
 app.get("/api/ping", (req, res) => {
   res.json({ 
     pong: true, 
@@ -61,13 +53,4 @@ app.use("*", (req, res) => {
 });
 
 // Export for serverless
-const handler = serverless(app);
-module.exports = handler;
-
-// Start server in development
-if (process.env.NODE_ENV !== "production") {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-}
+module.exports = serverless(app);
