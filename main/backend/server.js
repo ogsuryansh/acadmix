@@ -4,18 +4,6 @@ const DEFAULT_FRONTEND_ORIGIN = isProd
   ? "https://acadmix.shop"
   : "http://localhost:5173";
 
-console.log("🔑 ENV Check:", {
-  GOOGLE_CLIENT_ID: !!process.env.GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET: !!process.env.GOOGLE_CLIENT_SECRET,
-  MONGO_URI: !!process.env.MONGO_URI,
-  JWT_SECRET: !!process.env.JWT_SECRET,
-  ADMIN_USER: !!process.env.ADMIN_USER,
-  ADMIN_PASS: !!process.env.ADMIN_PASS,
-  NODE_ENV: process.env.NODE_ENV,
-  PORT: process.env.PORT,
-  FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN,
-});
-
 const express = require("express");
 const mongoose = require("mongoose");
 const passport = require("passport");
@@ -27,56 +15,13 @@ const helmet = require("helmet");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const rateLimit = require("express-rate-limit");
-const path = require("path");
-const fs = require("fs");
 
 // ─── EXPRESS APP ─────────────────────────────────────────────────────────────
 const app = express();
 app.set("trust proxy", 1);
 
 // ─── SECURITY MIDDLEWARE ─────────────────────────────────────────────────────
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      useDefaults: true,
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: [
-          "'self'", 
-          "'unsafe-inline'",
-          "https://apis.google.com",
-          "https://cdnjs.cloudflare.com",
-        ],
-        styleSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          "https://fonts.googleapis.com",
-          "https://cdnjs.cloudflare.com",
-        ],
-        fontSrc: [
-          "'self'",
-          "data:",
-          "https://fonts.gstatic.com",
-          "https://cdnjs.cloudflare.com",
-        ],
-        imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: [
-          "'self'",
-          "https://acadmix.shop",
-          "https://api.acadmix.shop",
-        ],
-        formAction: [
-          "'self'",
-          "https://acadmix.shop",
-          "https://api.acadmix.shop",
-        ],
-        workerSrc: ["'self'", "blob:"],
-        objectSrc: ["'none'"],
-        baseUri: ["'self'"],
-      },
-    },
-  })
-);
+app.use(helmet());
 
 // ─── RATE LIMITING ──────────────────────────────────────────────────────────
 const limiter = rateLimit({
