@@ -58,6 +58,32 @@ app.use(
 
 app.options('*', cors());
 
+// Global debugging and CORS middleware
+app.use((req, res, next) => {
+  // Add CORS headers for all routes
+  res.header('Access-Control-Allow-Origin', 'https://acadmix.shop');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Debug logging
+  console.log(`🌐 [${new Date().toISOString()}] ${req.method} ${req.path} - Origin: ${req.headers.origin || 'unknown'}`);
+  console.log(`🔍 Query params:`, req.query);
+  console.log(`📝 Headers:`, {
+    'authorization': req.headers.authorization ? 'present' : 'missing',
+    'content-type': req.headers['content-type'],
+    'user-agent': req.headers['user-agent']?.substring(0, 50) + '...'
+  });
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log(`✅ Preflight request handled for ${req.path}`);
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
 // Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -517,9 +543,17 @@ app.get("/api/auth/me", authenticateToken, async (req, res) => {
   }
 });
 
-// Books API
+// Books API with explicit CORS handling
 app.get("/api/books", async (req, res) => {
+  // Ensure CORS headers are set
+  res.header('Access-Control-Allow-Origin', 'https://acadmix.shop');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
   try {
+    console.log(`📚 [BOOKS API] Fetching books with section: ${req.query.section || 'all'}`);
+    
     await connectToDB();
     const { section } = req.query;
     let query = {};
@@ -528,7 +562,9 @@ app.get("/api/books", async (req, res) => {
       query.section = section;
     }
 
+    console.log(`🔍 [BOOKS API] Query:`, query);
     const books = await Book.find(query).sort({ createdAt: -1 });
+    console.log(`📖 [BOOKS API] Found ${books.length} books`);
     
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1];
@@ -541,13 +577,18 @@ app.get("/api/books", async (req, res) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-jwt-secret");
         userId = decoded.id;
         isAdmin = decoded.role === "admin" || decoded.admin;
+        console.log(`👤 [BOOKS API] User authenticated - ID: ${userId}, Admin: ${isAdmin}`);
         
         if (userId && !isAdmin) {
           payments = await Payment.find({ user: userId }).lean();
+          console.log(`💳 [BOOKS API] Found ${payments.length} payments for user`);
         }
       } catch (err) {
+        console.log(`⚠️ [BOOKS API] Token verification failed:`, err.message);
         // Token is invalid, continue without user context
       }
+    } else {
+      console.log(`👤 [BOOKS API] No authentication token provided`);
     }
 
     const booksWithAccess = books.map((book) => {
@@ -566,9 +607,15 @@ app.get("/api/books", async (req, res) => {
       };
     });
 
+    console.log(`✅ [BOOKS API] Successfully processed ${booksWithAccess.length} books`);
     res.json(booksWithAccess);
   } catch (err) {
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error(`❌ [BOOKS API] Error:`, err);
+    res.status(500).json({ 
+      error: "Internal Server Error", 
+      message: err.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
