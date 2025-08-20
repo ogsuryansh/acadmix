@@ -902,7 +902,15 @@ app.post("/api/admin/login", async (req, res) => {
 app.get("/api/admin/dashboard", authenticateToken, async (req, res) => {
   try {
     await connectToDB();
+    console.log(`🔍 [ADMIN DASHBOARD] User check:`, {
+      userId: req.user.id,
+      userRole: req.user.role,
+      userEmail: req.user.email,
+      isAdmin: req.user.role === "admin"
+    });
+    
     if (req.user.role !== "admin") {
+      console.log(`❌ [ADMIN DASHBOARD] Access denied - User role: ${req.user.role}`);
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -1119,7 +1127,15 @@ app.use("/api/admin", (req, res, next) => {
 // Admin config endpoint
 app.get("/api/admin/config", authenticateToken, async (req, res) => {
   try {
+    console.log(`🔍 [ADMIN CONFIG] User check:`, {
+      userId: req.user.id,
+      userRole: req.user.role,
+      userEmail: req.user.email,
+      isAdmin: req.user.role === "admin"
+    });
+    
     if (req.user.role !== "admin") {
+      console.log(`❌ [ADMIN CONFIG] Access denied - User role: ${req.user.role}`);
       return res.status(403).json({ error: "Admin access required" });
     }
     res.json(adminConfig);

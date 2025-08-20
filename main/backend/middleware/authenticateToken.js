@@ -1,5 +1,15 @@
 const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+const mongoose = require("mongoose");
+
+// Get User model safely
+function getUserModel() {
+  try {
+    return mongoose.model("User");
+  } catch (error) {
+    console.error("❌ User model not found:", error.message);
+    return null;
+  }
+}
 
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
@@ -37,6 +47,12 @@ const authenticateToken = async (req, res, next) => {
     }
 
     // Check if user still exists and is active (for regular users)
+    const User = getUserModel();
+    if (!User) {
+      console.error("❌ User model not available");
+      return res.status(500).json({ error: "Authentication service unavailable" });
+    }
+
     const user = await User.findById(decoded.id).select("-password");
     if (!user) {
       return res.status(401).json({ error: "User not found" });
