@@ -12,6 +12,7 @@ const helmet = require("helmet");
 
 // Import routes
 const paymentRoutes = require("./routes/payment");
+const adminConfig = require("./config/admin");
 
 const app = express();
 
@@ -981,6 +982,33 @@ app.post("/api/admin/payments/:id/reject", authenticateToken, async (req, res) =
     res.json({ message: "Payment rejected successfully" });
   } catch (err) {
     res.status(500).json({ error: "Failed to reject payment" });
+  }
+});
+
+// Admin routes middleware for CORS
+app.use("/api/admin", (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://acadmix.shop');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
+// Admin config endpoint
+app.get("/api/admin/config", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    res.json(adminConfig);
+  } catch (err) {
+    console.error("❌ Admin config error:", err);
+    res.status(500).json({ error: "Failed to fetch admin config" });
   }
 });
 
