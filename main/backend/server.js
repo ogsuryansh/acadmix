@@ -987,6 +987,20 @@ app.post("/api/admin/payments/:id/reject", authenticateToken, async (req, res) =
 // Mount payment routes
 app.use("/api", paymentRoutes);
 
+// Global error handler for CORS
+app.use((err, req, res, next) => {
+  // Set CORS headers even for errors
+  res.header('Access-Control-Allow-Origin', 'https://acadmix.shop');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({ error: 'CORS error', message: err.message });
+  }
+  next(err);
+});
+
 // Error handling
 app.use((err, req, res, next) => {
   console.error("Error:", err);

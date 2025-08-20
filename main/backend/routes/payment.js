@@ -7,6 +7,15 @@ const authenticateToken = require("../middleware/authenticateToken");
 
 const router = express.Router();
 
+// CORS middleware for payment routes
+router.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://acadmix.shop');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
+
 // Get payment configuration
 const getPaymentConfig = () => {
   return {
@@ -28,9 +37,16 @@ const generateQRCode = async (amount, upiId, payeeName) => {
 // Get payment data for a book
 router.get("/payment/:bookId", authenticateToken, async (req, res) => {
   try {
+    console.log("🔍 Payment request for bookId:", req.params.bookId);
+    console.log("👤 User:", req.user.id);
+    
     const book = await Book.findById(req.params.bookId);
-    if (!book) return res.status(404).json({ error: "Book not found" });
+    if (!book) {
+      console.log("❌ Book not found:", req.params.bookId);
+      return res.status(404).json({ error: "Book not found" });
+    }
 
+    console.log("📚 Book found:", book.title);
     const config = getPaymentConfig();
     
     // Calculate the amount to charge
@@ -48,8 +64,17 @@ router.get("/payment/:bookId", authenticateToken, async (req, res) => {
       amount = 0;
     }
     
+    console.log("💰 Amount calculated:", amount);
+    
     // Generate QR code
-    const qrCode = await generateQRCode(amount, config.upiId, config.payeeName);
+    let qrCode = null;
+    try {
+      qrCode = await generateQRCode(amount, config.upiId, config.payeeName);
+      console.log("✅ QR code generated successfully");
+    } catch (qrError) {
+      console.error("❌ QR code generation failed:", qrError);
+      // Continue without QR code if generation fails
+    }
     
     // Check if user already has a pending payment for this book
     const existingPayment = await Payment.findOne({
@@ -57,6 +82,8 @@ router.get("/payment/:bookId", authenticateToken, async (req, res) => {
       book: req.params.bookId,
       status: "pending"
     });
+
+    console.log("💳 Existing payment:", existingPayment ? "Found" : "None");
 
     res.json({
       book,
@@ -68,7 +95,11 @@ router.get("/payment/:bookId", authenticateToken, async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Payment API error:", err);
-    res.status(500).json({ error: "Failed to generate payment data" });
+    res.status(500).json({ 
+      error: "Failed to generate payment data",
+      message: err.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
