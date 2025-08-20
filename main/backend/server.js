@@ -77,7 +77,6 @@ async function connectToDB() {
         minPoolSize: 0, // Start with 0 connections
         maxIdleTimeMS: 30000, // Close idle connections after 30s
         bufferCommands: false, // Disable buffering
-        bufferMaxEntries: 0, // Disable buffer max entries
       })
       .then((connection) => {
         mongoConnection = connection;
