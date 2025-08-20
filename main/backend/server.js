@@ -61,10 +61,10 @@ app.options('*', cors());
 // Global debugging and CORS middleware
 app.use((req, res, next) => {
   // Add CORS headers for all routes
-  res.header('Access-Control-Allow-Origin', 'https://acadmix.shop');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.header('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', 'https://acadmix.shop');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   
   // Debug logging
   console.log(`🌐 [${new Date().toISOString()}] ${req.method} ${req.path} - Origin: ${req.headers.origin || 'unknown'}`);
@@ -543,13 +543,31 @@ app.get("/api/auth/me", authenticateToken, async (req, res) => {
   }
 });
 
+// Test endpoint for CORS
+app.get("/api/test", (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://acadmix.shop');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.json({ message: "CORS test successful", timestamp: new Date().toISOString() });
+});
+
+// Books API OPTIONS handler
+app.options("/api/books", (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://acadmix.shop');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
+});
+
 // Books API with explicit CORS handling
 app.get("/api/books", async (req, res) => {
   // Ensure CORS headers are set
-  res.header('Access-Control-Allow-Origin', 'https://acadmix.shop');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.header('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', 'https://acadmix.shop');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   
   try {
     console.log(`📚 [BOOKS API] Fetching books with section: ${req.query.section || 'all'}`);
