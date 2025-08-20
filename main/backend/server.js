@@ -598,8 +598,13 @@ app.get("/api/books", async (req, res) => {
         console.log(`👤 [BOOKS API] User authenticated - ID: ${userId}, Admin: ${isAdmin}`);
         
         if (userId && !isAdmin) {
-          payments = await Payment.find({ user: userId }).lean();
-          console.log(`💳 [BOOKS API] Found ${payments.length} payments for user`);
+          try {
+            payments = await Payment.find({ user: userId }).lean();
+            console.log(`💳 [BOOKS API] Found ${payments.length} payments for user`);
+          } catch (paymentError) {
+            console.error(`❌ [BOOKS API] Payment lookup failed:`, paymentError);
+            payments = []; // Continue with empty payments array
+          }
         }
       } catch (err) {
         console.log(`⚠️ [BOOKS API] Token verification failed:`, err.message);
@@ -610,19 +615,42 @@ app.get("/api/books", async (req, res) => {
     }
 
     const booksWithAccess = books.map((book) => {
-      const userPayments = payments
-        .filter((p) => p.book.toString() === book._id.toString())
-        .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+      try {
+        const userPayments = payments
+          .filter((p) => p.book && p.book.toString() === book._id.toString())
+          .sort((a, b) => new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0));
 
-      const userPayment = userPayments[0];
-      const isFreeBook = book.isFree === true;
+        const userPayment = userPayments[0];
+        const isFreeBook = book.isFree === true;
 
-      return {
-        ...book.toObject(),
-        canRead: isAdmin || userPayment?.status === "approved" || isFreeBook,
-        paymentStatus: isAdmin ? "admin_access" : isFreeBook ? "free" : userPayment?.status || null,
-        pdfUrl: book.pdfUrl || null,
-      };
+        const bookObject = book.toObject ? book.toObject() : book;
+
+        return {
+          ...bookObject,
+          canRead: isAdmin || userPayment?.status === "approved" || isFreeBook,
+          paymentStatus: isAdmin ? "admin_access" : isFreeBook ? "free" : userPayment?.status || null,
+          pdfUrl: book.pdfUrl || null,
+        };
+      } catch (bookError) {
+        console.error(`❌ [BOOKS API] Error processing book ${book._id}:`, bookError);
+        // Return a safe fallback for this book
+        return {
+          _id: book._id,
+          title: book.title || 'Unknown Book',
+          description: book.description || '',
+          category: book.category || '',
+          section: book.section || '',
+          price: book.price || 0,
+          priceDiscounted: book.priceDiscounted || 0,
+          pages: book.pages || 0,
+          image: book.image || '',
+          isFree: book.isFree || false,
+          shareCount: book.shareCount || 0,
+          canRead: isAdmin,
+          paymentStatus: isAdmin ? "admin_access" : "unknown",
+          pdfUrl: book.pdfUrl || null,
+        };
+      }
     });
 
     console.log(`✅ [BOOKS API] Successfully processed ${booksWithAccess.length} books`);
