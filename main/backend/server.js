@@ -729,6 +729,21 @@ app.get("/api/books", async (req, res) => {
     });
 
     console.log(`✅ [BOOKS API] Successfully processed ${booksWithAccess.length} books`);
+    
+    // Debug: Log price information for first few books
+    booksWithAccess.slice(0, 3).forEach((book, index) => {
+      console.log(`💰 [BOOKS API] Book ${index + 1} price debug:`, {
+        id: book._id,
+        title: book.title,
+        price: book.price,
+        priceDiscounted: book.priceDiscounted,
+        isFree: book.isFree,
+        priceType: typeof book.price,
+        discountedType: typeof book.priceDiscounted,
+        hasDiscount: book.priceDiscounted && book.priceDiscounted !== book.price
+      });
+    });
+    
     res.json(booksWithAccess);
   } catch (err) {
     console.error(`❌ [BOOKS API] Error:`, err);
@@ -1112,9 +1127,20 @@ app.get("/api/admin/books", authenticateToken, async (req, res) => {
         priceDiscounted: firstBook.priceDiscounted,
         isFree: firstBook.isFree,
         priceType: typeof firstBook.price,
-        discountedType: typeof firstBook.priceDiscounted
+        discountedType: typeof firstBook.priceDiscounted,
+        hasDiscount: firstBook.priceDiscounted && firstBook.priceDiscounted !== firstBook.price
       });
     }
+    
+    // Debug: Log price information for all books
+    books.forEach((book, index) => {
+      console.log(`💰 [ADMIN BOOKS] Book ${index + 1}:`, {
+        title: book.title,
+        price: book.price,
+        priceDiscounted: book.priceDiscounted,
+        isFree: book.isFree
+      });
+    });
     
     res.json(books);
   } catch (err) {
