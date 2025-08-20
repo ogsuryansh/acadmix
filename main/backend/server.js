@@ -127,52 +127,76 @@ async function connectToDB() {
   }
 }
 
-// Models
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String },
-  googleId: { type: String },
-  photo: { type: String },
-  role: { type: String, default: "user" },
-  isActive: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now }
-});
+// Model initialization function to prevent overwrite errors in serverless
+let models = {};
 
-const User = mongoose.model("User", userSchema);
+function initializeModels() {
+  if (Object.keys(models).length === 0) {
+    const userSchema = new mongoose.Schema({
+      name: { type: String, required: true },
+      email: { type: String, required: true, unique: true },
+      password: { type: String },
+      googleId: { type: String },
+      photo: { type: String },
+      role: { type: String, default: "user" },
+      isActive: { type: Boolean, default: true },
+      createdAt: { type: Date, default: Date.now }
+    });
 
-const bookSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: { type: String },
-  category: { type: String },
-  section: { type: String },
-  price: { type: Number },
-  priceDiscounted: { type: Number },
-  pages: { type: Number },
-  image: { type: String },
-  pdfUrl: { type: String },
-  isFree: { type: Boolean, default: false },
-  shareCount: { type: Number, default: 0 },
-  createdAt: { type: Date, default: Date.now }
-});
+    const bookSchema = new mongoose.Schema({
+      title: { type: String, required: true },
+      description: { type: String },
+      category: { type: String },
+      section: { type: String },
+      price: { type: Number },
+      priceDiscounted: { type: Number },
+      pages: { type: Number },
+      image: { type: String },
+      pdfUrl: { type: String },
+      isFree: { type: Boolean, default: false },
+      shareCount: { type: Number, default: 0 },
+      createdAt: { type: Date, default: Date.now }
+    });
 
-const Book = mongoose.model("Book", bookSchema);
+    const paymentSchema = new mongoose.Schema({
+      user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      book: { type: mongoose.Schema.Types.ObjectId, ref: 'Book', required: true },
+      amount: { type: Number, required: true },
+      currency: { type: String, default: 'INR' },
+      status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+      paymentMethod: { type: String },
+      transactionId: { type: String },
+      submittedAt: { type: Date, default: Date.now },
+      approvedAt: { type: Date },
+      rejectedAt: { type: Date },
+      screenshot: { type: String }
+    });
 
-const paymentSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  book: { type: mongoose.Schema.Types.ObjectId, ref: 'Book', required: true },
-  amount: { type: Number, required: true },
-  currency: { type: String, default: 'INR' },
-  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
-  paymentMethod: { type: String },
-  transactionId: { type: String },
-  submittedAt: { type: Date, default: Date.now },
-  approvedAt: { type: Date },
-  rejectedAt: { type: Date },
-  screenshot: { type: String }
-});
+    // Only create models if they don't already exist
+    try {
+      models.User = mongoose.model("User");
+    } catch (error) {
+      models.User = mongoose.model("User", userSchema);
+    }
 
-const Payment = mongoose.model("Payment", paymentSchema);
+    try {
+      models.Book = mongoose.model("Book");
+    } catch (error) {
+      models.Book = mongoose.model("Book", bookSchema);
+    }
+
+    try {
+      models.Payment = mongoose.model("Payment");
+    } catch (error) {
+      models.Payment = mongoose.model("Payment", paymentSchema);
+    }
+  }
+  
+  return models;
+}
+
+// Initialize models
+const { User, Book, Payment } = initializeModels();
 
 // Session configuration
 let sessionStore;
