@@ -10,6 +10,9 @@ const session = require("express-session");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
 
+// Import routes
+const paymentRoutes = require("./routes/payment");
+
 const app = express();
 
 // Security middleware
@@ -980,6 +983,9 @@ app.post("/api/admin/payments/:id/reject", authenticateToken, async (req, res) =
     res.status(500).json({ error: "Failed to reject payment" });
   }
 });
+
+// Mount payment routes
+app.use("/api", paymentRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {
