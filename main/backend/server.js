@@ -754,49 +754,107 @@ app.post("/api/books/:id/share", async (req, res) => {
 // User's purchased books
 app.get("/api/user/purchased-books", authenticateToken, async (req, res) => {
   try {
+    console.log(`🔍 [PURCHASED BOOKS] Request from user:`, {
+      userId: req.user.id,
+      userRole: req.user.role,
+      isAdmin: req.user.role === "admin"
+    });
+
     await connectToDB();
     const userId = req.user.id;
     const isAdmin = req.user.role === "admin";
 
     if (isAdmin) {
+      console.log(`👑 [PURCHASED BOOKS] Admin access - returning all books`);
       const allBooks = await Book.find({}).sort({ createdAt: -1 });
-      const booksWithAccess = allBooks.map(book => ({
-        ...book.toObject(),
-        paymentStatus: "admin_access",
-        canRead: true
-      }));
+      const booksWithAccess = allBooks.map(book => {
+        try {
+          return {
+            ...book.toObject(),
+            paymentStatus: "admin_access",
+            canRead: true
+          };
+        } catch (bookError) {
+          console.error(`❌ [PURCHASED BOOKS] Error processing book ${book._id}:`, bookError);
+          return {
+            _id: book._id,
+            title: book.title || 'Unknown Book',
+            paymentStatus: "admin_access",
+            canRead: true
+          };
+        }
+      });
       return res.json(booksWithAccess);
     }
 
+    console.log(`🔍 [PURCHASED BOOKS] Fetching approved payments for user: ${userId}`);
     const approvedPayments = await Payment.find({ 
       user: userId, 
       status: "approved" 
     }).populate('book');
 
-    const purchasedBooks = approvedPayments.map(payment => ({
-      ...payment.book.toObject(),
-      paymentStatus: "approved",
-      canRead: true,
-      paymentId: payment._id,
-      purchasedAt: payment.approvedAt || payment.submittedAt
-    }));
+    console.log(`📚 [PURCHASED BOOKS] Found ${approvedPayments.length} approved payments`);
 
+    const purchasedBooks = approvedPayments
+      .filter(payment => payment.book) // Filter out payments with null books
+      .map(payment => {
+        try {
+          return {
+            ...payment.book.toObject(),
+            paymentStatus: "approved",
+            canRead: true,
+            paymentId: payment._id,
+            purchasedAt: payment.approvedAt || payment.submittedAt
+          };
+        } catch (bookError) {
+          console.error(`❌ [PURCHASED BOOKS] Error processing payment book ${payment._id}:`, bookError);
+          return {
+            _id: payment.book._id,
+            title: payment.book.title || 'Unknown Book',
+            paymentStatus: "approved",
+            canRead: true,
+            paymentId: payment._id,
+            purchasedAt: payment.approvedAt || payment.submittedAt
+          };
+        }
+      });
+
+    console.log(`🔍 [PURCHASED BOOKS] Fetching free books`);
     const freeBooks = await Book.find({ isFree: true }).sort({ createdAt: -1 });
-    const freeBooksWithAccess = freeBooks.map(book => ({
-      ...book.toObject(),
-      paymentStatus: "free",
-      canRead: true,
-      isFree: true
-    }));
+    const freeBooksWithAccess = freeBooks.map(book => {
+      try {
+        return {
+          ...book.toObject(),
+          paymentStatus: "free",
+          canRead: true,
+          isFree: true
+        };
+      } catch (bookError) {
+        console.error(`❌ [PURCHASED BOOKS] Error processing free book ${book._id}:`, bookError);
+        return {
+          _id: book._id,
+          title: book.title || 'Unknown Book',
+          paymentStatus: "free",
+          canRead: true,
+          isFree: true
+        };
+      }
+    });
 
     const allUserBooks = [...purchasedBooks, ...freeBooksWithAccess];
     const uniqueBooks = allUserBooks.filter((book, index, self) => 
       index === self.findIndex(b => b._id.toString() === book._id.toString())
     );
 
+    console.log(`✅ [PURCHASED BOOKS] Returning ${uniqueBooks.length} books for user`);
     res.json(uniqueBooks);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch purchased books" });
+    console.error(`❌ [PURCHASED BOOKS] Error:`, err);
+    res.status(500).json({ 
+      error: "Failed to fetch purchased books",
+      message: err.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
@@ -944,6 +1002,46 @@ app.get("/api/admin/dashboard", authenticateToken, async (req, res) => {
   }
 });
 
+// Admin book details endpoint for debugging
+app.get("/api/admin/books/:id/details", authenticateToken, async (req, res) => {
+  try {
+    await connectToDB();
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const book = await Book.findById(req.params.id);
+    if (!book) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+
+    console.log(`🔍 [ADMIN BOOK DETAILS] Book debug:`, {
+      id: book._id,
+      title: book.title,
+      price: book.price,
+      priceDiscounted: book.priceDiscounted,
+      isFree: book.isFree,
+      priceType: typeof book.price,
+      discountedType: typeof book.priceDiscounted,
+      allFields: Object.keys(book.toObject())
+    });
+
+    res.json({
+      book,
+      debug: {
+        price: book.price,
+        priceDiscounted: book.priceDiscounted,
+        isFree: book.isFree,
+        priceType: typeof book.price,
+        discountedType: typeof book.priceDiscounted
+      }
+    });
+  } catch (err) {
+    console.error("❌ [ADMIN BOOK DETAILS] Error:", err);
+    res.status(500).json({ error: "Failed to fetch book details" });
+  }
+});
+
 app.get("/api/admin/books", authenticateToken, async (req, res) => {
   try {
     await connectToDB();
@@ -952,8 +1050,24 @@ app.get("/api/admin/books", authenticateToken, async (req, res) => {
     }
 
     const books = await Book.find().sort({ createdAt: -1 });
+    
+    // Debug: Log the first book's price information
+    if (books.length > 0) {
+      const firstBook = books[0];
+      console.log(`🔍 [ADMIN BOOKS] First book price debug:`, {
+        id: firstBook._id,
+        title: firstBook.title,
+        price: firstBook.price,
+        priceDiscounted: firstBook.priceDiscounted,
+        isFree: firstBook.isFree,
+        priceType: typeof firstBook.price,
+        discountedType: typeof firstBook.priceDiscounted
+      });
+    }
+    
     res.json(books);
   } catch (err) {
+    console.error("❌ [ADMIN BOOKS] Error:", err);
     res.status(500).json({ error: "Failed to fetch books" });
   }
 });
