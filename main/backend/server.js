@@ -567,6 +567,57 @@ app.get("/api/auth/me", authenticateToken, async (req, res) => {
   }
 });
 
+// PDF Proxy endpoint
+app.get("/api/pdf-proxy", async (req, res) => {
+  try {
+    const { url } = req.query;
+    
+    if (!url) {
+      return res.status(400).json({ error: "URL parameter is required" });
+    }
+
+    console.log(`🔍 [PDF PROXY] Fetching PDF from: ${url}`);
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error(`❌ [PDF PROXY] Failed to fetch PDF: ${response.status} ${response.statusText}`);
+      return res.status(response.status).json({ 
+        error: "Failed to fetch PDF",
+        status: response.status,
+        statusText: response.statusText
+      });
+    }
+
+    const contentType = response.headers.get('content-type');
+    const contentLength = response.headers.get('content-length');
+
+    // Set CORS headers
+    res.setHeader('Access-Control-Allow-Origin', 'https://acadmix.shop');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    // Set PDF headers
+    res.setHeader('Content-Type', contentType || 'application/pdf');
+    if (contentLength) {
+      res.setHeader('Content-Length', contentLength);
+    }
+    res.setHeader('Content-Disposition', 'inline; filename="document.pdf"');
+
+    // Stream the PDF
+    response.body.pipe(res);
+    
+    console.log(`✅ [PDF PROXY] Successfully streaming PDF`);
+  } catch (error) {
+    console.error(`❌ [PDF PROXY] Error:`, error);
+    res.status(500).json({ 
+      error: "Failed to proxy PDF",
+      message: error.message
+    });
+  }
+});
+
 // Test endpoint for CORS
 app.get("/api/test", (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', 'https://acadmix.shop');
