@@ -1319,85 +1319,111 @@ app.options("/api/admin/books", (req, res) => {
   res.status(200).end();
 });
 
-app.post("/api/admin/books", requireAdmin, upload.fields([
-  { name: 'image', maxCount: 1 },
-  { name: 'pdf', maxCount: 1 }
-]), async (req, res) => {
-  try {
-    console.log('📚 [ADMIN CREATE BOOK] Request received');
-    console.log('📝 [ADMIN CREATE BOOK] Body keys:', Object.keys(req.body));
-    console.log('📂 [ADMIN CREATE BOOK] Files:', req.files ? Object.keys(req.files) : 'No files');
+// Multer error handler middleware
+const handleUploadError = (err, req, res, next) => {
+  console.error('❌ [MULTER ERROR]', err.message);
+  console.error('❌ [MULTER ERROR] Code:', err.code);
+  console.error('❌ [MULTER ERROR] Field:', err.field);
 
-    await connectToDB();
+  // Send CORS headers even on error
+  res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://acadmix.shop');
+  res.header('Access-Control-Allow-Credentials', 'true');
 
-    // 1. Upload Cover Image
-    let coverImageUrl = '';
-    if (req.files && req.files.image && req.files.image[0]) {
-      const coverFile = req.files.image[0];
-      const b64 = Buffer.from(coverFile.buffer).toString("base64");
-      const dataURI = "data:" + coverFile.mimetype + ";base64," + b64;
-
-      console.log('⬆️ [ADMIN CREATE BOOK] Uploading cover image...');
-      const uploadResponse = await cloudinary.uploader.upload(dataURI, {
-        folder: "acadmix/covers",
-        resource_type: "image"
-      });
-      coverImageUrl = uploadResponse.secure_url;
-      console.log('✅ [ADMIN CREATE BOOK] Cover image uploaded:', coverImageUrl);
-    } else if (req.body.image && typeof req.body.image === 'string') {
-      coverImageUrl = req.body.image;
-    }
-
-    // 2. Upload PDF File
-    let pdfUrl = '';
-    if (req.files && req.files.pdf && req.files.pdf[0]) {
-      const pdfFile = req.files.pdf[0];
-      const b64 = Buffer.from(pdfFile.buffer).toString("base64");
-      const dataURI = "data:" + pdfFile.mimetype + ";base64," + b64;
-
-      console.log('⬆️ [ADMIN CREATE BOOK] Uploading PDF file...');
-      const uploadResponse = await cloudinary.uploader.upload(dataURI, {
-        folder: "acadmix/pdfs",
-        resource_type: "raw",
-        format: "pdf"
-      });
-      pdfUrl = uploadResponse.secure_url;
-      console.log('✅ [ADMIN CREATE BOOK] PDF uploaded:', pdfUrl);
-    } else if (req.body.pdfUrl) {
-      pdfUrl = req.body.pdfUrl;
-    }
-
-    // 3. Prepare Book Data
-    const bookData = {
-      title: req.body.title,
-      description: req.body.description,
-      price: Number(req.body.price) || 0,
-      priceDiscounted: Number(req.body.priceDiscounted) || 0,
-      isFree: req.body.isFree === 'true' || req.body.isFree === true,
-      category: req.body.category,
-      section: req.body.section,
-      author: req.body.author,
-      subject: req.body.subject,
-      class: req.body.class,
-      image: coverImageUrl,
-      pdfUrl: pdfUrl
-    };
-
-    console.log('🔨 [ADMIN CREATE BOOK] Creating book with data:', bookData);
-
-    const book = await Book.create(bookData);
-
-    console.log('✅ [ADMIN CREATE BOOK] Book created successfully:', book._id);
-    res.status(201).json(book);
-
-  } catch (err) {
-    console.error('❌ [ADMIN CREATE BOOK] Error occurred:', err);
-    res.status(500).json({
-      error: "Failed to create book",
-      details: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'File too large. Max size is 50MB.' });
   }
-});
+  return res.status(400).json({ error: err.message });
+};
+
+app.post("/api/admin/books",
+  (req, res, next) => {
+    console.log('🚀 [POST /api/admin/books] Request starting...');
+    console.log('📦 [POST] Content-Type:', req.headers['content-type']);
+    console.log('📏 [POST] Content-Length:', req.headers['content-length']);
+    next();
+  },
+  requireAdmin,
+  upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'pdf', maxCount: 1 }
+  ]),
+  handleUploadError,
+  async (req, res) => {
+    try {
+      console.log('📚 [ADMIN CREATE BOOK] Request received after upload middleware');
+      console.log('📝 [ADMIN CREATE BOOK] Body keys:', Object.keys(req.body));
+      console.log('📂 [ADMIN CREATE BOOK] Files:', req.files ? Object.keys(req.files) : 'No files');
+
+      await connectToDB();
+
+      // 1. Upload Cover Image
+      let coverImageUrl = '';
+      if (req.files && req.files.image && req.files.image[0]) {
+        const coverFile = req.files.image[0];
+        const b64 = Buffer.from(coverFile.buffer).toString("base64");
+        const dataURI = "data:" + coverFile.mimetype + ";base64," + b64;
+
+        console.log('⬆️ [ADMIN CREATE BOOK] Uploading cover image...');
+        const uploadResponse = await cloudinary.uploader.upload(dataURI, {
+          folder: "acadmix/covers",
+          resource_type: "image"
+        });
+        coverImageUrl = uploadResponse.secure_url;
+        console.log('✅ [ADMIN CREATE BOOK] Cover image uploaded:', coverImageUrl);
+      } else if (req.body.image && typeof req.body.image === 'string') {
+        coverImageUrl = req.body.image;
+      }
+
+      // 2. Upload PDF File
+      let pdfUrl = '';
+      if (req.files && req.files.pdf && req.files.pdf[0]) {
+        const pdfFile = req.files.pdf[0];
+        const b64 = Buffer.from(pdfFile.buffer).toString("base64");
+        const dataURI = "data:" + pdfFile.mimetype + ";base64," + b64;
+
+        console.log('⬆️ [ADMIN CREATE BOOK] Uploading PDF file...');
+        const uploadResponse = await cloudinary.uploader.upload(dataURI, {
+          folder: "acadmix/pdfs",
+          resource_type: "raw",
+          format: "pdf"
+        });
+        pdfUrl = uploadResponse.secure_url;
+        console.log('✅ [ADMIN CREATE BOOK] PDF uploaded:', pdfUrl);
+      } else if (req.body.pdfUrl) {
+        pdfUrl = req.body.pdfUrl;
+      }
+
+      // 3. Prepare Book Data
+      const bookData = {
+        title: req.body.title,
+        description: req.body.description,
+        price: Number(req.body.price) || 0,
+        priceDiscounted: Number(req.body.priceDiscounted) || 0,
+        isFree: req.body.isFree === 'true' || req.body.isFree === true,
+        category: req.body.category,
+        section: req.body.section,
+        author: req.body.author,
+        subject: req.body.subject,
+        class: req.body.class,
+        image: coverImageUrl,
+        pdfUrl: pdfUrl
+      };
+
+      console.log('🔨 [ADMIN CREATE BOOK] Creating book with data:', bookData);
+
+      const book = await Book.create(bookData);
+
+      console.log('✅ [ADMIN CREATE BOOK] Book created successfully:', book._id);
+      res.status(201).json(book);
+
+    } catch (err) {
+      console.error('❌ [ADMIN CREATE BOOK] Error occurred:', err);
+      res.status(500).json({
+        error: "Failed to create book",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+  });
 
 app.put("/api/admin/books/:id", requireAdmin, upload.fields([
   { name: 'image', maxCount: 1 },
