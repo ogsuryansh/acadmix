@@ -59,15 +59,21 @@ app.use(cors({
   origin: function (origin, callback) {
     const allowedOrigins = getAllowedOrigins();
 
+    console.log('🌐 [CORS] Request from origin:', origin);
+    console.log('✅ [CORS] Allowed origins:', allowedOrigins);
+
     // Allow requests with no origin (like mobile apps or curl requests) in development
     if (!origin && process.env.NODE_ENV === 'development') {
+      console.log('✅ [CORS] No origin - allowing in development');
       return callback(null, true);
     }
 
     if (allowedOrigins.includes(origin)) {
+      console.log('✅ [CORS] Origin allowed:', origin);
       callback(null, true);
     } else {
-      console.log(`🚫 CORS blocked origin: ${origin}`);
+      console.log(`🚫 [CORS] BLOCKED origin: ${origin}`);
+      console.log(`🚫 [CORS] Allowed origins are: ${allowedOrigins.join(', ')}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -342,9 +348,21 @@ passport.use(
 
 // Authentication middleware
 const requireAuth = (req, res, next) => {
+  console.log('🔐 [AUTH CHECK]', {
+    path: req.path,
+    isAuthenticated: req.isAuthenticated(),
+    hasSession: !!req.session,
+    sessionID: req.sessionID,
+    hasUser: !!req.user,
+    cookies: Object.keys(req.cookies || {})
+  });
+
   if (req.isAuthenticated()) {
+    console.log('✅ [AUTH] User authenticated:', req.user.email);
     return next();
   }
+
+  console.log('❌ [AUTH] Authentication required - user not authenticated');
   res.status(401).json({ error: "Authentication required" });
 };
 
