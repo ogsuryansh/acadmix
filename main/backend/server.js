@@ -6,6 +6,7 @@ const bcrypt = require("bcryptjs");
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const session = require("express-session");
+const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
 
@@ -48,10 +49,11 @@ app.use("/api/", limiter);
 
 // CORS configuration
 const getAllowedOrigins = () => {
-  const origins = process.env.ALLOWED_ORIGINS?.split(',') || [];
+  const origins = process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || [];
   if (process.env.NODE_ENV === 'development') {
     origins.push('http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5500');
   }
+  console.log('🔧 [CORS CONFIG] Allowed origins:', origins);
   return origins;
 };
 
@@ -104,6 +106,7 @@ app.use((req, res, next) => {
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
 // MongoDB connection with lazy loading
 let mongoConnection = null;
