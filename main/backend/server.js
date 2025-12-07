@@ -1302,6 +1302,23 @@ app.get("/api/admin/books", requireAdmin, async (req, res) => {
   }
 });
 
+// EXPLICIT OPTIONS handler for /api/admin/books - for debugging
+app.options("/api/admin/books", (req, res) => {
+  console.log('🔍 [OPTIONS /api/admin/books] Preflight request received');
+  console.log('🔍 [OPTIONS] Origin:', req.headers.origin);
+  console.log('🔍 [OPTIONS] Method:', req.method);
+  console.log('🔍 [OPTIONS] All headers:', req.headers);
+
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type,X-Requested-With,Accept,Origin,Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+
+  console.log('✅ [OPTIONS] Sending 200 OK response');
+  res.status(200).end();
+});
+
 app.post("/api/admin/books", requireAdmin, upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'pdf', maxCount: 1 }
