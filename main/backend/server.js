@@ -1384,11 +1384,11 @@ app.post("/api/admin/books",
         console.log('⬆️ [ADMIN CREATE BOOK] Uploading PDF file...');
         const uploadResponse = await cloudinary.uploader.upload(dataURI, {
           folder: "acadmix/pdfs",
-          resource_type: "raw",
-          format: "pdf"
+          resource_type: "raw"
         });
         pdfUrl = uploadResponse.secure_url;
         console.log('✅ [ADMIN CREATE BOOK] PDF uploaded:', pdfUrl);
+        console.log('🔍 [ADMIN CREATE BOOK] PDF public_id:', uploadResponse.public_id);
       } else if (req.body.pdfUrl) {
         pdfUrl = req.body.pdfUrl;
       }
