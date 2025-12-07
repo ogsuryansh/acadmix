@@ -118,21 +118,24 @@ async function connectToDB() {
   }
 
   if (!mongoConnectionPromise) {
+    console.log('🔌 [MongoDB] Initiating connection...');
     mongoConnectionPromise = mongoose
       .connect(process.env.MONGO_URI, {
-        serverSelectionTimeoutMS: 3000, // Reduced from 5000
-        connectTimeoutMS: 5000, // Reduced from 10000
-        socketTimeoutMS: 10000, // Reduced from 45000
+        serverSelectionTimeoutMS: 10000, // Increased for serverless cold starts
+        connectTimeoutMS: 30000, // Increased for serverless
+        socketTimeoutMS: 45000, // Keep reasonable timeout
         maxPoolSize: 1, // Limit pool size for serverless
         minPoolSize: 0, // Start with 0 connections
         maxIdleTimeMS: 30000, // Close idle connections after 30s
         bufferCommands: false, // Disable buffering
       })
       .then((connection) => {
+        console.log('✅ [MongoDB] Connected successfully');
         mongoConnection = connection;
         return connection;
       })
       .catch((error) => {
+        console.error('❌ [MongoDB] Connection failed:', error.message);
         mongoConnectionPromise = null;
         throw error;
       });
