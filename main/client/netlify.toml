@@ -1,5 +1,6 @@
 [build]
-  publish = "dist"
+  base = "main/client"
+  publish = "main/client/dist"
   command = "npm run build"
 
 [build.environment]
