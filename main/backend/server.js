@@ -67,10 +67,16 @@ const corsOptions = {
     console.log('🌐 [CORS] Request from origin:', origin);
     console.log('✅ [CORS] Allowed origins:', allowedOrigins);
 
-    // Allow requests with no origin (like mobile apps or curl requests) in development
-    if (!origin && process.env.NODE_ENV === 'development') {
-      console.log('✅ [CORS] No origin - allowing in development');
-      return callback(null, true);
+    // Allow requests with no origin (like mobile apps, curl, or OPTIONS preflight)
+    if (!origin) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ [CORS] No origin - allowing in development');
+        return callback(null, true);
+      } else {
+        // In production, also allow undefined origin for OPTIONS preflight
+        console.log('✅ [CORS] No origin - allowing for OPTIONS preflight');
+        return callback(null, true);
+      }
     }
 
     if (allowedOrigins.includes(origin)) {
