@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, BookOpen, Sparkles } from 'lucide-react';
 
@@ -12,6 +12,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleChange = (e) => {
     setFormData({
@@ -23,9 +24,12 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       await login(formData.email, formData.password);
+      // Redirect to the page user came from, or home if no previous location
+      const from = location.state?.from || '/';
+      navigate(from, { replace: true });
     } catch (error) {
       console.error('Login error:', error);
     } finally {
@@ -36,15 +40,15 @@ const Login = () => {
   const handleGoogleLogin = () => {
     // Redirect to Google OAuth using environment-aware URL
     const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const googleAuthUrl = isDevelopment 
+    const googleAuthUrl = isDevelopment
       ? 'http://localhost:5000/api/auth/google'
       : 'https://api.acadmix.shop/api/auth/google';
-    
+
     console.log('🔍 Debug Info:');
     console.log('Hostname:', window.location.hostname);
     console.log('Is Development:', isDevelopment);
     console.log('Google Auth URL:', googleAuthUrl);
-    
+
     window.location.href = googleAuthUrl;
   };
 

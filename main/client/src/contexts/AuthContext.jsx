@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
       if (success) {
         setUser(user);
         toast.success('Login successful!');
-        navigate('/');
+        // Don't navigate here - let the Login component handle navigation
       } else {
         throw new Error('Login failed');
       }
