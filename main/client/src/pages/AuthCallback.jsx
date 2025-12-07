@@ -13,7 +13,6 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        const token = searchParams.get('token');
         const error = searchParams.get('error');
 
         if (error) {
@@ -23,15 +22,8 @@ const AuthCallback = () => {
           return;
         }
 
-        if (!token) {
-          setStatus('error');
-          setMessage('No authentication token received.');
-          setTimeout(() => navigate('/login'), 3000);
-          return;
-        }
-
-        // Process the Google OAuth token
-        await googleLogin(token);
+        // User is already authenticated via session, just get user info
+        await googleLogin();
         setStatus('success');
         setMessage('Redirecting to dashboard...');
         setTimeout(() => navigate('/'), 2000);

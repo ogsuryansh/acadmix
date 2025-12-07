@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  X, 
-  ChevronLeft, 
-  ChevronRight, 
-  ZoomIn, 
-  ZoomOut, 
+import {
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  ZoomOut,
   Maximize2,
   Minimize2,
   Eye,
@@ -62,7 +62,7 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
         e.preventDefault();
         return false;
       }
-      
+
       // PDF navigation shortcuts
       if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
         e.preventDefault();
@@ -120,7 +120,7 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
 
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('touchstart', handleTouchStart);
-      
+
       resetTimeout();
 
       return () => {
@@ -156,12 +156,12 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
           const script = document.createElement('script');
           script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
           document.head.appendChild(script);
-          
+
           await new Promise((resolve, reject) => {
             script.onload = resolve;
             script.onerror = reject;
           });
-          
+
           window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
 
@@ -170,30 +170,22 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
         // Fetch PDF through proxy with auth
         console.log('🌐 Fetching PDF from proxy...');
         const authToken = localStorage.getItem('token') || localStorage.getItem('adminToken');
-        
+
         // Use the same dynamic API base URL logic as the rest of the application
         const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
           (isDevelopment ? 'http://localhost:5000/api' : 'https://api.acadmix.shop/api');
-        
+
         let response;
-        
-        if (authToken) {
-          // Try authenticated proxy first
-          response = await fetch(`${API_BASE_URL}/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Accept': 'application/pdf'
-            }
-          });
-        }
-        
-        // If no token or authenticated request failed, try free PDF endpoint
-        if (!authToken || !response?.ok) {
-          console.log('🆓 Trying free PDF endpoint...');
-          response = await fetch(`${API_BASE_URL}/free-pdf-proxy?url=${encodeURIComponent(pdfUrl)}`);
-        }
+
+        // Always use the pdf-proxy endpoint (works for both authenticated and free books)
+        response = await fetch(`${API_BASE_URL}/pdf-proxy?url=${encodeURIComponent(pdfUrl)}`, {
+          method: 'GET',
+          credentials: 'include', // Send cookies for session-based auth
+          headers: {
+            'Accept': 'application/pdf'
+          }
+        });
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -249,7 +241,7 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
     const renderPage = async () => {
       try {
         setIsRendering(true);
-        
+
         // Cancel any existing render task
         if (renderTaskRef.current) {
           renderTaskRef.current.cancel();
@@ -261,46 +253,46 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
 
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
-        
+
         let finalScale = scale;
         if (fitToWidth && containerRef.current) {
           const container = containerRef.current;
           const containerRect = container.getBoundingClientRect();
-          
+
           const headerHeight = 80;
           const controlsHeight = 60;
           const footerHeight = 50;
           const padding = 20;
           const buffer = 10;
-          
+
           const availableWidth = containerRect.width - padding - buffer;
           const availableHeight = containerRect.height - headerHeight - controlsHeight - footerHeight - padding - buffer;
-          
+
           const viewport = page.getViewport({ scale: 1, rotation: 0 });
           const scaleX = availableWidth / viewport.width;
           const scaleY = availableHeight / viewport.height;
-          
+
           finalScale = Math.min(scaleX, scaleY, 1.5);
-          
+
           if (finalScale < 1.0) {
             finalScale = Math.min(scaleX, 1.0);
           }
         }
 
         const viewport = page.getViewport({ scale: finalScale, rotation: 0 }); // Assuming rotation is 0 for now
-        
+
         const devicePixelRatio = window.devicePixelRatio || 1;
         const isMobile = window.innerWidth < 768;
         const mobileScaleFactor = isMobile ? 2 : 1;
-        
+
         canvas.height = viewport.height * devicePixelRatio * mobileScaleFactor;
         canvas.width = viewport.width * devicePixelRatio * mobileScaleFactor;
-        
+
         canvas.style.height = viewport.height + 'px';
         canvas.style.width = viewport.width + 'px';
-        
+
         context.scale(devicePixelRatio * mobileScaleFactor, devicePixelRatio * mobileScaleFactor);
-        
+
         if (nightMode) {
           context.fillStyle = '#1a1a1a';
           context.fillRect(0, 0, viewport.width, viewport.height);
@@ -322,7 +314,7 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
 
         renderTaskRef.current = page.render(renderContext);
         await renderTaskRef.current.promise;
-        
+
         if (isMounted) {
           renderTaskRef.current = null;
           setIsRendering(false);
@@ -370,10 +362,10 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
         Math.pow(touch2.clientX - touch1.clientX, 2) +
         Math.pow(touch2.clientY - touch1.clientY, 2)
       );
-      
+
       const scaleChange = distance / touchStartRef.current.distance;
       const newScale = Math.max(0.5, Math.min(5, scale * scaleChange));
-      
+
       if (Math.abs(scaleChange - 1) > 0.1) {
         setScale(newScale);
         setFitToWidth(false);
@@ -523,7 +515,7 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
   }
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className={`fixed inset-0 bg-black flex flex-col z-50 pdf-viewer-container ${nightMode ? 'night-mode' : ''}`}
       onTouchStart={handleTouchStart}
@@ -531,9 +523,8 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
       onContextMenu={(e) => e.preventDefault()}
       onDragStart={(e) => e.preventDefault()}
     >
-      <div className={`bg-white border-b border-gray-200 px-4 py-2 sm:py-3 flex items-center justify-between transition-transform duration-300 ${
-        isFullscreen && !showControls ? '-translate-y-full' : 'translate-y-0'
-      }`}>
+      <div className={`bg-white border-b border-gray-200 px-4 py-2 sm:py-3 flex items-center justify-between transition-transform duration-300 ${isFullscreen && !showControls ? '-translate-y-full' : 'translate-y-0'
+        }`}>
         <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
           <h2 className="text-base sm:text-lg font-semibold text-gray-800 truncate">
             {title || 'PDF Document'}
@@ -542,7 +533,7 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
             Page {currentPage} of {totalPages}
           </span>
         </div>
-        
+
         <div className="flex items-center space-x-1 sm:space-x-2">
           <button
             onClick={() => setNightMode(!nightMode)}
@@ -551,7 +542,7 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
           >
             {nightMode ? <Eye size={18} /> : <EyeOff size={18} />}
           </button>
-          
+
           <button
             onClick={toggleFullscreen}
             className="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -559,7 +550,7 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
           >
             {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
           </button>
-          
+
           <button
             onClick={onClose}
             className="p-2 text-gray-600 hover:text-red-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -570,9 +561,8 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
         </div>
       </div>
 
-      <div className={`bg-white border-b border-gray-200 px-4 py-2 transition-transform duration-300 ${
-        isFullscreen && !showControls ? '-translate-y-full' : 'translate-y-0'
-      }`}>
+      <div className={`bg-white border-b border-gray-200 px-4 py-2 transition-transform duration-300 ${isFullscreen && !showControls ? '-translate-y-full' : 'translate-y-0'
+        }`}>
         <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4">
           <div className="flex items-center space-x-2">
             <button
@@ -583,7 +573,7 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
             >
               <ChevronLeft size={20} />
             </button>
-            
+
             <div className="flex items-center space-x-2">
               <input
                 type="number"
@@ -595,7 +585,7 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
               />
               <span className="text-xs sm:text-sm text-gray-500">{currentPage} / {totalPages}</span>
             </div>
-            
+
             <button
               onClick={goToNextPage}
               disabled={currentPage >= totalPages || isFlipping}
@@ -614,11 +604,11 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
             >
               <ZoomOut size={20} />
             </button>
-            
+
             <span className="text-sm text-gray-600 min-w-[50px] sm:min-w-[60px] text-center font-medium">
               {fitToWidth ? 'Fit' : Math.round(scale * 100) + '%'}
             </span>
-            
+
             <button
               onClick={zoomIn}
               className="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -626,21 +616,20 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
             >
               <ZoomIn size={20} />
             </button>
-            
+
             <div className="w-px h-6 bg-gray-300"></div>
-            
+
             <button
               onClick={toggleFitToWidth}
-              className={`px-2 sm:px-3 py-1 text-xs font-medium rounded transition-colors ${
-                fitToWidth 
-                  ? 'bg-blue-600 text-white' 
+              className={`px-2 sm:px-3 py-1 text-xs font-medium rounded transition-colors ${fitToWidth
+                  ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+                }`}
               title="Fit to Screen"
             >
               FIT
             </button>
-            
+
             <button
               onClick={resetZoom}
               className="px-2 sm:px-3 py-1 text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 rounded transition-colors"
@@ -654,13 +643,12 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
 
       <div className="flex-1 overflow-auto bg-gray-100 relative">
         <div className="min-h-full flex items-center justify-center p-2 sm:p-4" style={{ minWidth: 'fit-content' }}>
-          <div className={`relative transition-all duration-150 ease-in-out ${
-            isFlipping ? 'transform scale-95 opacity-50' : 'transform scale-100 opacity-100'
-          }`} style={{ 
-            minWidth: 'fit-content', 
-            minHeight: 'fit-content',
-            alignSelf: 'center'
-          }}>
+          <div className={`relative transition-all duration-150 ease-in-out ${isFlipping ? 'transform scale-95 opacity-50' : 'transform scale-100 opacity-100'
+            }`} style={{
+              minWidth: 'fit-content',
+              minHeight: 'fit-content',
+              alignSelf: 'center'
+            }}>
             <canvas
               ref={canvasRef}
               className="shadow-xl border border-gray-300 bg-white rounded-lg pdf-canvas"
@@ -677,7 +665,7 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
               onContextMenu={(e) => e.preventDefault()}
               onDragStart={(e) => e.preventDefault()}
             />
-            
+
             {isRendering && (
               <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center rounded-lg">
                 <div className="flex items-center space-x-3">
@@ -686,7 +674,7 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
                 </div>
               </div>
             )}
-            
+
             <div className="absolute inset-0 pointer-events-none select-none">
               <div className="absolute top-4 right-4 text-xs text-gray-400 opacity-30 font-mono">
                 SECURE VIEWER
@@ -699,9 +687,8 @@ const AdvancedPDFViewer = ({ pdfUrl, title, onClose }) => {
         </div>
       </div>
 
-      <div className={`bg-white border-t border-gray-200 px-4 py-2 transition-transform duration-300 ${
-        isFullscreen && !showControls ? 'translate-y-full' : 'translate-y-0'
-      }`}>
+      <div className={`bg-white border-t border-gray-200 px-4 py-2 transition-transform duration-300 ${isFullscreen && !showControls ? 'translate-y-full' : 'translate-y-0'
+        }`}>
         <div className="flex items-center justify-between text-xs sm:text-sm text-gray-500">
           <div className="hidden sm:block">
             Use arrow keys to navigate • +/- to zoom • F for fullscreen • ESC to close

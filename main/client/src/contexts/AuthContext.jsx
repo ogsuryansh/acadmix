@@ -21,14 +21,15 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await api.post('/auth/login', { email, password });
-      const { token, user } = response.data;
-      
-      localStorage.setItem('token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(user);
-      
-      toast.success('Login successful!');
-      navigate('/');
+      const { success, user } = response.data;
+
+      if (success) {
+        setUser(user);
+        toast.success('Login successful!');
+        navigate('/');
+      } else {
+        throw new Error('Login failed');
+      }
     } catch (error) {
       toast.error(error.response?.data?.error || 'Login failed');
       throw error;
@@ -38,29 +39,27 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password) => {
     try {
       const response = await api.post('/auth/register', { name, email, password });
-      const { token, user } = response.data;
-      
-      localStorage.setItem('token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(user);
-      
-      toast.success('Registration successful!');
-      navigate('/');
+      const { success, user } = response.data;
+
+      if (success) {
+        setUser(user);
+        toast.success('Registration successful!');
+        navigate('/');
+      } else {
+        throw new Error('Registration failed');
+      }
     } catch (error) {
       toast.error(error.response?.data?.error || 'Registration failed');
       throw error;
     }
   };
 
-  const googleLogin = async (token) => {
+  const googleLogin = async () => {
     try {
-      localStorage.setItem('token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
-      // Get user info
+      // Get user info from session
       const response = await api.get('/auth/me');
       setUser(response.data.user);
-      
+
       // Don't navigate here - let AuthCallback handle the navigation
     } catch (error) {
       toast.error('Google login failed');
@@ -68,58 +67,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('isAdmin');
-    delete api.defaults.headers.common['Authorization'];
-    setUser(null);
-    toast.success('Logged out successfully');
-    navigate('/');
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+      setUser(null);
+      toast.success('Logged out successfully');
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still clear local state even if API call fails
+      setUser(null);
+      navigate('/');
+    }
   };
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const isAdmin = localStorage.getItem('isAdmin');
-        
         console.log('🔍 AuthContext: Checking authentication state', {
-          hasToken: !!token,
-          isAdmin: isAdmin === 'true',
           pathname: window.location.pathname
         });
-        
-        if (token) {
-          // Set token in API headers
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          
-          if (isAdmin === 'true') {
-            console.log('👤 Setting admin user');
-            // For admin users, create a mock user object
-            setUser({
-              id: 'admin',
-              name: 'Admin',
-              email: 'admin@acadmix.com',
-              role: 'admin'
-            });
-            setLoading(false);
-          } else {
-            console.log('🔍 Verifying token with /auth/me');
-            // Verify token and get user info for regular users
-            const response = await api.get('/auth/me');
-            console.log('✅ Token verified, user loaded:', response.data.user);
-            setUser(response.data.user);
-            setLoading(false);
-          }
-        } else {
-          console.log('🔍 No token found, user not authenticated');
-          setLoading(false);
-        }
+
+        // Check if user is authenticated via session
+        const response = await api.get('/auth/me');
+        console.log('✅ User authenticated:', response.data.user);
+        setUser(response.data.user);
+        setLoading(false);
       } catch (error) {
-        console.error('❌ Auth check failed:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('isAdmin');
-        delete api.defaults.headers.common['Authorization'];
+        console.log('🔍 No authenticated user found');
+        setUser(null);
         setLoading(false);
       }
     };

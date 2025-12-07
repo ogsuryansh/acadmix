@@ -3,21 +3,50 @@ const QRCode = require("qrcode");
 const Book = require("../models/Book");
 const Payment = require("../models/Payment");
 const User = require("../models/User");
-const authenticateToken = require("../middleware/authenticateToken");
+
+// Optional imports with fallback
+let Config, logger;
+try {
+  Config = require("../models/Config");
+  logger = require("../utils/logger");
+} catch (err) {
+  // Fallback if Config or logger not available
+  logger = {
+    info: (...args) => console.log('[INFO]', ...args),
+    warn: (...args) => console.warn('[WARN]', ...args),
+    error: (...args) => console.error('[ERROR]', ...args),
+    debug: (...args) => console.log('[DEBUG]', ...args)
+  };
+}
 
 const router = express.Router();
 
-// CORS middleware for payment routes
-router.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://acadmix.shop');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  next();
-});
+// Authentication middleware
+const requireAuth = (req, res, next) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ success: false, error: "Authentication required" });
+};
 
-// Get payment configuration
-const getPaymentConfig = () => {
+const requireAdmin = (req, res, next) => {
+  if (req.isAuthenticated() && req.user.role === 'admin') {
+    return next();
+  }
+  res.status(403).json({ success: false, error: "Admin access required" });
+};
+
+// Get payment configuration with fallback
+const getPaymentConfig = async () => {
+  try {
+    if (Config && Config.getPaymentConfig) {
+      return await Config.getPaymentConfig();
+    }
+  } catch (err) {
+    logger.warn ? logger.warn('Config model not available, using env vars') : console.warn('Config model not available, using env vars');
+  }
+
+  // Fallback to environment variables
   return {
     upiId: process.env.UPI_ID || 'anshgiri@fam',
     payeeName: process.env.PAYEE_NAME || 'Acadmix',
@@ -35,20 +64,19 @@ const generateQRCode = async (amount, upiId, payeeName) => {
 };
 
 // Get payment data for a book
-router.get("/payment/:bookId", authenticateToken, async (req, res) => {
+router.get("/payment/:bookId", requireAuth, async (req, res) => {
   try {
-    console.log("🔍 Payment request for bookId:", req.params.bookId);
-    console.log("👤 User:", req.user.id);
-    
+    logger.debug("Payment request for bookId", { bookId: req.params.bookId, userId: req.user._id });
+
     const book = await Book.findById(req.params.bookId);
     if (!book) {
-      console.log("❌ Book not found:", req.params.bookId);
-      return res.status(404).json({ error: "Book not found" });
+      logger.warn("Book not found", { bookId: req.params.bookId });
+      return res.status(404).json({ success: false, error: "Book not found" });
     }
 
-    console.log("📚 Book found:", book.title);
-    const config = getPaymentConfig();
-    
+    logger.debug("Book found", { title: book.title });
+    const config = await getPaymentConfig();
+
     // Calculate the amount to charge
     let amount;
     if (book.isFree) {
@@ -63,29 +91,30 @@ router.get("/payment/:bookId", authenticateToken, async (req, res) => {
       // If no valid price, set to 0 (free)
       amount = 0;
     }
-    
-    console.log("💰 Amount calculated:", amount);
-    
+
+    logger.debug("Amount calculated", { amount });
+
     // Generate QR code
     let qrCode = null;
     try {
       qrCode = await generateQRCode(amount, config.upiId, config.payeeName);
-      console.log("✅ QR code generated successfully");
+      logger.debug("QR code generated successfully");
     } catch (qrError) {
-      console.error("❌ QR code generation failed:", qrError);
+      logger.error("QR code generation failed", { error: qrError.message });
       // Continue without QR code if generation fails
     }
-    
+
     // Check if user already has a pending payment for this book
     const existingPayment = await Payment.findOne({
-      user: req.user.id,
+      user: req.user._id,
       book: req.params.bookId,
       status: "pending"
     });
 
-    console.log("💳 Existing payment:", existingPayment ? "Found" : "None");
+    logger.debug("Existing payment", { found: !!existingPayment });
 
     res.json({
+      success: true,
       book,
       qrCode,
       upiId: config.upiId,
@@ -94,8 +123,9 @@ router.get("/payment/:bookId", authenticateToken, async (req, res) => {
       existingPayment
     });
   } catch (err) {
-    console.error("❌ Payment API error:", err);
-    res.status(500).json({ 
+    logger.error("Payment API error", { error: err.message, stack: err.stack });
+    res.status(500).json({
+      success: false,
       error: "Failed to generate payment data",
       message: err.message,
       timestamp: new Date().toISOString()
@@ -104,34 +134,30 @@ router.get("/payment/:bookId", authenticateToken, async (req, res) => {
 });
 
 // Submit payment
-router.post("/payment/submit", authenticateToken, async (req, res) => {
+router.post("/payment/submit", requireAuth, async (req, res) => {
   try {
-    console.log('🔍 Payment submission request:', {
-      user: req.user,
-      body: req.body,
-      timestamp: new Date().toISOString()
-    });
-    
+    logger.info("Payment submission request", { userId: req.user._id, bookId: req.body.bookId });
+
     const { utr, bookId, amount } = req.body;
-    
+
     if (!utr || !bookId || !amount) {
-      return res.status(400).json({ error: "UTR number, book ID, and amount are required" });
+      return res.status(400).json({ success: false, error: "UTR number, book ID, and amount are required" });
     }
 
     // Check if payment already exists
     const existingPayment = await Payment.findOne({
-      user: req.user.id,
+      user: req.user._id,
       book: bookId,
       status: { $in: ["pending", "approved"] }
     });
 
     if (existingPayment) {
-      return res.status(400).json({ error: "Payment already exists for this book" });
+      return res.status(400).json({ success: false, error: "Payment already exists for this book" });
     }
 
     const book = await Book.findById(bookId);
     if (!book) {
-      return res.status(404).json({ error: "Book not found" });
+      return res.status(404).json({ success: false, error: "Book not found" });
     }
 
     // Validate the payment amount matches the book price
@@ -147,18 +173,29 @@ router.post("/payment/submit", authenticateToken, async (req, res) => {
     }
 
     if (parseFloat(amount) !== expectedAmount) {
-      return res.status(400).json({ 
+      return res.status(400).json({
+        success: false,
         error: `Payment amount mismatch. Expected: ₹${expectedAmount}, Received: ₹${amount}`,
         expectedAmount,
         receivedAmount: amount
       });
     }
 
-    const config = getPaymentConfig();
+    const config = await getPaymentConfig();
     const qrCode = await generateQRCode(amount, config.upiId, config.payeeName);
 
+    // Check if UTR already exists
+    const existingUTR = await Payment.findOne({ utr });
+    if (existingUTR) {
+      logger.warn("Duplicate UTR attempt", { utr, userId: req.user._id });
+      return res.status(400).json({
+        success: false,
+        error: "This UTR number has already been used. Please enter a unique transaction reference number."
+      });
+    }
+
     const payment = await Payment.create({
-      user: req.user.id,
+      user: req.user._id,
       book: bookId,
       utr,
       amount,
@@ -169,175 +206,182 @@ router.post("/payment/submit", authenticateToken, async (req, res) => {
       payeeName: config.payeeName
     });
 
-    res.json({ 
+    logger.info("Payment submitted successfully", { paymentId: payment._id });
+
+    res.json({
+      success: true,
       message: "Payment submitted successfully",
       paymentId: payment._id
     });
   } catch (err) {
-    console.error("❌ Payment submission error:", err);
-    res.status(500).json({ error: "Payment submission failed" });
+    // Handle duplicate key error
+    if (err.code === 11000) {
+      logger.warn("Duplicate key error in payment submission", { error: err.message });
+      return res.status(400).json({
+        success: false,
+        error: "This UTR number has already been used. Please use a different transaction reference number."
+      });
+    }
+
+    logger.error("Payment submission error", { error: err.message, stack: err.stack });
+    res.status(500).json({
+      success: false,
+      error: "Payment submission failed",
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
 // Get user's payment history
-router.get("/payments/history", authenticateToken, async (req, res) => {
+router.get("/payments/history", requireAuth, async (req, res) => {
   try {
-    const payments = await Payment.find({ user: req.user.id })
+    const payments = await Payment.find({ user: req.user._id })
       .populate('book', 'title image price priceDiscounted category')
       .sort({ submittedAt: -1 });
 
-    res.json({ payments });
+    res.json({ success: true, payments });
   } catch (err) {
-    console.error("❌ Payment history error:", err);
-    res.status(500).json({ error: "Failed to fetch payment history" });
+    logger.error("Payment history error", { error: err.message });
+    res.status(500).json({ success: false, error: "Failed to fetch payment history" });
   }
 });
 
 // Get payment status
-router.get("/payment/:paymentId/status", authenticateToken, async (req, res) => {
+router.get("/payment/:paymentId/status", requireAuth, async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.paymentId)
       .populate('book', 'title image price priceDiscounted category')
       .populate('approvedBy', 'name');
 
     if (!payment) {
-      return res.status(404).json({ error: "Payment not found" });
+      return res.status(404).json({ success: false, error: "Payment not found" });
     }
 
     // Check if user owns this payment
-    if (payment.user.toString() !== req.user.id.toString()) {
-      return res.status(403).json({ error: "Access denied" });
+    if (payment.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, error: "Access denied" });
     }
 
-    res.json({ payment });
+    res.json({ success: true, payment });
   } catch (err) {
-    console.error("❌ Payment status error:", err);
-    res.status(500).json({ error: "Failed to fetch payment status" });
+    logger.error("Payment status error", { error: err.message });
+    res.status(500).json({ success: false, error: "Failed to fetch payment status" });
   }
 });
 
 // Admin: Get all pending payments
-router.get("/admin/payments/pending", authenticateToken, async (req, res) => {
+router.get("/admin/payments/pending", requireAdmin, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: "Admin access required" });
-    }
-
     const payments = await Payment.find({ status: "pending" })
       .populate('user', 'name email')
       .populate('book', 'title image price priceDiscounted category')
       .sort({ submittedAt: -1 });
 
-    res.json({ payments });
+    res.json({ success: true, payments });
   } catch (err) {
-    console.error("❌ Admin payments error:", err);
-    res.status(500).json({ error: "Failed to fetch pending payments" });
+    logger.error("Admin payments error", { error: err.message });
+    res.status(500).json({ success: false, error: "Failed to fetch pending payments" });
   }
 });
 
 // Admin: Approve payment
-router.put("/admin/payment/:paymentId/approve", authenticateToken, async (req, res) => {
+router.put("/admin/payment/:paymentId/approve", requireAdmin, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: "Admin access required" });
-    }
-
     const { notes } = req.body;
     const payment = await Payment.findById(req.params.paymentId);
 
     if (!payment) {
-      return res.status(404).json({ error: "Payment not found" });
+      return res.status(404).json({ success: false, error: "Payment not found" });
     }
 
     if (payment.status !== "pending") {
-      return res.status(400).json({ error: "Payment is not pending" });
+      return res.status(400).json({ success: false, error: "Payment is not pending" });
     }
 
     payment.status = "approved";
     payment.approvedAt = new Date();
-    payment.approvedBy = req.user.id;
+    payment.approvedBy = req.user._id;
     payment.notes = notes;
 
     await payment.save();
 
-    res.json({ 
+    logger.info("Payment approved", { paymentId: payment._id, approvedBy: req.user._id });
+
+    res.json({
+      success: true,
       message: "Payment approved successfully",
       payment
     });
   } catch (err) {
-    console.error("❌ Payment approval error:", err);
-    res.status(500).json({ error: "Failed to approve payment" });
+    logger.error("Payment approval error", { error: err.message });
+    res.status(500).json({ success: false, error: "Failed to approve payment" });
   }
 });
 
 // Admin: Reject payment
-router.put("/admin/payment/:paymentId/reject", authenticateToken, async (req, res) => {
+router.put("/admin/payment/:paymentId/reject", requireAdmin, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: "Admin access required" });
-    }
-
     const { rejectionReason } = req.body;
     const payment = await Payment.findById(req.params.paymentId);
 
     if (!payment) {
-      return res.status(404).json({ error: "Payment not found" });
+      return res.status(404).json({ success: false, error: "Payment not found" });
     }
 
     if (payment.status !== "pending") {
-      return res.status(400).json({ error: "Payment is not pending" });
+      return res.status(400).json({ success: false, error: "Payment is not pending" });
     }
 
     payment.status = "rejected";
+    payment.rejectedAt = new Date(); // FIX: Added missing rejectedAt timestamp
     payment.rejectionReason = rejectionReason;
 
     await payment.save();
 
-    res.json({ 
+    logger.info("Payment rejected", { paymentId: payment._id, reason: rejectionReason });
+
+    res.json({
+      success: true,
       message: "Payment rejected successfully",
       payment
     });
   } catch (err) {
-    console.error("❌ Payment rejection error:", err);
-    res.status(500).json({ error: "Failed to reject payment" });
+    logger.error("Payment rejection error", { error: err.message });
+    res.status(500).json({ success: false, error: "Failed to reject payment" });
   }
 });
 
 // Admin: Get payment configuration
-router.get("/admin/payment-config", authenticateToken, async (req, res) => {
+router.get("/admin/payment-config", requireAdmin, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: "Admin access required" });
-    }
-
-    res.json({ config: getPaymentConfig() });
+    const config = await getPaymentConfig();
+    res.json({ success: true, config });
   } catch (err) {
-    console.error("❌ Payment config fetch error:", err);
-    res.status(500).json({ error: "Failed to fetch payment configuration" });
+    logger.error("Payment config fetch error", { error: err.message });
+    res.status(500).json({ success: false, error: "Failed to fetch payment configuration" });
   }
 });
 
 // Admin: Update payment configuration
-router.put("/admin/payment-config", authenticateToken, async (req, res) => {
+router.put("/admin/payment-config", requireAdmin, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: "Admin access required" });
-    }
-
     const { upiId, payeeName, bankName } = req.body;
-    
-    // Update environment variables (you might want to store these in a database instead)
-    if (upiId) process.env.UPI_ID = upiId;
-    if (payeeName) process.env.PAYEE_NAME = payeeName;
-    if (bankName) process.env.BANK_NAME = bankName;
 
-    res.json({ 
+    // Store configuration in database instead of mutating environment
+    await Config.setPaymentConfig({ upiId, payeeName, bankName }, req.user._id);
+
+    const updatedConfig = await getPaymentConfig();
+
+    logger.info("Payment configuration updated", { updatedBy: req.user._id });
+
+    res.json({
+      success: true,
       message: "Payment configuration updated successfully",
-      config: getPaymentConfig()
+      config: updatedConfig
     });
   } catch (err) {
-    console.error("❌ Payment config update error:", err);
-    res.status(500).json({ error: "Failed to update payment configuration" });
+    logger.error("Payment config update error", { error: err.message });
+    res.status(500).json({ success: false, error: "Failed to update payment configuration" });
   }
 });
 

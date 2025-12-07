@@ -2,7 +2,6 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
@@ -10,9 +9,29 @@ const session = require("express-session");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
 
+// Import fetch for Node.js
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
 // Import routes
 const paymentRoutes = require("./routes/payment");
 const adminConfig = require("./config/admin");
+const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Configure Multer (Memory Storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
+});
 
 const app = express();
 
@@ -28,44 +47,42 @@ const limiter = rateLimit({
 app.use("/api/", limiter);
 
 // CORS configuration
-const allowedOrigins = [
-  "https://acadmix.shop",
-  "https://www.acadmix.shop",
-  "https://api.acadmix.shop",
-  "http://localhost:3000",
-  "http://localhost:5173",
-  "http://127.0.0.1:5500",
-  "http://localhost:5000",
-  "http://localhost:3001",
-];
+const getAllowedOrigins = () => {
+  const origins = process.env.ALLOWED_ORIGINS?.split(',') || [];
+  if (process.env.NODE_ENV === 'development') {
+    origins.push('http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5500');
+  }
+  return origins;
+};
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-    exposedHeaders: ['Content-Range', 'X-Content-Range'],
-    maxAge: 86400
-  })
-);
+app.use(cors({
+  origin: function (origin, callback) {
+    const allowedOrigins = getAllowedOrigins();
 
+    // Allow requests with no origin (like mobile apps or curl requests) in development
+    if (!origin && process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log(`🚫 CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'X-Requested-With', 'Accept', 'Origin', 'Authorization'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400
+}));
+
+// Handle preflight requests globally
 app.options('*', cors());
 
-// Global debugging and CORS middleware
+// Global debugging middleware
 app.use((req, res, next) => {
-  // Add CORS headers for all routes
-  res.setHeader('Access-Control-Allow-Origin', 'https://acadmix.shop');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  
   // Debug logging
   console.log(`🌐 [${new Date().toISOString()}] ${req.method} ${req.path} - Origin: ${req.headers.origin || 'unknown'}`);
   console.log(`🔍 Query params:`, req.query);
@@ -74,19 +91,13 @@ app.use((req, res, next) => {
     'content-type': req.headers['content-type'],
     'user-agent': req.headers['user-agent']?.substring(0, 50) + '...'
   });
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    console.log(`✅ Preflight request handled for ${req.path}`);
-    return res.status(200).end();
-  }
-  
+
   next();
 });
 
 // Body parsers
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // MongoDB connection with lazy loading
 let mongoConnection = null;
@@ -96,7 +107,7 @@ async function connectToDB() {
   if (mongoConnection) {
     return mongoConnection;
   }
-  
+
   if (!mongoConnectionPromise) {
     mongoConnectionPromise = mongoose
       .connect(process.env.MONGO_URI, {
@@ -117,7 +128,7 @@ async function connectToDB() {
         throw error;
       });
   }
-  
+
   try {
     mongoConnection = await mongoConnectionPromise;
     return mongoConnection;
@@ -191,7 +202,7 @@ function initializeModels() {
       models.Payment = mongoose.model("Payment", paymentSchema);
     }
   }
-  
+
   return models;
 }
 
@@ -214,11 +225,27 @@ function setupSessionStore() {
   }
 }
 
+// Validate required environment variables
+const validateEnv = () => {
+  const required = ['SESSION_SECRET', 'MONGO_URI'];
+  const missing = required.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+};
+
+try {
+  validateEnv();
+} catch (error) {
+  console.error('❌ Environment validation failed:', error.message);
+  process.exit(1);
+}
+
 app.use((req, res, next) => {
   try {
     setupSessionStore();
     session({
-      secret: process.env.SESSION_SECRET || "fallback-secret",
+      secret: process.env.SESSION_SECRET,
       resave: false,
       saveUninitialized: false,
       store: sessionStore,
@@ -226,6 +253,7 @@ app.use((req, res, next) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       },
     })(req, res, next);
   } catch (error) {
@@ -260,17 +288,17 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         await connectToDB();
-        
+
         // Add timeout to database operations
         const findOptions = { maxTimeMS: 5000 };
-        
+
         let user = await User.findOne({ googleId: profile.id }).maxTimeMS(5000);
 
         if (!user) {
           const existingUser = await User.findOne({
             email: profile.emails?.[0]?.value,
           }).maxTimeMS(5000);
-          
+
           if (existingUser) {
             user = await User.findByIdAndUpdate(
               existingUser._id,
@@ -311,59 +339,24 @@ passport.use(
   )
 );
 
-// JWT middleware
-const generateToken = (user) => {
-  return jwt.sign(
-    {
-      id: user._id,
-      email: user.email,
-      name: user.name,
-      role: user.role || "user",
-    },
-    process.env.JWT_SECRET || "fallback-jwt-secret",
-    { expiresIn: "7d" }
-  );
+// Authentication middleware
+const requireAuth = (req, res, next) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ error: "Authentication required" });
 };
 
-const authenticateToken = async (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({ error: "Access token required" });
+const requireAdmin = (req, res, next) => {
+  if (req.isAuthenticated() && req.user.role === 'admin') {
+    return next();
   }
+  res.status(403).json({ error: "Admin access required" });
+};
 
-  try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "fallback-jwt-secret"
-    );
-
-    if (decoded.admin && decoded.role === "admin") {
-      req.user = decoded;
-      return next();
-    }
-
-    await connectToDB();
-    const user = await User.findById(decoded.id).select("-password");
-    if (!user) {
-      return res.status(401).json({ error: "User not found" });
-    }
-
-    if (!user.isActive) {
-      return res.status(403).json({ error: "Account is deactivated" });
-    }
-
-    req.user = { ...decoded, role: user.role };
-    next();
-  } catch (err) {
-    if (err.name === "JsonWebTokenError") {
-      return res.status(403).json({ error: "Invalid token" });
-    } else if (err.name === "TokenExpiredError") {
-      return res.status(403).json({ error: "Token expired" });
-    }
-    return res.status(403).json({ error: "Invalid or expired token" });
-  }
+// Helper function to get current user
+const getCurrentUser = (req) => {
+  return req.isAuthenticated() ? req.user : null;
 };
 
 // Basic endpoints
@@ -386,8 +379,8 @@ app.get("/api/health", (req, res) => {
 });
 
 app.get("/api/ping", (req, res) => {
-  res.json({ 
-    pong: true, 
+  res.json({
+    pong: true,
     timestamp: new Date().toISOString()
   });
 });
@@ -396,10 +389,10 @@ app.get("/api/ping", (req, res) => {
 app.get("/api/test", async (req, res) => {
   try {
     await connectToDB();
-    
+
     // Test a simple database operation
     const userCount = await User.countDocuments().maxTimeMS(3000);
-    
+
     res.json({
       message: "API is working",
       database: "Connected successfully",
@@ -443,29 +436,17 @@ app.get(
   },
   async (req, res) => {
     try {
-      const token = generateToken(req.user);
-      
-      // Determine the correct frontend URL based on environment
-      let frontendOrigin;
-      if (process.env.NODE_ENV === "production" || req.get("host")?.includes("vercel.app") || req.get("host")?.includes("acadmix.shop")) {
-        frontendOrigin = "https://acadmix.shop";
-      } else {
-        frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
-      }
-      
-      const redirectUrl = `${frontendOrigin}/auth-callback?token=${token}`;
-      res.redirect(redirectUrl);
+      // User is automatically logged in via passport
+      const frontendOrigin = process.env.FRONTEND_ORIGIN ||
+        (process.env.NODE_ENV === "production" ? "https://acadmix.shop" : "http://localhost:5173");
+
+      res.redirect(`${frontendOrigin}/auth-callback`);
     } catch (err) {
-      // Determine the correct frontend URL for error redirect
-      let frontendOrigin;
-      if (process.env.NODE_ENV === "production" || req.get("host")?.includes("vercel.app") || req.get("host")?.includes("acadmix.shop")) {
-        frontendOrigin = "https://acadmix.shop";
-      } else {
-        frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
-      }
-      
-      const errorUrl = `${frontendOrigin}/login?error=oauth_failed`;
-      res.redirect(errorUrl);
+      console.error('OAuth callback error:', err);
+      const frontendOrigin = process.env.FRONTEND_ORIGIN ||
+        (process.env.NODE_ENV === "production" ? "https://acadmix.shop" : "http://localhost:5173");
+
+      res.redirect(`${frontendOrigin}/login?error=oauth_failed`);
     }
   }
 );
@@ -494,18 +475,25 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    const token = generateToken(user);
-    res.json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        photo: user.photo,
-      },
+    // Log user in with passport
+    req.login(user, (err) => {
+      if (err) {
+        return res.status(500).json({ error: "Login failed" });
+      }
+
+      res.json({
+        success: true,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          photo: user.photo,
+        },
+      });
     });
   } catch (err) {
+    console.error('Login error:', err);
     res.status(500).json({ error: "Login failed" });
   }
 });
@@ -523,6 +511,12 @@ app.post("/api/auth/register", async (req, res) => {
       return res.status(400).json({ error: "Password must be at least 6 characters long" });
     }
 
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+
     const existingUser = await User.findOne({ email }).maxTimeMS(5000);
     if (existingUser) {
       return res.status(400).json({ error: "User with this email already exists" });
@@ -536,17 +530,24 @@ app.post("/api/auth/register", async (req, res) => {
       role: "user",
     });
 
-    const token = generateToken(user);
-    res.status(201).json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+    // Log user in with passport
+    req.login(user, (err) => {
+      if (err) {
+        return res.status(500).json({ error: "Registration failed" });
+      }
+
+      res.status(201).json({
+        success: true,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      });
     });
   } catch (err) {
+    console.error('Registration error:', err);
     if (err.code === 11000) {
       return res.status(400).json({ error: "User with this email already exists" });
     }
@@ -554,50 +555,154 @@ app.post("/api/auth/register", async (req, res) => {
   }
 });
 
-app.get("/api/auth/me", authenticateToken, async (req, res) => {
+app.get("/api/auth/me", requireAuth, async (req, res) => {
   try {
     await connectToDB();
-    const user = await User.findById(req.user.id).select("-password").maxTimeMS(5000);
+    const user = await User.findById(req.user._id).select("-password").maxTimeMS(5000);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
     res.json({ user });
   } catch (err) {
+    console.error('Get user profile error:', err);
     res.status(500).json({ error: "Failed to get user profile" });
   }
+});
+
+app.post("/api/auth/logout", (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      return res.status(500).json({ error: "Logout failed" });
+    }
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      res.clearCookie('connect.sid');
+      res.json({ success: true, message: "Logged out successfully" });
+    });
+  });
 });
 
 // PDF Proxy endpoint
 app.get("/api/pdf-proxy", async (req, res) => {
   try {
     const { url } = req.query;
-    
+
     if (!url) {
       return res.status(400).json({ error: "URL parameter is required" });
     }
 
     console.log(`🔍 [PDF PROXY] Fetching PDF from: ${url}`);
-    
-    const response = await fetch(url);
-    
+
+    // Check if this is a Cloudinary URL and convert it if needed
+    let fetchUrl = url;
+    if (url.includes('cloudinary.com') && url.includes('/raw/upload/')) {
+      // Extract the public ID and try different URL formats
+      const match = url.match(/\/upload\/(?:v\d+\/)?(.+)$/);
+      if (match && match[1]) {
+        const publicId = match[1].replace(/\.(pdf|PDF)$/, ''); // Remove .pdf extension if present
+        console.log(`📝 [PDF PROXY] Extracted public ID: ${publicId}`);
+
+        // Try to generate a signed URL for better access
+        try {
+          const signedUrl = cloudinary.url(publicId, {
+            resource_type: 'raw',
+            type: 'upload',
+            secure: true,
+            sign_url: false // Try without signing first
+          });
+          console.log(`🔗 [PDF PROXY] Generated Cloudinary URL: ${signedUrl}`);
+          fetchUrl = signedUrl;
+        } catch (urlErr) {
+          console.warn(`⚠️ [PDF PROXY] Could not generate Cloudinary URL, using original:`, urlErr.message);
+        }
+      }
+    }
+
+    // Forward headers to bypass 401/403 errors if the source requires auth or specific headers
+    // Do not forward all headers as they might include backend-specific auth tokens
+    // that cause issues with external services like Cloudinary
+    const headers = {
+      'User-Agent': req.headers['user-agent'] || 'Acadmix-Backend'
+    };
+
+    console.log(`🌐 [PDF PROXY] Attempting fetch from: ${fetchUrl}`);
+
+    let response = await fetch(fetchUrl, { headers });
+
+    console.log(`📊 [PDF PROXY] Response status: ${response.status} ${response.statusText}`);
+
+    // Auto-fix for private Cloudinary resources (handle 401/403/404)
+    if ((response.status === 401 || response.status === 403 || response.status === 404) && url.includes('cloudinary.com')) {
+      console.log(`⚠️ [PDF PROXY] ${response.status} from Cloudinary. Attempting different approaches...`);
+      try {
+        // Extract public ID from raw/upload URL
+        // Format: /raw/upload/v<version>/<public_id> or /raw/upload/<public_id>
+        const match = url.match(/\/upload\/(?:v\d+\/)?(.+)$/);
+        if (match && match[1]) {
+          const publicIdWithExt = match[1];
+          const publicId = publicIdWithExt.replace(/\.(pdf|PDF)$/, '');
+          console.log(`📝 [PDF PROXY] Public ID (cleaned): ${publicId}`);
+
+          // Try 1: Authenticated URL
+          try {
+            const signedUrl = cloudinary.url(publicId, {
+              resource_type: 'raw',
+              type: 'authenticated',
+              sign_url: true,
+              secure: true
+            });
+
+            console.log(`🔄 [PDF PROXY] Trying authenticated URL...`);
+            response = await fetch(signedUrl, { headers });
+            console.log(`📊 [PDF PROXY] Authenticated response: ${response.status}`);
+          } catch (err) {
+            console.error('❌ [PDF PROXY] Authenticated URL failed:', err.message);
+          }
+
+          // Try 2: If still failing, try upload type with .pdf extension
+          if (!response.ok) {
+            const urlWithPdf = cloudinary.url(publicId + '.pdf', {
+              resource_type: 'raw',
+              type: 'upload',
+              secure: true
+            });
+            console.log(`🔄 [PDF PROXY] Trying with .pdf extension: ${urlWithPdf}`);
+            response = await fetch(urlWithPdf, { headers });
+            console.log(`📊 [PDF PROXY] With extension response: ${response.status}`);
+          }
+
+          // Try 3: Direct URL construction
+          if (!response.ok) {
+            const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+            const directUrl = `https://res.cloudinary.com/${cloudName}/raw/upload/${publicId}`;
+            console.log(`🔄 [PDF PROXY] Trying direct URL: ${directUrl}`);
+            response = await fetch(directUrl, { headers });
+            console.log(`📊 [PDF PROXY] Direct URL response: ${response.status}`);
+          }
+        }
+      } catch (err) {
+        console.error('❌ [PDF PROXY] All retry attempts failed:', err.message);
+      }
+    }
+
     if (!response.ok) {
       console.error(`❌ [PDF PROXY] Failed to fetch PDF: ${response.status} ${response.statusText}`);
-      return res.status(response.status).json({ 
+      console.error(`📍 [PDF PROXY] URL was: ${fetchUrl}`);
+      return res.status(response.status).json({
         error: "Failed to fetch PDF",
         status: response.status,
-        statusText: response.statusText
+        statusText: response.statusText,
+        url: fetchUrl
       });
     }
 
     const contentType = response.headers.get('content-type');
     const contentLength = response.headers.get('content-length');
 
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Origin', 'https://acadmix.shop');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    
+    console.log(`📦 [PDF PROXY] Content-Type: ${contentType}, Content-Length: ${contentLength}`);
+
     // Set PDF headers
     res.setHeader('Content-Type', contentType || 'application/pdf');
     if (contentLength) {
@@ -607,46 +712,26 @@ app.get("/api/pdf-proxy", async (req, res) => {
 
     // Stream the PDF
     response.body.pipe(res);
-    
+
     console.log(`✅ [PDF PROXY] Successfully streaming PDF`);
   } catch (error) {
     console.error(`❌ [PDF PROXY] Error:`, error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Failed to proxy PDF",
       message: error.message
     });
   }
 });
 
-// Test endpoint for CORS
-app.get("/api/test", (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://acadmix.shop');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.json({ message: "CORS test successful", timestamp: new Date().toISOString() });
-});
 
-// Books API OPTIONS handler
-app.options("/api/books", (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://acadmix.shop');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.status(200).end();
-});
 
-// Books API with explicit CORS handling
+
+// Books API
 app.get("/api/books", async (req, res) => {
-  // Ensure CORS headers are set
-  res.setHeader('Access-Control-Allow-Origin', 'https://acadmix.shop');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  
+
   try {
     console.log(`📚 [BOOKS API] Fetching books with section: ${req.query.section || 'all'}`);
-    
+
     await connectToDB();
     const { section } = req.query;
     let query = {};
@@ -658,35 +743,28 @@ app.get("/api/books", async (req, res) => {
     console.log(`🔍 [BOOKS API] Query:`, query);
     const books = await Book.find(query).sort({ createdAt: -1 });
     console.log(`📖 [BOOKS API] Found ${books.length} books`);
-    
-    const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1];
+
+    const user = getCurrentUser(req);
     let userId = null;
     let isAdmin = false;
     let payments = [];
 
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-jwt-secret");
-        userId = decoded.id;
-        isAdmin = decoded.role === "admin" || decoded.admin;
-        console.log(`👤 [BOOKS API] User authenticated - ID: ${userId}, Admin: ${isAdmin}`);
-        
-        if (userId && !isAdmin) {
-          try {
-            payments = await Payment.find({ user: userId }).lean();
-            console.log(`💳 [BOOKS API] Found ${payments.length} payments for user`);
-          } catch (paymentError) {
-            console.error(`❌ [BOOKS API] Payment lookup failed:`, paymentError);
-            payments = []; // Continue with empty payments array
-          }
+    if (user) {
+      userId = user._id;
+      isAdmin = user.role === "admin";
+      console.log(`👤 [BOOKS API] User authenticated - ID: ${userId}, Admin: ${isAdmin}`);
+
+      if (userId && !isAdmin) {
+        try {
+          payments = await Payment.find({ user: userId }).lean();
+          console.log(`💳 [BOOKS API] Found ${payments.length} payments for user`);
+        } catch (paymentError) {
+          console.error(`❌ [BOOKS API] Payment lookup failed:`, paymentError);
+          payments = []; // Continue with empty payments array
         }
-      } catch (err) {
-        console.log(`⚠️ [BOOKS API] Token verification failed:`, err.message);
-        // Token is invalid, continue without user context
       }
     } else {
-      console.log(`👤 [BOOKS API] No authentication token provided`);
+      console.log(`👤 [BOOKS API] No authenticated user`);
     }
 
     const booksWithAccess = books.map((book) => {
@@ -729,7 +807,7 @@ app.get("/api/books", async (req, res) => {
     });
 
     console.log(`✅ [BOOKS API] Successfully processed ${booksWithAccess.length} books`);
-    
+
     // Debug: Log price information for first few books
     booksWithAccess.slice(0, 3).forEach((book, index) => {
       console.log(`💰 [BOOKS API] Book ${index + 1} price debug:`, {
@@ -743,12 +821,12 @@ app.get("/api/books", async (req, res) => {
         hasDiscount: book.priceDiscounted && book.priceDiscounted !== book.price
       });
     });
-    
+
     res.json(booksWithAccess);
   } catch (err) {
     console.error(`❌ [BOOKS API] Error:`, err);
-    res.status(500).json({ 
-      error: "Internal Server Error", 
+    res.status(500).json({
+      error: "Internal Server Error",
       message: err.message,
       timestamp: new Date().toISOString()
     });
@@ -759,17 +837,17 @@ app.get("/api/books/:id", async (req, res) => {
   try {
     await connectToDB();
     const { id } = req.params;
-    
+
     if (!id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({ error: "Invalid book ID format" });
     }
-    
+
     const book = await Book.findById(id);
-    
+
     if (!book) {
       return res.status(404).json({ error: "Book not found" });
     }
-    
+
     const bookData = {
       _id: book._id,
       title: book.title,
@@ -785,7 +863,7 @@ app.get("/api/books/:id", async (req, res) => {
       createdAt: book.createdAt,
       updatedAt: book.updatedAt
     };
-    
+
     res.json(bookData);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch book" });
@@ -796,21 +874,21 @@ app.post("/api/books/:id/share", async (req, res) => {
   try {
     await connectToDB();
     const { id } = req.params;
-    
+
     if (!id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({ error: "Invalid book ID format" });
     }
-    
+
     const book = await Book.findByIdAndUpdate(
       id,
       { $inc: { shareCount: 1 } },
       { new: true }
     );
-    
+
     if (!book) {
       return res.status(404).json({ error: "Book not found" });
     }
-    
+
     res.json({ success: true, shareCount: book.shareCount });
   } catch (err) {
     res.status(500).json({ error: "Failed to update share count" });
@@ -818,16 +896,16 @@ app.post("/api/books/:id/share", async (req, res) => {
 });
 
 // User's purchased books
-app.get("/api/user/purchased-books", authenticateToken, async (req, res) => {
+app.get("/api/user/purchased-books", requireAuth, async (req, res) => {
   try {
     console.log(`🔍 [PURCHASED BOOKS] Request from user:`, {
-      userId: req.user.id,
+      userId: req.user._id,
       userRole: req.user.role,
       isAdmin: req.user.role === "admin"
     });
 
     await connectToDB();
-    const userId = req.user.id;
+    const userId = req.user._id;
     const isAdmin = req.user.role === "admin";
 
     if (isAdmin) {
@@ -854,9 +932,9 @@ app.get("/api/user/purchased-books", authenticateToken, async (req, res) => {
     }
 
     console.log(`🔍 [PURCHASED BOOKS] Fetching approved payments for user: ${userId}`);
-    const approvedPayments = await Payment.find({ 
-      user: userId, 
-      status: "approved" 
+    const approvedPayments = await Payment.find({
+      user: userId,
+      status: "approved"
     }).populate('book');
 
     console.log(`📚 [PURCHASED BOOKS] Found ${approvedPayments.length} approved payments`);
@@ -908,7 +986,7 @@ app.get("/api/user/purchased-books", authenticateToken, async (req, res) => {
     });
 
     const allUserBooks = [...purchasedBooks, ...freeBooksWithAccess];
-    const uniqueBooks = allUserBooks.filter((book, index, self) => 
+    const uniqueBooks = allUserBooks.filter((book, index, self) =>
       index === self.findIndex(b => b._id.toString() === book._id.toString())
     );
 
@@ -916,7 +994,7 @@ app.get("/api/user/purchased-books", authenticateToken, async (req, res) => {
     res.json(uniqueBooks);
   } catch (err) {
     console.error(`❌ [PURCHASED BOOKS] Error:`, err);
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Failed to fetch purchased books",
       message: err.message,
       timestamp: new Date().toISOString()
@@ -925,7 +1003,7 @@ app.get("/api/user/purchased-books", authenticateToken, async (req, res) => {
 });
 
 // Payment routes
-app.post("/api/payments", authenticateToken, async (req, res) => {
+app.post("/api/payments", requireAuth, async (req, res) => {
   try {
     await connectToDB();
     const { bookId, amount, paymentMethod, transactionId, screenshot } = req.body;
@@ -940,7 +1018,7 @@ app.post("/api/payments", authenticateToken, async (req, res) => {
     }
 
     const payment = await Payment.create({
-      user: req.user.id,
+      user: req.user._id,
       book: bookId,
       amount,
       paymentMethod,
@@ -950,18 +1028,20 @@ app.post("/api/payments", authenticateToken, async (req, res) => {
 
     res.status(201).json(payment);
   } catch (err) {
+    console.error('Create payment error:', err);
     res.status(500).json({ error: "Failed to create payment" });
   }
 });
 
-app.get("/api/payments", authenticateToken, async (req, res) => {
+app.get("/api/payments", requireAuth, async (req, res) => {
   try {
     await connectToDB();
-    const payments = await Payment.find({ user: req.user.id })
+    const payments = await Payment.find({ user: req.user._id })
       .populate('book', 'title image')
       .sort({ submittedAt: -1 });
     res.json(payments);
   } catch (err) {
+    console.error('Get payments error:', err);
     res.status(500).json({ error: "Failed to fetch payments" });
   }
 });
@@ -973,15 +1053,25 @@ app.post("/api/admin/login", async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({ error: "Username and password are required" });
+      return res.status(400).json({ success: false, error: "Username and password are required" });
     }
 
     let adminUser = null;
     let useEnvAuth = false;
 
+    // Convert username to email format if needed
+    const emailUsername = username.includes('@') ? username : `${username}@acadmix.local`;
+
     try {
-      adminUser = await User.findOne({ role: "admin", email: username });
+      adminUser = await User.findOne({
+        role: "admin",
+        $or: [
+          { email: username },
+          { email: emailUsername }
+        ]
+      });
     } catch (dbErr) {
+      console.error('Database error during admin lookup:', dbErr);
       useEnvAuth = true;
     }
 
@@ -991,6 +1081,7 @@ app.post("/api/admin/login", async (req, res) => {
       try {
         isValidAdmin = await bcrypt.compare(password, adminUser.password);
       } catch (bcryptErr) {
+        console.error('Password comparison error:', bcryptErr);
         isValidAdmin = false;
       }
     } else if (useEnvAuth || !adminUser) {
@@ -999,50 +1090,78 @@ app.post("/api/admin/login", async (req, res) => {
 
       if (envUsername && envPassword) {
         isValidAdmin = username === envUsername && password === envPassword;
+        if (isValidAdmin && !adminUser) {
+          // Create admin user if using env auth
+          try {
+            adminUser = await User.create({
+              name: 'Admin',
+              email: emailUsername,
+              password: await bcrypt.hash(password, 12),
+              role: 'admin',
+              isActive: true
+            });
+            console.log('Admin user created successfully');
+          } catch (createErr) {
+            console.error('Error creating admin user:', createErr);
+            // If user already exists, try to find it
+            adminUser = await User.findOne({ email: emailUsername });
+            if (!adminUser) {
+              return res.status(500).json({ success: false, error: "Failed to create admin user" });
+            }
+          }
+        }
       } else {
-        return res.status(500).json({ error: "Admin authentication not configured" });
+        return res.status(500).json({ success: false, error: "Admin authentication not configured" });
       }
     }
 
-    if (isValidAdmin) {
-      const token = jwt.sign(
-        {
-          admin: true,
-          role: "admin",
-          id: adminUser?._id || "admin",
-        },
-        process.env.JWT_SECRET || "fallback-jwt-secret",
-        { expiresIn: "7d" }
-      );
-      res.json({ token, message: "Admin login successful" });
+    if (isValidAdmin && adminUser) {
+      // Update last login
+      adminUser.lastLogin = new Date();
+      await adminUser.save();
+
+      // Log admin in with passport
+      req.login(adminUser, (err) => {
+        if (err) {
+          console.error('Passport login error:', err);
+          return res.status(500).json({ success: false, error: "Admin login failed" });
+        }
+
+        res.json({
+          success: true,
+          message: "Admin login successful",
+          user: {
+            id: adminUser._id,
+            name: adminUser.name,
+            email: adminUser.email,
+            role: adminUser.role
+          }
+        });
+      });
     } else {
-      res.status(401).json({ error: "Admin authentication failed" });
+      res.status(401).json({ success: false, error: "Admin authentication failed" });
     }
   } catch (err) {
-    res.status(500).json({ error: "Admin authentication error" });
+    console.error('Admin login error:', err);
+    res.status(500).json({ success: false, error: "Admin authentication error", details: err.message });
   }
 });
 
-app.get("/api/admin/dashboard", authenticateToken, async (req, res) => {
+app.get("/api/admin/dashboard", requireAdmin, async (req, res) => {
   try {
     await connectToDB();
     console.log(`🔍 [ADMIN DASHBOARD] User check:`, {
-      userId: req.user.id,
+      userId: req.user._id,
       userRole: req.user.role,
       userEmail: req.user.email,
       isAdmin: req.user.role === "admin"
     });
-    
-    if (req.user.role !== "admin") {
-      console.log(`❌ [ADMIN DASHBOARD] Access denied - User role: ${req.user.role}`);
-      return res.status(403).json({ error: "Admin access required" });
-    }
 
     const users = await User.find().select("-password").lean();
     const totalUsers = users.length;
     const totalBooks = await Book.countDocuments();
     const totalPayments = await Payment.countDocuments();
-    
+
     const approvedPayments = await Payment.find({ status: "approved" }).lean();
     const totalRevenue = approvedPayments.reduce((sum, payment) => {
       return sum + (payment.amount || 0);
@@ -1069,12 +1188,9 @@ app.get("/api/admin/dashboard", authenticateToken, async (req, res) => {
 });
 
 // Admin book details endpoint for debugging
-app.get("/api/admin/books/:id/details", authenticateToken, async (req, res) => {
+app.get("/api/admin/books/:id/details", requireAdmin, async (req, res) => {
   try {
     await connectToDB();
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
-    }
 
     const book = await Book.findById(req.params.id);
     if (!book) {
@@ -1108,15 +1224,12 @@ app.get("/api/admin/books/:id/details", authenticateToken, async (req, res) => {
   }
 });
 
-app.get("/api/admin/books", authenticateToken, async (req, res) => {
+app.get("/api/admin/books", requireAdmin, async (req, res) => {
   try {
     await connectToDB();
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
-    }
 
     const books = await Book.find().sort({ createdAt: -1 });
-    
+
     // Debug: Log the first book's price information
     if (books.length > 0) {
       const firstBook = books[0];
@@ -1131,7 +1244,7 @@ app.get("/api/admin/books", authenticateToken, async (req, res) => {
         hasDiscount: firstBook.priceDiscounted && firstBook.priceDiscounted !== firstBook.price
       });
     }
-    
+
     // Debug: Log price information for all books
     books.forEach((book, index) => {
       console.log(`💰 [ADMIN BOOKS] Book ${index + 1}:`, {
@@ -1141,7 +1254,7 @@ app.get("/api/admin/books", authenticateToken, async (req, res) => {
         isFree: book.isFree
       });
     });
-    
+
     res.json(books);
   } catch (err) {
     console.error("❌ [ADMIN BOOKS] Error:", err);
@@ -1149,43 +1262,147 @@ app.get("/api/admin/books", authenticateToken, async (req, res) => {
   }
 });
 
-app.post("/api/admin/books", authenticateToken, async (req, res) => {
+app.post("/api/admin/books", requireAdmin, upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'pdf', maxCount: 1 }
+]), async (req, res) => {
   try {
+    console.log('📚 [ADMIN CREATE BOOK] Request received');
+    console.log('📝 [ADMIN CREATE BOOK] Body keys:', Object.keys(req.body));
+    console.log('📂 [ADMIN CREATE BOOK] Files:', req.files ? Object.keys(req.files) : 'No files');
+
     await connectToDB();
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
+
+    // 1. Upload Cover Image
+    let coverImageUrl = '';
+    if (req.files && req.files.image && req.files.image[0]) {
+      const coverFile = req.files.image[0];
+      const b64 = Buffer.from(coverFile.buffer).toString("base64");
+      const dataURI = "data:" + coverFile.mimetype + ";base64," + b64;
+
+      console.log('⬆️ [ADMIN CREATE BOOK] Uploading cover image...');
+      const uploadResponse = await cloudinary.uploader.upload(dataURI, {
+        folder: "acadmix/covers",
+        resource_type: "image"
+      });
+      coverImageUrl = uploadResponse.secure_url;
+      console.log('✅ [ADMIN CREATE BOOK] Cover image uploaded:', coverImageUrl);
+    } else if (req.body.image && typeof req.body.image === 'string') {
+      coverImageUrl = req.body.image;
     }
 
-    const book = await Book.create(req.body);
+    // 2. Upload PDF File
+    let pdfUrl = '';
+    if (req.files && req.files.pdf && req.files.pdf[0]) {
+      const pdfFile = req.files.pdf[0];
+      const b64 = Buffer.from(pdfFile.buffer).toString("base64");
+      const dataURI = "data:" + pdfFile.mimetype + ";base64," + b64;
+
+      console.log('⬆️ [ADMIN CREATE BOOK] Uploading PDF file...');
+      const uploadResponse = await cloudinary.uploader.upload(dataURI, {
+        folder: "acadmix/pdfs",
+        resource_type: "raw",
+        format: "pdf"
+      });
+      pdfUrl = uploadResponse.secure_url;
+      console.log('✅ [ADMIN CREATE BOOK] PDF uploaded:', pdfUrl);
+    } else if (req.body.pdfUrl) {
+      pdfUrl = req.body.pdfUrl;
+    }
+
+    // 3. Prepare Book Data
+    const bookData = {
+      title: req.body.title,
+      description: req.body.description,
+      price: Number(req.body.price) || 0,
+      priceDiscounted: Number(req.body.priceDiscounted) || 0,
+      isFree: req.body.isFree === 'true' || req.body.isFree === true,
+      category: req.body.category,
+      section: req.body.section,
+      author: req.body.author,
+      subject: req.body.subject,
+      class: req.body.class,
+      image: coverImageUrl,
+      pdfUrl: pdfUrl
+    };
+
+    console.log('🔨 [ADMIN CREATE BOOK] Creating book with data:', bookData);
+
+    const book = await Book.create(bookData);
+
+    console.log('✅ [ADMIN CREATE BOOK] Book created successfully:', book._id);
     res.status(201).json(book);
+
   } catch (err) {
-    res.status(500).json({ error: "Failed to create book" });
+    console.error('❌ [ADMIN CREATE BOOK] Error occurred:', err);
+    res.status(500).json({
+      error: "Failed to create book",
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
-app.put("/api/admin/books/:id", authenticateToken, async (req, res) => {
+app.put("/api/admin/books/:id", requireAdmin, upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'pdf', maxCount: 1 }
+]), async (req, res) => {
   try {
     await connectToDB();
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
+
+    const updateData = { ...req.body };
+
+    // Handle Image Upload
+    if (req.files && req.files.image && req.files.image[0]) {
+      const coverFile = req.files.image[0];
+      const b64 = Buffer.from(coverFile.buffer).toString("base64");
+      const dataURI = "data:" + coverFile.mimetype + ";base64," + b64;
+
+      const uploadResponse = await cloudinary.uploader.upload(dataURI, {
+        folder: "acadmix/covers",
+        resource_type: "image"
+      });
+      updateData.image = uploadResponse.secure_url;
     }
 
-    const book = await Book.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    // Handle PDF Upload
+    if (req.files && req.files.pdf && req.files.pdf[0]) {
+      const pdfFile = req.files.pdf[0];
+      const b64 = Buffer.from(pdfFile.buffer).toString("base64");
+      const dataURI = "data:" + pdfFile.mimetype + ";base64," + b64;
+
+      const uploadResponse = await cloudinary.uploader.upload(dataURI, {
+        folder: "acadmix/pdfs",
+        resource_type: "raw",
+        format: "pdf"
+      });
+      updateData.pdfUrl = uploadResponse.secure_url;
+    }
+
+    // Handle numeric fields
+    if (updateData.price) updateData.price = Number(updateData.price);
+    if (updateData.priceDiscounted) updateData.priceDiscounted = Number(updateData.priceDiscounted);
+    if (updateData.pages) updateData.pages = Number(updateData.pages);
+    if (updateData.isFree !== undefined) updateData.isFree = updateData.isFree === 'true' || updateData.isFree === true;
+
+    // Explicitly set text fields if present
+    if (req.body.category) updateData.category = req.body.category;
+    if (req.body.section) updateData.section = req.body.section;
+
+    const book = await Book.findByIdAndUpdate(req.params.id, updateData, { new: true });
+
     if (!book) {
       return res.status(404).json({ error: "Book not found" });
     }
     res.json(book);
   } catch (err) {
+    console.error('❌ [ADMIN UPDATE BOOK] Error:', err);
     res.status(500).json({ error: "Failed to update book" });
   }
 });
 
-app.delete("/api/admin/books/:id", authenticateToken, async (req, res) => {
+app.delete("/api/admin/books/:id", requireAdmin, async (req, res) => {
   try {
     await connectToDB();
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
-    }
 
     const book = await Book.findByIdAndDelete(req.params.id);
     if (!book) {
@@ -1197,12 +1414,9 @@ app.delete("/api/admin/books/:id", authenticateToken, async (req, res) => {
   }
 });
 
-app.get("/api/admin/users", authenticateToken, async (req, res) => {
+app.get("/api/admin/users", requireAdmin, async (req, res) => {
   try {
     await connectToDB();
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
-    }
 
     const users = await User.find().select("-password").sort({ createdAt: -1 }).lean();
     res.json({ users });
@@ -1211,12 +1425,9 @@ app.get("/api/admin/users", authenticateToken, async (req, res) => {
   }
 });
 
-app.put("/api/admin/users/:id/role", authenticateToken, async (req, res) => {
+app.put("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
   try {
     await connectToDB();
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
-    }
 
     const { role } = req.body;
     if (!["user", "admin"].includes(role)) {
@@ -1239,12 +1450,9 @@ app.put("/api/admin/users/:id/role", authenticateToken, async (req, res) => {
   }
 });
 
-app.put("/api/admin/users/:id/status", authenticateToken, async (req, res) => {
+app.put("/api/admin/users/:id/status", requireAdmin, async (req, res) => {
   try {
     await connectToDB();
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
-    }
 
     const { isActive } = req.body;
     if (typeof isActive !== "boolean") {
@@ -1267,14 +1475,11 @@ app.put("/api/admin/users/:id/status", authenticateToken, async (req, res) => {
   }
 });
 
-app.post("/api/admin/payments/:id/approve", authenticateToken, async (req, res) => {
+app.post("/api/admin/payments/:id/approve", requireAdmin, async (req, res) => {
   try {
     await connectToDB();
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
-    }
 
-    await Payment.findByIdAndUpdate(req.params.id, { 
+    await Payment.findByIdAndUpdate(req.params.id, {
       status: "approved",
       approvedAt: new Date()
     });
@@ -1284,14 +1489,11 @@ app.post("/api/admin/payments/:id/approve", authenticateToken, async (req, res) 
   }
 });
 
-app.post("/api/admin/payments/:id/reject", authenticateToken, async (req, res) => {
+app.post("/api/admin/payments/:id/reject", requireAdmin, async (req, res) => {
   try {
     await connectToDB();
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
-    }
 
-    await Payment.findByIdAndUpdate(req.params.id, { 
+    await Payment.findByIdAndUpdate(req.params.id, {
       status: "rejected",
       rejectedAt: new Date()
     });
@@ -1301,13 +1503,8 @@ app.post("/api/admin/payments/:id/reject", authenticateToken, async (req, res) =
   }
 });
 
-// Admin routes middleware for CORS
+// Admin routes middleware
 app.use("/api/admin", (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://acadmix.shop');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -1316,19 +1513,14 @@ app.use("/api/admin", (req, res, next) => {
 });
 
 // Admin config endpoint
-app.get("/api/admin/config", authenticateToken, async (req, res) => {
+app.get("/api/admin/config", requireAdmin, async (req, res) => {
   try {
     console.log(`🔍 [ADMIN CONFIG] User check:`, {
-      userId: req.user.id,
+      userId: req.user._id,
       userRole: req.user.role,
       userEmail: req.user.email,
       isAdmin: req.user.role === "admin"
     });
-    
-    if (req.user.role !== "admin") {
-      console.log(`❌ [ADMIN CONFIG] Access denied - User role: ${req.user.role}`);
-      return res.status(403).json({ error: "Admin access required" });
-    }
     res.json(adminConfig);
   } catch (err) {
     console.error("❌ Admin config error:", err);
@@ -1339,14 +1531,8 @@ app.get("/api/admin/config", authenticateToken, async (req, res) => {
 // Mount payment routes
 app.use("/api", paymentRoutes);
 
-// Global error handler for CORS
+// Global error handler
 app.use((err, req, res, next) => {
-  // Set CORS headers even for errors
-  res.header('Access-Control-Allow-Origin', 'https://acadmix.shop');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
   if (err.message === 'Not allowed by CORS') {
     return res.status(403).json({ error: 'CORS error', message: err.message });
   }
@@ -1356,8 +1542,8 @@ app.use((err, req, res, next) => {
 // Error handling
 app.use((err, req, res, next) => {
   console.error("Error:", err);
-  res.status(500).json({ 
-    error: "Internal Server Error", 
+  res.status(500).json({
+    error: "Internal Server Error",
     message: err.message,
     timestamp: new Date().toISOString()
   });
@@ -1372,4 +1558,34 @@ app.use("*", (req, res) => {
   });
 });
 
+// Export for Vercel serverless functions
 module.exports = app;
+
+// Local development server setup
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 Local URL: http://localhost:${PORT}`);
+    console.log(`📡 API URL: http://localhost:${PORT}/api`);
+  });
+}
+
+// Vercel serverless function handler
+let serverless;
+try {
+  serverless = require('serverless-http');
+  module.exports.handler = serverless(app, {
+    request: {
+      // Disable request logging to avoid issues
+      logger: false
+    },
+    response: {
+      // Disable response logging to avoid issues
+      logger: false
+    }
+  });
+} catch (error) {
+  console.log('⚠️ serverless-http not available, skipping serverless export');
+}

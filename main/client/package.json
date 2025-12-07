@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "setup": "node setup-dev.js",
+    "setup:dev": "node setup-dev.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.84.1",

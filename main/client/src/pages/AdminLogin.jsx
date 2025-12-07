@@ -17,12 +17,14 @@ const AdminLogin = () => {
     mutationFn: (credentials) => api.post('/admin/login', credentials),
     onSuccess: (data) => {
       const { token } = data.data;
-      localStorage.setItem('token', token);
-      localStorage.setItem('isAdmin', 'true');
-      // Set the Authorization header immediately for subsequent requests
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      if (token) {
+        localStorage.setItem('token', token);
+        localStorage.setItem('isAdmin', 'true');
+        // Set the Authorization header immediately for subsequent requests
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
       toast.success('Admin login successful!');
-      // Force a page refresh to ensure AuthContext picks up the new token
+      // Force a page refresh to ensure AuthContext picks up the new user
       window.location.href = '/admin';
     },
     onError: (error) => {
