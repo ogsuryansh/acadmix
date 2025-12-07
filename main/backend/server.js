@@ -1382,13 +1382,21 @@ app.post("/api/admin/books",
         const dataURI = "data:" + pdfFile.mimetype + ";base64," + b64;
 
         console.log('⬆️ [ADMIN CREATE BOOK] Uploading PDF file...');
+        console.log('📏 [ADMIN CREATE BOOK] PDF file size:', pdfFile.size, 'bytes');
+        console.log('📝 [ADMIN CREATE BOOK] PDF mimetype:', pdfFile.mimetype);
+
         const uploadResponse = await cloudinary.uploader.upload(dataURI, {
           folder: "acadmix/pdfs",
           resource_type: "raw"
         });
+
+        console.log('✅ [ADMIN CREATE BOOK] PDF uploaded successfully!');
+        console.log('🔗 [ADMIN CREATE BOOK] PDF secure_url:', uploadResponse.secure_url);
+        console.log('🔗 [ADMIN CREATE BOOK] PDF url:', uploadResponse.url);
+        console.log('🆔 [ADMIN CREATE BOOK] PDF public_id:', uploadResponse.public_id);
+        console.log('📊 [ADMIN CREATE BOOK] Full Cloudinary response:', JSON.stringify(uploadResponse, null, 2));
+
         pdfUrl = uploadResponse.secure_url;
-        console.log('✅ [ADMIN CREATE BOOK] PDF uploaded:', pdfUrl);
-        console.log('🔍 [ADMIN CREATE BOOK] PDF public_id:', uploadResponse.public_id);
       } else if (req.body.pdfUrl) {
         pdfUrl = req.body.pdfUrl;
       }
