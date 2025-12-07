@@ -36,6 +36,9 @@ const upload = multer({
 
 const app = express();
 
+// Trust proxy - required for Vercel/serverless
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 
@@ -223,7 +226,7 @@ const { User, Book, Payment } = initializeModels();
 
 // Session configuration
 let sessionStore;
-function setupSessionStore() {
+async function setupSessionStore() {
   if (!sessionStore) {
     try {
       const MongoStore = require("connect-mongo");
@@ -231,10 +234,13 @@ function setupSessionStore() {
         mongoUrl: process.env.MONGO_URI,
         ttl: 14 * 24 * 60 * 60,
       });
+      console.log('✅ [SESSION] MongoStore created successfully');
     } catch (err) {
+      console.error('❌ [SESSION] Failed to create MongoStore:', err.message);
       sessionStore = undefined;
     }
   }
+  return sessionStore;
 }
 
 // Validate required environment variables
@@ -253,26 +259,26 @@ try {
   process.exit(1);
 }
 
-app.use((req, res, next) => {
-  try {
-    setupSessionStore();
-    session({
-      secret: process.env.SESSION_SECRET,
-      resave: false,
-      saveUninitialized: false,
-      store: sessionStore,
-      cookie: {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        domain: process.env.NODE_ENV === "production" ? ".acadmix.shop" : undefined,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      },
-    })(req, res, next);
-  } catch (error) {
-    next(error);
-  }
+// Initialize session store and setup session middleware ONCE at startup
+setupSessionStore().then(() => {
+  console.log('🔐 [SESSION] Setting up session middleware with cookie domain:',
+    process.env.NODE_ENV === "production" ? ".acadmix.shop" : "localhost");
 });
+
+// Session middleware - created ONCE, not per-request
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  store: sessionStore,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    domain: process.env.NODE_ENV === "production" ? ".acadmix.shop" : undefined,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  },
+}));
 
 app.use(passport.initialize());
 app.use(passport.session());
