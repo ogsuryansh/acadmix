@@ -60,7 +60,7 @@ const getAllowedOrigins = () => {
   return origins;
 };
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = getAllowedOrigins();
 
@@ -87,10 +87,13 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'X-Requested-With', 'Accept', 'Origin', 'Authorization'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   maxAge: 86400
-}));
+};
 
-// Handle preflight requests globally
-app.options('*', cors());
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Handle preflight requests globally with same config
+app.options('*', cors(corsOptions));
 
 // Global debugging middleware
 app.use((req, res, next) => {
