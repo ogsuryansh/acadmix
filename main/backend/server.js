@@ -635,106 +635,107 @@ app.get("/api/pdf-proxy", async (req, res) => {
 
     console.log(`🔍 [PDF PROXY] Fetching PDF from: ${url}`);
 
-    // Check if this is a Cloudinary URL and convert it if needed
-    let fetchUrl = url;
-    if (url.includes('cloudinary.com') && url.includes('/raw/upload/')) {
-      // Extract the public ID and try different URL formats
-      const match = url.match(/\/upload\/(?:v\d+\/)?(.+)$/);
-      if (match && match[1]) {
-        const publicId = match[1].replace(/\.(pdf|PDF)$/, ''); // Remove .pdf extension if present
-        console.log(`📝 [PDF PROXY] Extracted public ID: ${publicId}`);
+    // Check if this is a Cloudinary URL
+    if (url.includes('cloudinary.com')) {
+      const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
 
-        // Try to generate a signed URL for better access
-        try {
-          const signedUrl = cloudinary.url(publicId, {
-            resource_type: 'raw',
-            type: 'upload',
-            secure: true,
-            sign_url: false // Try without signing first
-          });
-          console.log(`🔗 [PDF PROXY] Generated Cloudinary URL: ${signedUrl}`);
-          fetchUrl = signedUrl;
-        } catch (urlErr) {
-          console.warn(`⚠️ [PDF PROXY] Could not generate Cloudinary URL, using original:`, urlErr.message);
+      // Extract the public ID from the URL
+      const match = url.match(/\/upload\/(?:v\d+\/)?(.+)$/);
+
+      if (match && match[1]) {
+        let publicId = match[1];
+
+        // Remove .pdf extension if present to get base public ID
+        const basePublicId = publicId.replace(/\.(pdf|PDF)$/, '');
+
+        console.log(`📝 [PDF PROXY] Extracted public ID: ${basePublicId}`);
+
+        // Array of URL strategies to try in order
+        const urlsToTry = [
+          // Try 1: Direct URL without extension
+          `https://res.cloudinary.com/${cloudName}/raw/upload/${basePublicId}`,
+
+          // Try 2: Direct URL with .pdf extension
+          `https://res.cloudinary.com/${cloudName}/raw/upload/${basePublicId}.pdf`,
+
+          // Try 3: Original URL
+          url,
+        ];
+
+        const headers = {
+          'User-Agent': req.headers['user-agent'] || 'Acadmix-Backend'
+        };
+
+        let response = null;
+        let successUrl = null;
+
+        // Try each URL until one works
+        for (const tryUrl of urlsToTry) {
+          console.log(`🔄 [PDF PROXY] Trying URL: ${tryUrl}`);
+
+          try {
+            response = await fetch(tryUrl, { headers });
+            console.log(`📊 [PDF PROXY] Response: ${response.status} ${response.statusText}`);
+
+            if (response.ok) {
+              successUrl = tryUrl;
+              console.log(`✅ [PDF PROXY] Success with URL: ${successUrl}`);
+              break;
+            }
+          } catch (err) {
+            console.warn(`⚠️ [PDF PROXY] Failed to fetch from ${tryUrl}:`, err.message);
+          }
         }
+
+        if (!response || !response.ok) {
+          console.error(`❌ [PDF PROXY] All URL attempts failed for public ID: ${basePublicId}`);
+          return res.status(404).json({
+            error: "PDF not found",
+            message: "Unable to locate the PDF file. The file may have been deleted or moved.",
+            publicId: basePublicId
+          });
+        }
+
+        const contentType = response.headers.get('content-type');
+        const contentLength = response.headers.get('content-length');
+
+        console.log(`📦 [PDF PROXY] Content-Type: ${contentType}, Content-Length: ${contentLength}`);
+
+        // Set PDF headers
+        res.setHeader('Content-Type', contentType || 'application/pdf');
+        if (contentLength) {
+          res.setHeader('Content-Length', contentLength);
+        }
+        res.setHeader('Content-Disposition', 'inline; filename="document.pdf"');
+        res.setHeader('Cache-Control', 'private, max-age=3600');
+
+        // Stream the PDF
+        response.body.pipe(res);
+
+        console.log(`✅ [PDF PROXY] Successfully streaming PDF from: ${successUrl}`);
+        return;
       }
     }
 
-    // Forward headers to bypass 401/403 errors if the source requires auth or specific headers
-    // Do not forward all headers as they might include backend-specific auth tokens
-    // that cause issues with external services like Cloudinary
+    // Non-Cloudinary URL or fallback - try direct proxy
+    console.log(`🌐 [PDF PROXY] Non-Cloudinary URL, using direct proxy`);
+
     const headers = {
       'User-Agent': req.headers['user-agent'] || 'Acadmix-Backend'
     };
 
-    console.log(`🌐 [PDF PROXY] Attempting fetch from: ${fetchUrl}`);
-
-    let response = await fetch(fetchUrl, { headers });
+    const response = await fetch(url, { headers });
 
     console.log(`📊 [PDF PROXY] Response status: ${response.status} ${response.statusText}`);
 
-    // Auto-fix for private Cloudinary resources (handle 401/403/404)
-    if ((response.status === 401 || response.status === 403 || response.status === 404) && url.includes('cloudinary.com')) {
-      console.log(`⚠️ [PDF PROXY] ${response.status} from Cloudinary. Attempting different approaches...`);
-      try {
-        // Extract public ID from raw/upload URL
-        // Format: /raw/upload/v<version>/<public_id> or /raw/upload/<public_id>
-        const match = url.match(/\/upload\/(?:v\d+\/)?(.+)$/);
-        if (match && match[1]) {
-          const publicIdWithExt = match[1];
-          const publicId = publicIdWithExt.replace(/\.(pdf|PDF)$/, '');
-          console.log(`📝 [PDF PROXY] Public ID (cleaned): ${publicId}`);
-
-          // Try 1: Authenticated URL
-          try {
-            const signedUrl = cloudinary.url(publicId, {
-              resource_type: 'raw',
-              type: 'authenticated',
-              sign_url: true,
-              secure: true
-            });
-
-            console.log(`🔄 [PDF PROXY] Trying authenticated URL...`);
-            response = await fetch(signedUrl, { headers });
-            console.log(`📊 [PDF PROXY] Authenticated response: ${response.status}`);
-          } catch (err) {
-            console.error('❌ [PDF PROXY] Authenticated URL failed:', err.message);
-          }
-
-          // Try 2: If still failing, try upload type with .pdf extension
-          if (!response.ok) {
-            const urlWithPdf = cloudinary.url(publicId + '.pdf', {
-              resource_type: 'raw',
-              type: 'upload',
-              secure: true
-            });
-            console.log(`🔄 [PDF PROXY] Trying with .pdf extension: ${urlWithPdf}`);
-            response = await fetch(urlWithPdf, { headers });
-            console.log(`📊 [PDF PROXY] With extension response: ${response.status}`);
-          }
-
-          // Try 3: Direct URL construction
-          if (!response.ok) {
-            const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-            const directUrl = `https://res.cloudinary.com/${cloudName}/raw/upload/${publicId}`;
-            console.log(`🔄 [PDF PROXY] Trying direct URL: ${directUrl}`);
-            response = await fetch(directUrl, { headers });
-            console.log(`📊 [PDF PROXY] Direct URL response: ${response.status}`);
-          }
-        }
-      } catch (err) {
-        console.error('❌ [PDF PROXY] All retry attempts failed:', err.message);
-      }
-    }
 
     if (!response.ok) {
       console.error(`❌ [PDF PROXY] Failed to fetch PDF: ${response.status} ${response.statusText}`);
-      console.error(`📍 [PDF PROXY] URL was: ${fetchUrl}`);
       return res.status(response.status).json({
         error: "Failed to fetch PDF",
         status: response.status,
         statusText: response.statusText,
-        url: fetchUrl
+        url: url
       });
     }
 
