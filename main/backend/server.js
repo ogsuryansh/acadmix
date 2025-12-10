@@ -39,8 +39,61 @@ const app = express();
 // Trust proxy - required for Vercel/serverless
 app.set('trust proxy', 1);
 
-// Security middleware
-app.use(helmet());
+// ================================
+// CORS HANDLING - MUST BE FIRST!
+// ================================
+
+// Helper function to get allowed origins
+const getAllowedOrigins = () => {
+  const origins = process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || [];
+  if (process.env.NODE_ENV === 'development') {
+    origins.push('http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5500');
+  }
+  console.log('🔧 [CORS] Configured allowed origins:', origins);
+  return origins;
+};
+
+// AGGRESSIVE CORS middleware - runs FIRST before everything
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = getAllowedOrigins();
+
+  console.log(`🌐 [CORS] Request: ${req.method} ${req.path} from origin: ${origin || 'none'}`);
+
+  // Set CORS headers on ALL responses
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    console.log(`✅ [CORS] Added headers for allowed origin: ${origin}`);
+  } else if (!origin) {
+    // No origin (like server-side requests or same-origin)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    console.log('✅ [CORS] No origin header, allowing all');
+  } else {
+    console.log(`❌ [CORS] Origin NOT allowed: ${origin}`);
+    console.log(`   Allowed origins: ${allowedOrigins.join(', ')}`);
+  }
+
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Requested-With, Accept, Origin, Authorization, Cookie');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range, Set-Cookie');
+  res.setHeader('Access-Control-Max-Age', '86400');
+
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    console.log('🔄 [CORS] Handling OPTIONS preflight - responding immediately');
+    return res.status(204).end();
+  }
+
+  next();
+});
+
+// Security middleware - configured to NOT interfere with CORS
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -50,80 +103,12 @@ const limiter = rateLimit({
 });
 app.use("/api/", limiter);
 
-// CORS configuration
-const getAllowedOrigins = () => {
-  const origins = process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || [];
-  if (process.env.NODE_ENV === 'development') {
-    origins.push('http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5500');
-  }
-  console.log('🔧 [CORS CONFIG] Allowed origins:', origins);
-  return origins;
-};
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = getAllowedOrigins();
-
-    console.log('🌐 [CORS] Request from origin:', origin);
-    console.log('✅ [CORS] Allowed origins:', allowedOrigins);
-
-    // Allow requests with no origin (like mobile apps, curl, or OPTIONS preflight)
-    if (!origin) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('✅ [CORS] No origin - allowing in development');
-        return callback(null, true);
-      } else {
-        // In production, also allow undefined origin for OPTIONS preflight
-        console.log('✅ [CORS] No origin - allowing for OPTIONS preflight');
-        return callback(null, true);
-      }
-    }
-
-    if (allowedOrigins.includes(origin)) {
-      console.log('✅ [CORS] Origin allowed:', origin);
-      callback(null, true);
-    } else {
-      console.log(`🚫 [CORS] BLOCKED origin: ${origin}`);
-      console.log(`🚫 [CORS] Allowed origins are: ${allowedOrigins.join(', ')}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'X-Requested-With', 'Accept', 'Origin', 'Authorization'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 86400
-};
-
-// Explicit CORS headers middleware (required for Vercel serverless)
+// Global debugging middleware
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  const allowedOrigins = getAllowedOrigins();
-
-  // Set CORS headers explicitly for all responses
-  if (!origin || allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, X-Requested-With, Accept, Origin, Authorization');
-    res.header('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
-    res.header('Access-Control-Max-Age', '86400');
-  }
-
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    console.log('🔄 [CORS] Handling OPTIONS preflight request');
-    return res.status(200).end();
-  }
-
+  // Debug logging
+  console.log(`📍 [REQUEST] ${req.method} ${req.path}`);
   next();
 });
-
-// Apply CORS middleware
-app.use(cors(corsOptions));
-
-// Handle preflight requests globally with same config
-app.options('*', cors(corsOptions));
 
 // Global debugging middleware
 app.use((req, res, next) => {
