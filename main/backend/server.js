@@ -95,6 +95,30 @@ const corsOptions = {
   maxAge: 86400
 };
 
+// Explicit CORS headers middleware (required for Vercel serverless)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = getAllowedOrigins();
+
+  // Set CORS headers explicitly for all responses
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, X-Requested-With, Accept, Origin, Authorization');
+    res.header('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
+    res.header('Access-Control-Max-Age', '86400');
+  }
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log('🔄 [CORS] Handling OPTIONS preflight request');
+    return res.status(200).end();
+  }
+
+  next();
+});
+
 // Apply CORS middleware
 app.use(cors(corsOptions));
 
