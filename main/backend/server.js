@@ -1659,7 +1659,50 @@ app.use("*", (req, res) => {
   });
 });
 
-// Export for Vercel serverless functions
+// ================================
+// FINAL CORS RESPONSE INTERCEPTOR
+// ================================
+// This ensures CORS headers are present in the FINAL response
+// Required for Vercel serverless where headers might get lost
+app.use((req, res, next) => {
+  const originalSend = res.send;
+  const originalJson = res.json;
+  const originalEnd = res.end;
+
+  const ensureCorsHeaders = () => {
+    const origin = req.headers.origin;
+    const allowedOrigins = getAllowedOrigins();
+
+    if (origin && allowedOrigins.includes(origin)) {
+      if (!res.getHeader('Access-Control-Allow-Origin')) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Requested-With, Accept, Origin, Authorization, Cookie');
+        console.log(`🔧 [CORS FINAL] Added missing headers for: ${origin}`);
+      }
+    }
+  };
+
+  res.send = function (...args) {
+    ensureCorsHeaders();
+    return originalSend.apply(res, args);
+  };
+
+  res.json = function (...args) {
+    ensureCorsHeaders();
+    return originalJson.apply(res, args);
+  };
+
+  res.end = function (...args) {
+    ensureCorsHeaders();
+    return originalEnd.apply(res, args);
+  };
+
+  next();
+});
+
+// Export for Vercel - Direct app export (no serverless-http wrapper)
 module.exports = app;
 
 // Local development server setup
@@ -1672,6 +1715,7 @@ if (process.env.NODE_ENV !== 'production') {
     console.log(`📡 API URL: http://localhost:${PORT}/api`);
   });
 }
+
 
 // Vercel serverless function handler
 let serverless;
