@@ -13,25 +13,43 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
+        console.log('🔄 [AuthCallback] Starting authentication callback');
+        console.log('🔍 [AuthCallback] URL search params:', window.location.search);
+        console.log('🔍 [AuthCallback] Full URL:', window.location.href);
+
         const error = searchParams.get('error');
 
         if (error) {
+          console.error('❌ [AuthCallback] Error in URL params:', error);
           setStatus('error');
-          setMessage('Authentication failed. Please try again.');
+          setMessage(`Authentication failed: ${error}. Please try again.`);
           setTimeout(() => navigate('/login'), 3000);
           return;
         }
 
+        // Add a small delay to ensure session cookie is set
+        console.log('⏳ [AuthCallback] Waiting for session cookie...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         // User is already authenticated via session, just get user info
+        console.log('📡 [AuthCallback] Fetching user info from session...');
         await googleLogin();
+
+        console.log('✅ [AuthCallback] Successfully authenticated');
         setStatus('success');
-        setMessage('Redirecting to dashboard...');
+        setMessage('Login successful! Redirecting...');
         setTimeout(() => navigate('/'), 2000);
 
       } catch (error) {
-        console.error('Auth callback error:', error);
+        console.error('❌ [AuthCallback] Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          stack: error.stack
+        });
+
         setStatus('error');
-        setMessage('Authentication failed. Please try again.');
+        setMessage(error.response?.data?.error || 'Authentication failed. Please try logging in again.');
         setTimeout(() => navigate('/login'), 3000);
       }
     };

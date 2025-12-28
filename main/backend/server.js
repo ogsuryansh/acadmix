@@ -46,9 +46,16 @@ app.set('trust proxy', 1);
 // Helper function to get allowed origins
 const getAllowedOrigins = () => {
   const origins = process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || [];
+
+  // Environment-specific defaults
   if (process.env.NODE_ENV === 'development') {
     origins.push('http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5500');
+  } else {
+    // Production fallback - ensure main domains are always allowed
+    if (!origins.includes('https://acadmix.shop')) origins.push('https://acadmix.shop');
+    if (!origins.includes('https://www.acadmix.shop')) origins.push('https://www.acadmix.shop');
   }
+
   console.log('🔧 [CORS] Configured allowed origins:', origins);
   return origins;
 };
@@ -124,9 +131,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Body parsers
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Body parsers - Increased limit to 50MB to match Multer file upload limit
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
 // MongoDB connection with lazy loading
@@ -1233,7 +1240,15 @@ app.get("/api/admin/dashboard", requireAdmin, async (req, res) => {
       payments,
     });
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch admin data" });
+    console.error('❌ [ADMIN DASHBOARD] Error:', {
+      message: err.message,
+      stack: err.stack,
+      name: err.name
+    });
+    res.status(500).json({
+      error: "Failed to fetch admin data",
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
@@ -1397,7 +1412,9 @@ app.post("/api/admin/books",
 
         const uploadResponse = await cloudinary.uploader.upload(dataURI, {
           folder: "acadmix/pdfs",
-          resource_type: "raw"
+          resource_type: "raw",
+          timeout: 120000, // 2 minutes for large files
+          chunk_size: 6000000 // 6MB chunks for stable upload
         });
 
         console.log('✅ [ADMIN CREATE BOOK] PDF uploaded successfully!');
@@ -1474,7 +1491,9 @@ app.put("/api/admin/books/:id", requireAdmin, upload.fields([
       const uploadResponse = await cloudinary.uploader.upload(dataURI, {
         folder: "acadmix/pdfs",
         resource_type: "raw",
-        format: "pdf"
+        format: "pdf",
+        timeout: 120000, // 2 minutes for large files
+        chunk_size: 6000000 // 6MB chunks for stable upload
       });
       updateData.pdfUrl = uploadResponse.secure_url;
     }
