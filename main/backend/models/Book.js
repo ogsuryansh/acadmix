@@ -65,6 +65,14 @@ const bookSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  demoPdfUrl: {
+    type: String,
+    default: ''
+  },
+  telegramLink: {
+    type: String,
+    default: ''
+  },
   badge: {
     type: String,
     default: '',

@@ -917,6 +917,8 @@ app.get("/api/books/:id", async (req, res) => {
       image: book.image,
       isFree: book.isFree,
       shareCount: book.shareCount,
+      demoPdfUrl: book.demoPdfUrl || '',
+      telegramLink: book.telegramLink || '',
       createdAt: book.createdAt,
       updatedAt: book.updatedAt
     };
@@ -1370,7 +1372,8 @@ app.post("/api/admin/books",
   requireAdmin,
   upload.fields([
     { name: 'image', maxCount: 1 },
-    { name: 'pdf', maxCount: 1 }
+    { name: 'pdf', maxCount: 1 },
+    { name: 'demoPdf', maxCount: 1 }
   ]),
   handleUploadError,
   async (req, res) => {
@@ -1407,28 +1410,41 @@ app.post("/api/admin/books",
         const dataURI = "data:" + pdfFile.mimetype + ";base64," + b64;
 
         console.log('⬆️ [ADMIN CREATE BOOK] Uploading PDF file...');
-        console.log('📏 [ADMIN CREATE BOOK] PDF file size:', pdfFile.size, 'bytes');
-        console.log('📝 [ADMIN CREATE BOOK] PDF mimetype:', pdfFile.mimetype);
-
         const uploadResponse = await cloudinary.uploader.upload(dataURI, {
           folder: "acadmix/pdfs",
           resource_type: "raw",
-          timeout: 120000, // 2 minutes for large files
-          chunk_size: 6000000 // 6MB chunks for stable upload
+          timeout: 120000,
+          chunk_size: 6000000
         });
 
-        console.log('✅ [ADMIN CREATE BOOK] PDF uploaded successfully!');
-        console.log('🔗 [ADMIN CREATE BOOK] PDF secure_url:', uploadResponse.secure_url);
-        console.log('🔗 [ADMIN CREATE BOOK] PDF url:', uploadResponse.url);
-        console.log('🆔 [ADMIN CREATE BOOK] PDF public_id:', uploadResponse.public_id);
-        console.log('📊 [ADMIN CREATE BOOK] Full Cloudinary response:', JSON.stringify(uploadResponse, null, 2));
-
         pdfUrl = uploadResponse.secure_url;
+        console.log('✅ [ADMIN CREATE BOOK] PDF uploaded successfully');
       } else if (req.body.pdfUrl) {
         pdfUrl = req.body.pdfUrl;
       }
 
-      // 3. Prepare Book Data
+      // 3. Upload Demo PDF File
+      let demoPdfUrl = '';
+      if (req.files && req.files.demoPdf && req.files.demoPdf[0]) {
+        const demoPdfFile = req.files.demoPdf[0];
+        const b64 = Buffer.from(demoPdfFile.buffer).toString("base64");
+        const dataURI = "data:" + demoPdfFile.mimetype + ";base64," + b64;
+
+        console.log('⬆️ [ADMIN CREATE BOOK] Uploading Demo PDF file...');
+        const uploadResponse = await cloudinary.uploader.upload(dataURI, {
+          folder: "acadmix/demo-pdfs",
+          resource_type: "raw",
+          timeout: 60000,
+          chunk_size: 6000000
+        });
+
+        demoPdfUrl = uploadResponse.secure_url;
+        console.log('✅ [ADMIN CREATE BOOK] Demo PDF uploaded successfully');
+      } else if (req.body.demoPdfUrl) {
+        demoPdfUrl = req.body.demoPdfUrl;
+      }
+
+      // 4. Prepare Book Data
       const bookData = {
         title: req.body.title,
         description: req.body.description,
@@ -1441,7 +1457,9 @@ app.post("/api/admin/books",
         subject: req.body.subject,
         class: req.body.class,
         image: coverImageUrl,
-        pdfUrl: pdfUrl
+        pdfUrl: pdfUrl,
+        demoPdfUrl: demoPdfUrl,
+        telegramLink: req.body.telegramLink || ''
       };
 
       console.log('🔨 [ADMIN CREATE BOOK] Creating book with data:', bookData);
@@ -1462,7 +1480,8 @@ app.post("/api/admin/books",
 
 app.put("/api/admin/books/:id", requireAdmin, upload.fields([
   { name: 'image', maxCount: 1 },
-  { name: 'pdf', maxCount: 1 }
+  { name: 'pdf', maxCount: 1 },
+  { name: 'demoPdf', maxCount: 1 }
 ]), async (req, res) => {
   try {
     await connectToDB();
@@ -1498,6 +1517,21 @@ app.put("/api/admin/books/:id", requireAdmin, upload.fields([
       updateData.pdfUrl = uploadResponse.secure_url;
     }
 
+    // Handle Demo PDF Upload
+    if (req.files && req.files.demoPdf && req.files.demoPdf[0]) {
+      const demoPdfFile = req.files.demoPdf[0];
+      const b64 = Buffer.from(demoPdfFile.buffer).toString("base64");
+      const dataURI = "data:" + demoPdfFile.mimetype + ";base64," + b64;
+
+      const uploadResponse = await cloudinary.uploader.upload(dataURI, {
+        folder: "acadmix/demo-pdfs",
+        resource_type: "raw",
+        timeout: 60000,
+        chunk_size: 6000000
+      });
+      updateData.demoPdfUrl = uploadResponse.secure_url;
+    }
+
     // Handle numeric fields
     if (updateData.price) updateData.price = Number(updateData.price);
     if (updateData.priceDiscounted) updateData.priceDiscounted = Number(updateData.priceDiscounted);
@@ -1507,6 +1541,7 @@ app.put("/api/admin/books/:id", requireAdmin, upload.fields([
     // Explicitly set text fields if present
     if (req.body.category) updateData.category = req.body.category;
     if (req.body.section) updateData.section = req.body.section;
+    if (req.body.telegramLink !== undefined) updateData.telegramLink = req.body.telegramLink;
 
     const book = await Book.findByIdAndUpdate(req.params.id, updateData, { new: true });
 

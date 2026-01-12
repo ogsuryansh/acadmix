@@ -34,6 +34,8 @@ const schemas = {
         priceDiscounted: Joi.number().min(0).max(10000).optional(),
         pages: Joi.number().min(1).max(10000).optional(),
         pdfUrl: Joi.string().uri().allow(''),
+        demoPdfUrl: Joi.string().uri().allow(''),
+        telegramLink: Joi.string().uri().allow(''),
         badge: Joi.string().max(20).allow(''),
         demo: Joi.string().valid('Yes', 'No').default('No'),
         isFree: Joi.boolean().default(false)
@@ -49,6 +51,8 @@ const schemas = {
         priceDiscounted: Joi.number().min(0).max(10000),
         pages: Joi.number().min(1).max(10000),
         pdfUrl: Joi.string().uri().allow(''),
+        demoPdfUrl: Joi.string().uri().allow(''),
+        telegramLink: Joi.string().uri().allow(''),
         badge: Joi.string().max(20).allow(''),
         demo: Joi.string().valid('Yes', 'No'),
         isFree: Joi.boolean()

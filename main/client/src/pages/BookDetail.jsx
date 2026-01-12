@@ -1,14 +1,11 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  BookOpen, 
-  Download, 
-  ArrowLeft, 
-  Star, 
-  Clock, 
-  FileText,
+import { useEffect } from 'react';
+import {
+  BookOpen,
+  ArrowLeft,
+  Clock,
   Tag,
-  DollarSign,
   ShoppingCart,
   Eye
 } from 'lucide-react';
@@ -27,20 +24,32 @@ const BookDetail = () => {
     enabled: !!bookId,
   });
 
+  // Fetch user's purchased books to check ownership
+  const { data: purchasedBooks } = useQuery({
+    queryKey: ['purchased-books'],
+    queryFn: () => api.get('/user/purchased-books').then(res => res.data),
+    enabled: !!user,
+  });
+
+  const isPurchased = purchasedBooks?.some(b => b._id === bookId) || false;
+  const purchasedBook = purchasedBooks?.find(b => b._id === bookId);
+  const isAdmin = user?.role === 'admin';
+  const canRead = isPurchased || isAdmin || book?.isFree;
+
   const handlePurchase = () => {
     if (!user) {
       toast.error('Please login to purchase this book');
       navigate('/login', { state: { from: `/book/${bookId}` } });
       return;
     }
-    
+
     // Navigate to payment page
     navigate(`/payment/${bookId}`);
   };
 
   const handlePreview = () => {
-    if (book?.pdfUrl) {
-      window.open(book.pdfUrl, '_blank');
+    if (book?.demoPdfUrl) {
+      window.open(book.demoPdfUrl, '_blank');
     }
   };
 
@@ -73,6 +82,18 @@ const BookDetail = () => {
       </div>
     );
   }
+
+  useEffect(() => {
+    if (book) {
+      console.log('Permissions Debug:', {
+        role: user?.role,
+        isAdmin,
+        isPurchased,
+        isFree: book.isFree,
+        canRead
+      });
+    }
+  }, [book, user, isAdmin, isPurchased, canRead]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -112,7 +133,7 @@ const BookDetail = () => {
                     <BookOpen className="h-24 w-24 text-gray-400" />
                   </div>
                 )}
-                
+
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-2">
@@ -128,30 +149,66 @@ const BookDetail = () => {
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-3">
-                    <button
-                      onClick={handlePurchase}
-                      className="w-full btn-primary flex items-center justify-center space-x-2 py-3"
-                    >
-                      <ShoppingCart className="h-5 w-5" />
-                      <span>
-                        {book.isFree ? 'Get Free Book' : (
-                          book.priceDiscounted && book.priceDiscounted !== book.price ? 
-                          `Buy for ₹${book.priceDiscounted}` : 
-                          `Buy for ₹${book.price}`
+                    {canRead ? (
+                      /* Owned State */
+                      <>
+                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center mb-4">
+                          <p className="text-green-800 dark:text-green-200 font-medium">
+                            {isAdmin ? 'Admin Access' : (book.isFree ? 'Free Book' : 'You own this book')}
+                          </p>
+                        </div>
+
+                        {(book.telegramLink || purchasedBook?.telegramLink) ? (
+                          <a
+                            href={book.telegramLink || purchasedBook?.telegramLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full btn-primary flex items-center justify-center space-x-2 py-3 bg-blue-600 hover:bg-blue-700"
+                          >
+                            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-2.02-1.35-2.92-1.96-.96-.65-.05-1.09.2-1.34.64-.64 3.75-3.4 3.82-3.69.01-.03.01-.13-.05-.18s-.15-.04-.22.01c-.1.06-1.56.99-4.43 2.93-.41.28-.79.42-1.12.41-.36-.01-1.05-.2-1.56-.36-.63-.19-1.13-.29-1.08-.61.02-.16.24-.32.65-.49 2.54-1.1 4.24-1.83 5.09-2.18 2.42-1 2.92-1.17 3.25-1.17.07 0 .23.02.34.1.11.08.14.19.16.27l.02.13z" />
+                            </svg>
+                            <span>Get on Telegram</span>
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => window.open(book.pdfUrl || purchasedBook?.pdfUrl, '_blank')}
+                            className="w-full btn-primary flex items-center justify-center space-x-2 py-3"
+                          >
+                            <BookOpen className="h-5 w-5" />
+                            <span>Read Now</span>
+                          </button>
                         )}
-                      </span>
-                    </button>
-                    
-                    {book.pdfUrl && (
-                      <button
-                        onClick={handlePreview}
-                        className="w-full btn-outline flex items-center justify-center space-x-2 py-3"
-                      >
-                        <Eye className="h-5 w-5" />
-                        <span>Preview Book</span>
-                      </button>
+                      </>
+                    ) : (
+                      /* Not Owned State */
+                      <>
+                        <button
+                          onClick={handlePurchase}
+                          className="w-full btn-primary flex items-center justify-center space-x-2 py-3"
+                        >
+                          <ShoppingCart className="h-5 w-5" />
+                          <span>
+                            {book.isFree ? 'Get Free Book' : (
+                              book.priceDiscounted && book.priceDiscounted !== book.price ?
+                                `Buy for ₹${book.priceDiscounted}` :
+                                `Buy for ₹${book.price}`
+                            )}
+                          </span>
+                        </button>
+
+                        {book.demoPdfUrl && (
+                          <button
+                            onClick={handlePreview}
+                            className="w-full btn-outline flex items-center justify-center space-x-2 py-3"
+                          >
+                            <Eye className="h-5 w-5" />
+                            <span>Preview Book (Demo)</span>
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -181,7 +238,7 @@ const BookDetail = () => {
                     Pages
                   </div>
                 </div>
-                
+
                 <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className="text-2xl font-bold text-green-600">
                     {book.category}
@@ -190,7 +247,7 @@ const BookDetail = () => {
                     Category
                   </div>
                 </div>
-                
+
                 <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className="text-2xl font-bold text-purple-600">
                     {book.section}
@@ -199,16 +256,16 @@ const BookDetail = () => {
                     Section
                   </div>
                 </div>
-                
+
                 <div className="text-center p-4 bg-blue-600 rounded-lg">
                   <div className="text-sm text-blue-100">
                     {book.priceDiscounted && book.priceDiscounted !== book.price ? 'Sale Price' : 'Price'}
                   </div>
                   <div className="text-2xl font-bold text-white">
                     {book.isFree ? 'Free' : (
-                      book.priceDiscounted && book.priceDiscounted !== book.price ? 
-                      `₹${book.priceDiscounted}` : 
-                      `₹${book.price}`
+                      book.priceDiscounted && book.priceDiscounted !== book.price ?
+                        `₹${book.priceDiscounted}` :
+                        `₹${book.price}`
                     )}
                   </div>
                 </div>

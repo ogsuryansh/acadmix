@@ -7,25 +7,26 @@ import toast from 'react-hot-toast';
 
 const BookCard = ({ book }) => {
   const [showPDF, setShowPDF] = useState(false);
+  const [showDemoPDF, setShowDemoPDF] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
 
   const handleBuyNow = (e) => {
     e.preventDefault();
-    
+
     if (!user) {
       toast.error('Please log in to purchase this book');
       navigate('/login');
       return;
     }
-    
+
     // Check if payment is pending
     if (book.paymentStatus === 'pending') {
       toast.error('Payment is already pending for this book. Please wait for admin approval.');
       return;
     }
-    
+
     navigate(`/payment/${book._id}`);
   };
 
@@ -94,19 +95,19 @@ const BookCard = ({ book }) => {
           <div className={`w-full h-48 bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/20 dark:to-primary-800/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 ${book.image ? 'hidden' : ''}`}>
             <BookOpen className="h-12 w-12 text-primary-600 dark:text-primary-400" />
           </div>
-          
+
           <div className="absolute top-2 right-2 flex items-center bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">
             <Star className="h-3 w-3 text-yellow-400 fill-current" />
             <span className="text-xs text-white ml-1 font-medium">4.8</span>
           </div>
-          
+
           <div className="absolute top-2 left-2">
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white/90 dark:bg-gray-800/90 text-gray-800 dark:text-gray-200 backdrop-blur-sm">
               {book.category}
             </span>
           </div>
         </div>
-        
+
         <div className="p-5 flex-1 flex flex-col">
           <div className="flex-1">
             <div className="mb-3">
@@ -114,11 +115,11 @@ const BookCard = ({ book }) => {
                 {book.title}
               </h3>
             </div>
-            
+
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2 leading-relaxed">
               {book.description}
             </p>
-            
+
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
                 {book.isFree || book.paymentStatus === 'free' ? (
@@ -144,11 +145,11 @@ const BookCard = ({ book }) => {
                   </>
                 )}
               </div>
-              
+
               {getStatusBadge(isAdmin ? 'admin_access' : (book.paymentStatus || 'locked'))}
             </div>
           </div>
-          
+
           <div className="mt-auto">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
@@ -156,11 +157,23 @@ const BookCard = ({ book }) => {
                 <span>{book.pages || '200+'} pages</span>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-between">
               {(book.paymentStatus === 'approved' || book.paymentStatus === 'admin_access' || book.paymentStatus === 'free' || isAdmin) ? (
                 <div className="flex items-center space-x-2 w-full">
-                  {book.pdfUrl && (
+                  {book.telegramLink ? (
+                    <a
+                      href={book.telegramLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group/link flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    >
+                      <svg className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-2.02-1.35-2.92-1.96-.96-.65-.05-1.09.2-1.34.64-.64 3.75-3.4 3.82-3.69.01-.03.01-.13-.05-.18s-.15-.04-.22.01c-.1.06-1.56.99-4.43 2.93-.41.28-.79.42-1.12.41-.36-.01-1.05-.2-1.56-.36-.63-.19-1.13-.29-1.08-.61.02-.16.24-.32.65-.49 2.54-1.1 4.24-1.83 5.09-2.18 2.42-1 2.92-1.17 3.25-1.17.07 0 .23.02.34.1.11.08.14.19.16.27l.02.13z" />
+                      </svg>
+                      Get on Telegram
+                    </a>
+                  ) : book.pdfUrl && (
                     <button
                       onClick={() => setShowPDF(true)}
                       className="group/link flex items-center text-sm text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20"
@@ -188,18 +201,32 @@ const BookCard = ({ book }) => {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={handleBuyNow}
-                  className="group/link flex items-center justify-center w-full text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors px-4 py-2 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 border border-primary-200 dark:border-primary-800"
-                >
-                  Buy Now
-                  <ArrowRight className="h-4 w-4 ml-1 group-hover/link:translate-x-1 transition-transform" />
-                </button>
+                <div className="grid grid-cols-2 gap-2 w-full">
+                  {book.demoPdfUrl && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setShowDemoPDF(true);
+                      }}
+                      className="group/link flex items-center justify-center text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      Demo
+                    </button>
+                  )}
+                  <button
+                    onClick={handleBuyNow}
+                    className={`group/link flex items-center justify-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 border border-primary-200 dark:border-primary-800 ${!book.demoPdfUrl ? 'col-span-2' : ''}`}
+                  >
+                    Buy Now
+                    <ArrowRight className="h-4 w-4 ml-1 group-hover/link:translate-x-1 transition-transform" />
+                  </button>
+                </div>
               )}
             </div>
           </div>
         </div>
-        
+
         <div className="absolute inset-0 bg-gradient-to-t from-primary-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
       </div>
 
@@ -208,6 +235,14 @@ const BookCard = ({ book }) => {
           pdfUrl={book.pdfUrl}
           title={book.title}
           onClose={() => setShowPDF(false)}
+        />
+      )}
+
+      {showDemoPDF && book.demoPdfUrl && (
+        <AdvancedPDFViewer
+          pdfUrl={book.demoPdfUrl}
+          title={`${book.title} (Demo)`}
+          onClose={() => setShowDemoPDF(false)}
         />
       )}
     </>
