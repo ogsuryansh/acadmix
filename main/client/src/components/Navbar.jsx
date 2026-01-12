@@ -16,8 +16,10 @@ const Navbar = () => {
     { name: 'Tests', href: '/tests' },
   ];
 
+  const isAdmin = user?.role === 'admin';
+
   const userNavigation = [
-    { name: 'Dashboard', href: '/', icon: Home },
+    { name: 'Dashboard', href: isAdmin ? '/admin' : '/', icon: Home },
     { name: 'My Books', href: '/my-books', icon: BookMarked },
     { name: 'Tests', href: '/tests', icon: Target },
     { name: 'Class 11', href: '/class11', icon: BookOpen },
@@ -47,11 +49,10 @@ const Navbar = () => {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 flex items-center ${
-                  isActive(item.href)
-                    ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 shadow-sm'
-                    : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                }`}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 flex items-center ${isActive(item.href)
+                  ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 shadow-sm'
+                  : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                  }`}
               >
                 {item.icon && <item.icon className="h-4 w-4 mr-2" />}
                 {item.name}
@@ -62,7 +63,7 @@ const Navbar = () => {
           {/* Desktop Auth & Theme */}
           <div className="hidden md:flex items-center space-x-4">
             <ThemeToggle />
-            
+
             {user ? (
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
@@ -73,7 +74,7 @@ const Navbar = () => {
                     {user.name}
                   </span>
                 </div>
-                {user.admin && (
+                {isAdmin && (
                   <Link
                     to="/admin"
                     className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors duration-200"
@@ -125,26 +126,24 @@ const Navbar = () => {
       </div>
 
       {/* Mobile Navigation */}
-      <div className={`md:hidden transition-all duration-300 ease-in-out ${
-        isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-      } overflow-hidden`}>
+      <div className={`md:hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        } overflow-hidden`}>
         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 glass-effect border-t border-gray-200/50 dark:border-gray-700/50">
           {navigation.map((item) => (
             <Link
               key={item.name}
               to={item.href}
-              className={`block px-3 py-2 rounded-lg text-base font-medium transition-all duration-200 transform hover:scale-105 flex items-center ${
-                isActive(item.href)
-                  ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
-                  : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-              }`}
+              className={`block px-3 py-2 rounded-lg text-base font-medium transition-all duration-200 transform hover:scale-105 flex items-center ${isActive(item.href)
+                ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
+                : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                }`}
               onClick={() => setIsOpen(false)}
             >
               {item.icon && <item.icon className="h-5 w-5 mr-3" />}
               {item.name}
             </Link>
           ))}
-          
+
           {user ? (
             <div className="pt-4 border-t border-gray-200/50 dark:border-gray-700/50 space-y-2">
               <div className="flex items-center px-3 py-2">
@@ -155,7 +154,7 @@ const Navbar = () => {
                   Welcome, {user.name}
                 </span>
               </div>
-              {user.admin && (
+              {isAdmin && (
                 <Link
                   to="/admin"
                   className="block px-3 py-2 text-base text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors duration-200"

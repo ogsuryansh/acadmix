@@ -184,7 +184,7 @@ router.post("/payment/submit", requireAuth, async (req, res) => {
     const config = await getPaymentConfig();
     const qrCode = await generateQRCode(amount, config.upiId, config.payeeName);
 
-    // Check if UTR already exists
+    // Check if UTR already exists in DB (Primary Duplicate Check)
     const existingUTR = await Payment.findOne({ utr });
     if (existingUTR) {
       logger.warn("Duplicate UTR attempt", { utr, userId: req.user._id });
@@ -194,24 +194,52 @@ router.post("/payment/submit", requireAuth, async (req, res) => {
       });
     }
 
+    // Auto-Verify via Email
+    let status = "pending";
+    let approvedAt = undefined;
+    let approvedBy = undefined;
+    let notes = undefined;
+
+    try {
+      const { verifyPaymentEmail } = require('../utils/emailVerifier');
+      const isVerified = await verifyPaymentEmail(utr);
+
+      if (isVerified) {
+        status = "approved";
+        approvedAt = new Date();
+        approvedBy = req.user._id; // Approved by system/user trigger
+        notes = "Auto-approved via Email Verification (Slice)";
+        logger.info(`✅ Payment ${utr} auto-approved via email`);
+      } else {
+        logger.info(`ℹ️ Payment ${utr} not verified via email, set to pending`);
+      }
+    } catch (emailErr) {
+      logger.error('Email verification process error', emailErr);
+      // Continue as pending
+    }
+
     const payment = await Payment.create({
       user: req.user._id,
       book: bookId,
       utr,
       amount,
-      status: "pending",
+      status, // pending or approved
       submittedAt: new Date(),
+      approvedAt,
+      approvedBy,
+      notes,
       qrCode,
       upiId: config.upiId,
       payeeName: config.payeeName
     });
 
-    logger.info("Payment submitted successfully", { paymentId: payment._id });
+    logger.info("Payment submitted successfully", { paymentId: payment._id, status });
 
     res.json({
       success: true,
-      message: "Payment submitted successfully",
-      paymentId: payment._id
+      message: status === 'approved' ? "Payment verified and approved instantly!" : "Payment submitted successfully. Waiting for admin approval.",
+      paymentId: payment._id,
+      status
     });
   } catch (err) {
     // Handle duplicate key error
