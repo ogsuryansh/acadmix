@@ -73,55 +73,6 @@ const Class12 = () => {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-12 bg-white dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                <div className="flex justify-center mb-3">
-                  <div className="p-3 bg-primary-100 dark:bg-primary-900/20 rounded-full">
-                    <stat.icon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
-                  </div>
-                </div>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{stat.number}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16 bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 animate-fade-in">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Why Choose Our <span className="gradient-text">Class 12</span> Materials?
-            </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Designed specifically for Class 12 students to master advanced concepts
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <div key={index} className="text-center group animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                <div className={`${feature.bgColor} w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                  <feature.icon className={`h-10 w-10 ${feature.color}`} />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                  {feature.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Content Section */}
       <section className="py-16 bg-white dark:bg-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -142,7 +93,7 @@ const Class12 = () => {
                     <p className="text-gray-600 dark:text-gray-400">Advanced materials for medical entrance excellence</p>
                   </div>
                 </div>
-                
+
                 {neetBooks.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {neetBooks.map((book, index) => (
@@ -171,7 +122,7 @@ const Class12 = () => {
                     <p className="text-gray-600 dark:text-gray-400">Expert materials for engineering entrance mastery</p>
                   </div>
                 </div>
-                
+
                 {jeeBooks.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {jeeBooks.map((book, index) => (
@@ -197,7 +148,7 @@ const Class12 = () => {
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400">Expert strategies for final year success</p>
                 </div>
-                
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className="space-y-4">
                     <div className="flex items-start">
@@ -227,7 +178,7 @@ const Class12 = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div className="flex items-start">
                       <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-full mr-4 mt-1">
@@ -267,20 +218,20 @@ const Class12 = () => {
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400">Students who achieved their dreams with our materials</p>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="text-center p-6 bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-xl">
                     <Award className="h-12 w-12 text-primary-600 dark:text-primary-400 mx-auto mb-4" />
                     <h4 className="font-semibold text-gray-900 dark:text-white mb-2">NEET AIR 45</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">"Our materials helped me understand complex concepts easily."</p>
                   </div>
-                  
+
                   <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl">
                     <Award className="h-12 w-12 text-green-600 dark:text-green-400 mx-auto mb-4" />
                     <h4 className="font-semibold text-gray-900 dark:text-white mb-2">JEE AIR 127</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">"The advanced problem-solving techniques were game-changing."</p>
                   </div>
-                  
+
                   <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl">
                     <Award className="h-12 w-12 text-purple-600 dark:text-purple-400 mx-auto mb-4" />
                     <h4 className="font-semibold text-gray-900 dark:text-white mb-2">NEET AIR 89</h4>
@@ -290,6 +241,55 @@ const Class12 = () => {
               </section>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-12 bg-white dark:bg-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {stats.map((stat, index) => (
+              <div key={index} className="text-center animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                <div className="flex justify-center mb-3">
+                  <div className="p-3 bg-primary-100 dark:bg-primary-900/20 rounded-full">
+                    <stat.icon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{stat.number}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-16 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12 animate-fade-in">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              Why Choose Our <span className="gradient-text">Class 12</span> Materials?
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Designed specifically for Class 12 students to master advanced concepts
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {features.map((feature, index) => (
+              <div key={index} className="text-center group animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                <div className={`${feature.bgColor} w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                  <feature.icon className={`h-10 w-10 ${feature.color}`} />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                  {feature.title}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </div>

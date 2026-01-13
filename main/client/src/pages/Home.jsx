@@ -108,7 +108,7 @@ const Home = () => {
                   Your Gateway to NEET & JEE Success
                 </p>
                 <p className="text-lg mb-12 text-primary-200 max-w-3xl mx-auto leading-relaxed">
-                  Access comprehensive study materials, practice tests, and expert guidance 
+                  Access comprehensive study materials, practice tests, and expert guidance
                   to excel in your medical and engineering entrance exams.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -161,7 +161,7 @@ const Home = () => {
               We provide everything you need to succeed in your entrance exams
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
               <div key={index} className="text-center group animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
@@ -180,42 +180,7 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="py-20 bg-white dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16 animate-fade-in">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              {user ? 'Your Recommended Materials' : 'Featured Study Materials'}
-            </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-400">
-              {user ? 'Personalized content based on your learning progress' : 'Start your preparation with our most popular resources'}
-            </p>
-          </div>
 
-          {isLoading ? (
-            <div className="flex justify-center">
-              <div className="spinner h-12 w-12"></div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {books?.slice(0, 8).map((book, index) => (
-                <div key={book._id} className="animate-scale-in h-full" style={{ animationDelay: `${index * 0.1}s` }}>
-                  <BookCard book={book} />
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="text-center mt-12 animate-fade-in">
-            <Link
-              to="/class11"
-              className="group btn-primary text-lg px-8 py-4 inline-flex items-center"
-            >
-              {user ? 'Continue Learning' : 'View All Materials'}
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
-        </div>
-      </section>
 
       {/* Contact Section */}
       <section className="py-20 bg-gray-50 dark:bg-gray-900">
@@ -228,7 +193,7 @@ const Home = () => {
               Need help? We're here to support your learning journey
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Email */}
             <div className="text-center p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
@@ -237,8 +202,8 @@ const Home = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Email Support</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">Get quick responses to your questions</p>
-              <a 
-                href="mailto:acadmix.shop@gmail.com" 
+              <a
+                href="mailto:acadmix.shop@gmail.com"
                 className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
               >
                 acadmix.shop@gmail.com
@@ -252,9 +217,9 @@ const Home = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">WhatsApp</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">Instant messaging support</p>
-              <a 
-                href="https://wa.me/212780729301" 
-                target="_blank" 
+              <a
+                href="https://wa.me/212780729301"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium transition-colors"
               >
@@ -269,9 +234,9 @@ const Home = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Telegram</h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">Join our community channel</p>
-              <a 
-                href="https://t.me/preachify" 
-                target="_blank" 
+              <a
+                href="https://t.me/preachify"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
               >

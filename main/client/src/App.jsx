@@ -14,6 +14,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Payment from './pages/Payment';
 import Admin from './pages/Admin';
+import Boards from './pages/Boards';
+import Neet from './pages/Neet';
 import AdminLogin from './pages/AdminLogin';
 import AuthCallback from './pages/AuthCallback';
 import MyBooks from './pages/MyBooks';
@@ -50,7 +52,10 @@ function App() {
                     <Route path="/" element={<Home />} />
                     <Route path="/class11" element={<Class11 />} />
                     <Route path="/class12" element={<Class12 />} />
-                    <Route path="/tests" element={<Tests />} />
+                    <Route path="/class12" element={<Class12 />} />
+                    {/* <Route path="/tests" element={<Tests />} /> */}
+                    <Route path="/boards" element={<Boards />} />
+                    <Route path="/neet" element={<Neet />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/admin-login" element={<AdminLogin />} />

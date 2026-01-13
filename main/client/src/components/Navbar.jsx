@@ -11,9 +11,11 @@ const Navbar = () => {
 
   const publicNavigation = [
     { name: 'Home', href: '/' },
+    { name: 'NEET', href: '/neet' },
+    { name: 'BOARDS (CBSE)', href: '/boards' },
     { name: 'Class 11', href: '/class11' },
     { name: 'Class 12', href: '/class12' },
-    { name: 'Tests', href: '/tests' },
+    // { name: 'Tests', href: '/tests' }, // Disabled
   ];
 
   const isAdmin = user?.role === 'admin';
@@ -21,7 +23,8 @@ const Navbar = () => {
   const userNavigation = [
     { name: 'Dashboard', href: isAdmin ? '/admin' : '/', icon: Home },
     { name: 'My Books', href: '/my-books', icon: BookMarked },
-    { name: 'Tests', href: '/tests', icon: Target },
+    { name: 'NEET', href: '/neet', icon: Target },
+    { name: 'BOARDS (CBSE)', href: '/boards', icon: Target },
     { name: 'Class 11', href: '/class11', icon: BookOpen },
     { name: 'Class 12', href: '/class12', icon: BookOpen },
   ];
