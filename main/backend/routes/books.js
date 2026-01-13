@@ -23,11 +23,15 @@ router.get('/', validate(schemas.section, 'query'), asyncHandler(async (req, res
     logger.debug('Fetching books', { section: req.query.section || 'all' });
 
     await connectToDB();
-    const { section } = req.query;
+    const { section, category } = req.query;
     let query = {};
 
     if (section && section !== "home") {
         query.section = section;
+    }
+
+    if (category) {
+        query.category = category;
     }
 
     const books = await Book.find(query).sort({ createdAt: -1 });

@@ -29,7 +29,7 @@ const schemas = {
         description: Joi.string().min(10).max(1000).required(),
         image: Joi.string().uri().allow(''),
         category: Joi.string().valid('NEET', 'JEE').required(),
-        section: Joi.string().valid('home', 'class11', 'class12', 'test').required(),
+        section: Joi.string().valid('home', 'class11', 'class12', 'test', 'boards', 'neet').required(),
         price: Joi.number().min(0).max(10000).required(),
         priceDiscounted: Joi.number().min(0).max(10000).optional(),
         pages: Joi.number().min(1).max(10000).optional(),
@@ -46,7 +46,7 @@ const schemas = {
         description: Joi.string().min(10).max(1000),
         image: Joi.string().uri().allow(''),
         category: Joi.string().valid('NEET', 'JEE'),
-        section: Joi.string().valid('home', 'class11', 'class12', 'test'),
+        section: Joi.string().valid('home', 'class11', 'class12', 'test', 'boards', 'neet'),
         price: Joi.number().min(0).max(10000),
         priceDiscounted: Joi.number().min(0).max(10000),
         pages: Joi.number().min(1).max(10000),
@@ -94,7 +94,8 @@ const schemas = {
     }),
 
     section: Joi.object({
-        section: Joi.string().valid('home', 'class11', 'class12', 'test').optional()
+        section: Joi.string().valid('home', 'class11', 'class12', 'test', 'boards', 'neet').optional(),
+        category: Joi.string().valid('NEET', 'JEE').optional()
     }),
 
     pagination: Joi.object({
