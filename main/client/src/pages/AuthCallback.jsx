@@ -27,9 +27,8 @@ const AuthCallback = () => {
           return;
         }
 
-        // Add a small delay to ensure session cookie is set
-        console.log('⏳ [AuthCallback] Waiting for session cookie...');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Proceed immediately to user fetching
+        console.log('📡 [AuthCallback] Fetching user info from session...');
 
         // User is already authenticated via session, just get user info
         console.log('📡 [AuthCallback] Fetching user info from session...');
@@ -37,8 +36,8 @@ const AuthCallback = () => {
 
         console.log('✅ [AuthCallback] Successfully authenticated');
         setStatus('success');
-        setMessage('Login successful! Redirecting...');
-        setTimeout(() => navigate('/'), 2000);
+        setMessage('Login successful!');
+        navigate('/', { replace: true });
 
       } catch (error) {
         console.error('❌ [AuthCallback] Error details:', {
