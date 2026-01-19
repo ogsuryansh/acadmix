@@ -49,13 +49,8 @@ function App() {
                 <Navbar />
                 <main className="flex-1 pt-16 animate-fade-in">
                   <Routes>
+                    {/* Public Routes */}
                     <Route path="/" element={<Home />} />
-                    <Route path="/class11" element={<Class11 />} />
-                    <Route path="/class12" element={<Class12 />} />
-                    <Route path="/class12" element={<Class12 />} />
-                    {/* <Route path="/tests" element={<Tests />} /> */}
-                    <Route path="/boards" element={<Boards />} />
-                    <Route path="/neet" element={<Neet />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/admin-login" element={<AdminLogin />} />
@@ -63,9 +58,48 @@ function App() {
                     <Route path="/refund" element={<RefundPolicy />} />
                     <Route path="/privacy" element={<PrivacyPolicy />} />
                     <Route path="/terms" element={<TermsOfService />} />
+
+                    {/* Protected Routes */}
+                    <Route
+                      path="/class11"
+                      element={
+                        <ProtectedRoute>
+                          <Class11 />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/class12"
+                      element={
+                        <ProtectedRoute>
+                          <Class12 />
+                        </ProtectedRoute>
+                      }
+                    />
+                    {/* <Route path="/tests" element={<ProtectedRoute><Tests /></ProtectedRoute>} /> */}
+                    <Route
+                      path="/boards"
+                      element={
+                        <ProtectedRoute>
+                          <Boards />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/neet"
+                      element={
+                        <ProtectedRoute>
+                          <Neet />
+                        </ProtectedRoute>
+                      }
+                    />
                     <Route
                       path="/book/:bookId"
-                      element={<BookDetail />}
+                      element={
+                        <ProtectedRoute>
+                          <BookDetail />
+                        </ProtectedRoute>
+                      }
                     />
                     <Route
                       path="/my-books"
@@ -83,6 +117,8 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
+
+                    {/* Admin Routes */}
                     <Route
                       path="/admin"
                       element={

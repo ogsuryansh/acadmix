@@ -496,7 +496,9 @@ app.get(
       const frontendOrigin = process.env.FRONTEND_ORIGIN ||
         (process.env.NODE_ENV === "production" ? "https://acadmix.shop" : "http://localhost:5173");
 
-      res.redirect(`${frontendOrigin}/auth-callback`);
+      // In development, redirect directly to home; in production use auth-callback for better UX
+      const redirectPath = process.env.NODE_ENV === "production" ? "/auth-callback" : "/";
+      res.redirect(`${frontendOrigin}${redirectPath}`);
     } catch (err) {
       console.error('OAuth callback error:', err);
       const frontendOrigin = process.env.FRONTEND_ORIGIN ||
