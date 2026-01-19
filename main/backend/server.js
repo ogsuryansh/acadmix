@@ -493,16 +493,38 @@ app.get(
   async (req, res) => {
     try {
       // User is automatically logged in via passport
+
+      // Smart environment detection: check actual host being accessed
+      const host = req.get("host") || "";
+      const isProductionHost = host.includes("acadmix.shop") || host.includes("vercel.app");
+      const isProduction = process.env.NODE_ENV === "production" || isProductionHost;
+
       const frontendOrigin = process.env.FRONTEND_ORIGIN ||
-        (process.env.NODE_ENV === "production" ? "https://acadmix.shop" : "http://localhost:5173");
+        (isProduction ? "https://acadmix.shop" : "http://localhost:5173");
 
       // In development, redirect directly to home; in production use auth-callback for better UX
-      const redirectPath = process.env.NODE_ENV === "production" ? "/auth-callback" : "/";
+      const redirectPath = isProduction ? "/auth-callback" : "/";
+
+      console.log('🔄 [OAuth Callback] Redirecting:', {
+        host,
+        isProductionHost,
+        isProduction,
+        frontendOrigin,
+        redirectPath,
+        fullRedirect: `${frontendOrigin}${redirectPath}`
+      });
+
       res.redirect(`${frontendOrigin}${redirectPath}`);
     } catch (err) {
       console.error('OAuth callback error:', err);
+
+      // Smart environment detection for error redirect too
+      const host = req.get("host") || "";
+      const isProductionHost = host.includes("acadmix.shop") || host.includes("vercel.app");
+      const isProduction = process.env.NODE_ENV === "production" || isProductionHost;
+
       const frontendOrigin = process.env.FRONTEND_ORIGIN ||
-        (process.env.NODE_ENV === "production" ? "https://acadmix.shop" : "http://localhost:5173");
+        (isProduction ? "https://acadmix.shop" : "http://localhost:5173");
 
       res.redirect(`${frontendOrigin}/login?error=oauth_failed`);
     }
