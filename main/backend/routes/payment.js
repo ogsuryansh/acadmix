@@ -194,7 +194,7 @@ router.post("/payment/submit", requireAuth, async (req, res) => {
       });
     }
 
-    // Auto-Verify via Email
+    // Auto-Verify via Email (with smart retry)
     let status = "pending";
     let approvedAt = undefined;
     let approvedBy = undefined;
@@ -202,16 +202,34 @@ router.post("/payment/submit", requireAuth, async (req, res) => {
 
     try {
       const { verifyPaymentEmail } = require('../utils/emailVerifier');
-      const isVerified = await verifyPaymentEmail(utr);
+      const MAX_RETRIES = 3;
+      const DELAY_MS = 5000;
+      let isVerified = false;
+
+      // Try multiple times to allow for email delivery delays
+      for (let i = 0; i < MAX_RETRIES; i++) {
+        logger.info(`🔄 Verification attempt ${i + 1}/${MAX_RETRIES} for UTR: ${utr}`);
+
+        isVerified = await verifyPaymentEmail(utr);
+
+        if (isVerified) {
+          break; // Found it! Stop waiting.
+        }
+
+        if (i < MAX_RETRIES - 1) {
+          logger.info(`⏳ Payment email not found yet. Waiting ${DELAY_MS / 1000}s...`);
+          await new Promise(resolve => setTimeout(resolve, DELAY_MS));
+        }
+      }
 
       if (isVerified) {
         status = "approved";
         approvedAt = new Date();
-        approvedBy = req.user._id; // Approved by system/user trigger
+        approvedBy = req.user._id; // Approved by system
         notes = "Auto-approved via Email Verification (Slice)";
-        logger.info(`✅ Payment ${utr} auto-approved via email`);
+        logger.info(`✅ Payment ${utr} auto-approved via email!`);
       } else {
-        logger.info(`ℹ️ Payment ${utr} not verified via email, set to pending`);
+        logger.info(`ℹ️ Payment ${utr} could not be verified after ${MAX_RETRIES} attempts. Marked as pending for manual review.`);
       }
     } catch (emailErr) {
       logger.error('Email verification process error', emailErr);
