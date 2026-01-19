@@ -84,17 +84,11 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log('🔍 AuthContext: Checking authentication state', {
-          pathname: window.location.pathname
-        });
-
         // Check if user is authenticated via session
         const response = await api.get('/auth/me');
-        console.log('✅ User authenticated:', response.data.user);
         setUser(response.data.user);
         setLoading(false);
       } catch (error) {
-        console.log('🔍 No authenticated user found');
         setUser(null);
         setLoading(false);
       }

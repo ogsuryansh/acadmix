@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import {
   Mail,
-  Phone,
   MapPin,
   BookOpen,
   Target,
@@ -111,15 +110,9 @@ const Footer = () => {
                 </a>
               </div>
               <div className="flex items-center space-x-2">
-                <Phone className="h-4 w-4 text-gray-400" />
-                <a href="https://wa.me/212780729301" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  +212 780729301 (WhatsApp)
-                </a>
-              </div>
-              <div className="flex items-center space-x-2">
                 <MessageCircle className="h-4 w-4 text-gray-400" />
-                <a href="https://t.me/preachify" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  @preachify (Telegram)
+                <a href="https://t.me/stolemindbot" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors text-sm">
+                  @stolemindbot (Telegram)
                 </a>
               </div>
             </div>

@@ -13,39 +13,24 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        console.log('🔄 [AuthCallback] Starting authentication callback');
-        console.log('🔍 [AuthCallback] URL search params:', window.location.search);
-        console.log('🔍 [AuthCallback] Full URL:', window.location.href);
-
         const error = searchParams.get('error');
 
         if (error) {
-          console.error('❌ [AuthCallback] Error in URL params:', error);
           setStatus('error');
           setMessage(`Authentication failed: ${error}. Please try again.`);
           setTimeout(() => navigate('/login'), 3000);
           return;
         }
 
-        // Proceed immediately to user fetching
-        console.log('📡 [AuthCallback] Fetching user info from session...');
-
         // User is already authenticated via session, just get user info
-        console.log('📡 [AuthCallback] Fetching user info from session...');
         await googleLogin();
 
-        console.log('✅ [AuthCallback] Successfully authenticated');
         setStatus('success');
         setMessage('Login successful!');
         navigate('/', { replace: true });
 
       } catch (error) {
-        console.error('❌ [AuthCallback] Error details:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          stack: error.stack
-        });
+        console.error('Authentication error:', error.message);
 
         setStatus('error');
         setMessage(error.response?.data?.error || 'Authentication failed. Please try logging in again.');

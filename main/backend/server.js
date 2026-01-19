@@ -494,7 +494,7 @@ app.get(
     try {
       // User is automatically logged in via passport
 
-      // ULTRA-ROBUST environment detection with multiple fallback layers
+      // Smart environment detection with multiple checks
       const host = req.get("host") || "";
       const origin = req.get("origin") || "";
       const referer = req.get("referer") || "";
@@ -508,38 +508,18 @@ app.get(
 
       const isProduction = process.env.NODE_ENV === "production" || isProductionHost;
 
-      // Explicit FRONTEND_ORIGIN with smart fallback
-      let frontendOrigin;
-      if (process.env.FRONTEND_ORIGIN) {
-        frontendOrigin = process.env.FRONTEND_ORIGIN;
-      } else if (isProduction) {
-        // HARDCODED production domain as ultimate fallback
-        frontendOrigin = "https://acadmix.shop";
-      } else {
-        frontendOrigin = "http://localhost:5173";
-      }
+      // Use FRONTEND_ORIGIN env var if set, otherwise smart default
+      const frontendOrigin = process.env.FRONTEND_ORIGIN ||
+        (isProduction ? "https://acadmix.shop" : "http://localhost:5173");
 
       // In development, redirect directly to home; in production use auth-callback for better UX
       const redirectPath = isProduction ? "/auth-callback" : "/";
-
-      console.log('🔄 [OAuth Callback] Redirecting:', {
-        host,
-        origin,
-        referer,
-        isProductionHost,
-        isProduction,
-        frontendOrigin,
-        redirectPath,
-        fullRedirect: `${frontendOrigin}${redirectPath}`,
-        envFrontendOrigin: process.env.FRONTEND_ORIGIN || 'NOT SET',
-        nodeEnv: process.env.NODE_ENV || 'NOT SET'
-      });
 
       res.redirect(`${frontendOrigin}${redirectPath}`);
     } catch (err) {
       console.error('OAuth callback error:', err);
 
-      // ULTRA-ROBUST environment detection for error redirect too
+      // Smart environment detection for error redirect
       const host = req.get("host") || "";
       const origin = req.get("origin") || "";
       const referer = req.get("referer") || "";
@@ -552,14 +532,8 @@ app.get(
 
       const isProduction = process.env.NODE_ENV === "production" || isProductionHost;
 
-      let frontendOrigin;
-      if (process.env.FRONTEND_ORIGIN) {
-        frontendOrigin = process.env.FRONTEND_ORIGIN;
-      } else if (isProduction) {
-        frontendOrigin = "https://acadmix.shop";
-      } else {
-        frontendOrigin = "http://localhost:5173";
-      }
+      const frontendOrigin = process.env.FRONTEND_ORIGIN ||
+        (isProduction ? "https://acadmix.shop" : "http://localhost:5173");
 
       res.redirect(`${frontendOrigin}/login?error=oauth_failed`);
     }
