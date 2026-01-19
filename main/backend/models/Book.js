@@ -123,4 +123,10 @@ bookSchema.virtual('discountPercentage').get(function () {
   return 0;
 });
 
-module.exports = mongoose.model('Book', bookSchema);
+const Book = mongoose.model('Book', bookSchema);
+
+// Export constants for use in routes
+Book.SECTIONS = SECTIONS;
+Book.TRACKS = TRACKS;
+
+module.exports = Book;

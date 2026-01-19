@@ -815,6 +815,13 @@ app.get("/api/pdf-proxy", async (req, res) => {
 
 
 
+// Book metadata endpoint
+app.get("/api/books/metadata", (req, res) => {
+  res.json({
+    categories: Book.TRACKS || ['NEET', 'JEE'],
+    sections: Book.SECTIONS || ['home', 'class11', 'class12', 'test']
+  });
+});
 
 // Books API
 app.get("/api/books", async (req, res) => {

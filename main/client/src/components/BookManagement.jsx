@@ -48,6 +48,13 @@ const BookManagement = () => {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Fetch book metadata (categories and sections)
+  const { data: bookMetadata } = useQuery({
+    queryKey: ['book-metadata'],
+    queryFn: () => api.get('/books/metadata').then(res => res.data),
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+
   // Create book mutation
   const createBook = useMutation({
     mutationFn: (data) => api.post('/admin/books', data),
@@ -341,373 +348,377 @@ const BookManagement = () => {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Category *
-                    </label>
-                    <select
-                      name="category"
-                      value={formData.category}
-                      onChange={handleInputChange}
-                      className="input-field"
-                    >
-                      <option value="NEET">NEET</option>
-                      <option value="JEE">JEE</option>
-                    </select>
-                  </div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Category *
+                  </label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    className="input-field"
+                  >
+                    {(bookMetadata?.categories || ['NEET', 'JEE']).map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
                 </div>
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Section *
-                    </label>
-                    <select
-                      name="section"
-                      value={formData.section}
-                      onChange={handleInputChange}
-                      className="input-field"
-                    >
-                      <option value="class11">Class 11</option>
-                      <option value="class12">Class 12</option>
-                      <option value="test">Test Series</option>
-                      <option value="home">Home</option>
-                    </select>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Section *
+                </label>
+                <select
+                  name="section"
+                  value={formData.section}
+                  onChange={handleInputChange}
+                  className="input-field"
+                >
+                  {(bookMetadata?.sections || ['home', 'class11', 'class12', 'test']).map(sec => (
+                    <option key={sec} value={sec}>
+                      {sec === 'home' ? 'Home' :
+                        sec === 'class11' ? 'Class 11' :
+                          sec === 'class12' ? 'Class 12' :
+                            sec === 'test' ? 'Test Series' : sec}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Regular Price (₹) *
+                </label>
+                <input
+                  type="number"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  className="input-field"
+                  placeholder="99"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">This is the original price of the book</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Sale Price (₹)
+                </label>
+                <input
+                  type="number"
+                  name="priceDiscounted"
+                  value={formData.priceDiscounted}
+                  onChange={handleInputChange}
+                  className="input-field"
+                  placeholder="29"
+                  min="0"
+                  step="0.01"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Leave empty if no discount. Users will pay this amount if set.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Description *
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={4}
+                className="input-field"
+                placeholder="Enter book description"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Number of Pages
+                </label>
+                <input
+                  type="number"
+                  name="pages"
+                  value={formData.pages}
+                  onChange={handleInputChange}
+                  className="input-field"
+                  placeholder="200"
+                />
+              </div>
+            </div>
+
+            {/* Free Book Toggle */}
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                id="isFree"
+                name="isFree"
+                checked={formData.isFree}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  isFree: e.target.checked
+                }))}
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              />
+              <label htmlFor="isFree" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Mark as free for all users
+              </label>
+            </div>
+            {formData.isFree && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Regular Price (₹) *
-                    </label>
-                    <input
-                      type="number"
-                      name="price"
-                      value={formData.price}
-                      onChange={handleInputChange}
-                      className="input-field"
-                      placeholder="99"
-                      min="0"
-                      step="0.01"
-                      required
-                    />
-                    <p className="text-xs text-gray-500 mt-1">This is the original price of the book</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Sale Price (₹)
-                    </label>
-                    <input
-                      type="number"
-                      name="priceDiscounted"
-                      value={formData.priceDiscounted}
-                      onChange={handleInputChange}
-                      className="input-field"
-                      placeholder="29"
-                      min="0"
-                      step="0.01"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Leave empty if no discount. Users will pay this amount if set.
+                  <div className="ml-3">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      This book will be available for free to all users and will appear in their "My Books" section.
                     </p>
                   </div>
                 </div>
+              </div>
+            )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Description *
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    rows={4}
-                    className="input-field"
-                    placeholder="Enter book description"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Number of Pages
-                    </label>
+            {/* File Uploads */}
+            <div className="space-y-6">
+              {/* Delivery Method Selector */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Delivery Method
+                </label>
+                <div className="flex items-center space-x-6">
+                  <label className="inline-flex items-center cursor-pointer">
                     <input
-                      type="number"
-                      name="pages"
-                      value={formData.pages}
+                      type="radio"
+                      name="deliveryType"
+                      value="pdf"
+                      checked={deliveryType === 'pdf'}
+                      onChange={(e) => setDeliveryType(e.target.value)}
+                      className="form-radio h-4 w-4 text-primary-600 transition duration-150 ease-in-out"
+                    />
+                    <span className="ml-2 text-gray-700 dark:text-gray-300">Direct PDF Download</span>
+                  </label>
+                  <label className="inline-flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      name="deliveryType"
+                      value="telegram"
+                      checked={deliveryType === 'telegram'}
+                      onChange={(e) => setDeliveryType(e.target.value)}
+                      className="form-radio h-4 w-4 text-primary-600 transition duration-150 ease-in-out"
+                    />
+                    <span className="ml-2 text-gray-700 dark:text-gray-300">Telegram Bot</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Conditional Fields based on Delivery Method */}
+              {deliveryType === 'telegram' ? (
+                /* Telegram Link */
+                <div className="mb-6 animate-fade-in">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Telegram Bot Link
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-2.02-1.35-2.92-1.96-.96-.65-.05-1.09.2-1.34.64-.64 3.75-3.4 3.82-3.69.01-.03.01-.13-.05-.18s-.15-.04-.22.01c-.1.06-1.56.99-4.43 2.93-.41.28-.79.42-1.12.41-.36-.01-1.05-.2-1.56-.36-.63-.19-1.13-.29-1.08-.61.02-.16.24-.32.65-.49 2.54-1.1 4.24-1.83 5.09-2.18 2.42-1 2.92-1.17 3.25-1.17.07 0 .23.02.34.1.11.08.14.19.16.27l.02.13z" />
+                      </svg>
+                    </div>
+                    <input
+                      type="url"
+                      name="telegramLink"
+                      value={formData.telegramLink || ''}
                       onChange={handleInputChange}
-                      className="input-field"
-                      placeholder="200"
+                      className="input-field pl-10"
+                      placeholder="https://t.me/yourbot?start=..."
                     />
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Users will be directed to this Telegram bot after purchase.
+                  </p>
                 </div>
-
-                {/* Free Book Toggle */}
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="isFree"
-                    name="isFree"
-                    checked={formData.isFree}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      isFree: e.target.checked
-                    }))}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="isFree" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Mark as free for all users
+              ) : (
+                /* Full PDF Upload - Only show when NOT using Telegram */
+                <div className="mb-6 animate-fade-in">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Full PDF (Original)
                   </label>
-                </div>
-                {formData.isFree && (
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm text-blue-700 dark:text-blue-300">
-                          This book will be available for free to all users and will appear in their "My Books" section.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* File Uploads */}
-                <div className="space-y-6">
-                  {/* Delivery Method Selector */}
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Delivery Method
-                    </label>
-                    <div className="flex items-center space-x-6">
-                      <label className="inline-flex items-center cursor-pointer">
-                        <input
-                          type="radio"
-                          name="deliveryType"
-                          value="pdf"
-                          checked={deliveryType === 'pdf'}
-                          onChange={(e) => setDeliveryType(e.target.value)}
-                          className="form-radio h-4 w-4 text-primary-600 transition duration-150 ease-in-out"
-                        />
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">Direct PDF Download</span>
-                      </label>
-                      <label className="inline-flex items-center cursor-pointer">
-                        <input
-                          type="radio"
-                          name="deliveryType"
-                          value="telegram"
-                          checked={deliveryType === 'telegram'}
-                          onChange={(e) => setDeliveryType(e.target.value)}
-                          className="form-radio h-4 w-4 text-primary-600 transition duration-150 ease-in-out"
-                        />
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">Telegram Bot</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Conditional Fields based on Delivery Method */}
-                  {deliveryType === 'telegram' ? (
-                    /* Telegram Link */
-                    <div className="mb-6 animate-fade-in">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Telegram Bot Link
-                      </label>
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center">
+                    {formData.pdfName ? (
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <svg className="h-5 w-5 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-2.02-1.35-2.92-1.96-.96-.65-.05-1.09.2-1.34.64-.64 3.75-3.4 3.82-3.69.01-.03.01-.13-.05-.18s-.15-.04-.22.01c-.1.06-1.56.99-4.43 2.93-.41.28-.79.42-1.12.41-.36-.01-1.05-.2-1.56-.36-.63-.19-1.13-.29-1.08-.61.02-.16.24-.32.65-.49 2.54-1.1 4.24-1.83 5.09-2.18 2.42-1 2.92-1.17 3.25-1.17.07 0 .23.02.34.1.11.08.14.19.16.27l.02.13z" />
-                          </svg>
+                        <div className="flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                          <FileText className="h-8 w-8 text-blue-500 mr-2" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-[150px]">
+                            {formData.pdfName}
+                          </span>
                         </div>
+                        <button
+                          type="button"
+                          onClick={removePdf}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          Click to upload Full PDF
+                        </p>
                         <input
-                          type="url"
-                          name="telegramLink"
-                          value={formData.telegramLink || ''}
-                          onChange={handleInputChange}
-                          className="input-field pl-10"
-                          placeholder="https://t.me/yourbot?start=..."
+                          type="file"
+                          accept=".pdf"
+                          onChange={handlePdfUpload}
+                          className="hidden"
+                          id="pdf-upload"
                         />
+                        <label
+                          htmlFor="pdf-upload"
+                          className="btn-secondary cursor-pointer"
+                        >
+                          Upload Full PDF
+                        </label>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Users will be directed to this Telegram bot after purchase.
-                      </p>
-                    </div>
-                  ) : (
-                    /* Full PDF Upload - Only show when NOT using Telegram */
-                    <div className="mb-6 animate-fade-in">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Full PDF (Original)
-                      </label>
-                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center">
-                        {formData.pdfName ? (
-                          <div className="relative">
-                            <div className="flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                              <FileText className="h-8 w-8 text-blue-500 mr-2" />
-                              <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-[150px]">
-                                {formData.pdfName}
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={removePdf}
-                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div>
-                            <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                              Click to upload Full PDF
-                            </p>
-                            <input
-                              type="file"
-                              accept=".pdf"
-                              onChange={handlePdfUpload}
-                              className="hidden"
-                              id="pdf-upload"
-                            />
-                            <label
-                              htmlFor="pdf-upload"
-                              className="btn-secondary cursor-pointer"
-                            >
-                              Upload Full PDF
-                            </label>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                </div>
+              )}
 
-                  {/* File Uploads (Image & Demo PDF always visible) */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Image Upload */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Cover Image
-                      </label>
-                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center">
-                        {formData.imagePreview ? (
-                          <div className="relative">
-                            <img
-                              src={formData.imagePreview}
-                              alt="Preview"
-                              className="w-full h-32 object-cover rounded-lg"
-                            />
-                            <button
-                              type="button"
-                              onClick={removeImage}
-                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div>
-                            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                              Click to upload cover image
-                            </p>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageUpload}
-                              className="hidden"
-                              id="image-upload"
-                            />
-                            <label
-                              htmlFor="image-upload"
-                              className="btn-secondary cursor-pointer"
-                            >
-                              Choose Image
-                            </label>
-                          </div>
-                        )}
+              {/* File Uploads (Image & Demo PDF always visible) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Image Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Cover Image
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center">
+                    {formData.imagePreview ? (
+                      <div className="relative">
+                        <img
+                          src={formData.imagePreview}
+                          alt="Preview"
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
-                    </div>
-
-                    {/* Demo PDF (Always available) */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Demo PDF (Preview)
-                      </label>
-                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center">
-                        {formData.demoPdfName ? (
-                          <div className="relative">
-                            <div className="flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                              <FileText className="h-8 w-8 text-green-500 mr-2" />
-                              <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-[150px]">
-                                {formData.demoPdfName}
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={removeDemoPdf}
-                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div>
-                            <Eye className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                              Click to upload Demo PDF
-                            </p>
-                            <input
-                              type="file"
-                              accept=".pdf"
-                              onChange={handleDemoPdfUpload}
-                              className="hidden"
-                              id="demo-pdf-upload"
-                            />
-                            <label
-                              htmlFor="demo-pdf-upload"
-                              className="btn-secondary cursor-pointer"
-                            >
-                              Upload Demo PDF
-                            </label>
-                          </div>
-                        )}
+                    ) : (
+                      <div>
+                        <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          Click to upload cover image
+                        </p>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          id="image-upload"
+                        />
+                        <label
+                          htmlFor="image-upload"
+                          className="btn-secondary cursor-pointer"
+                        >
+                          Choose Image
+                        </label>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Submit Buttons */}
-                <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddModal(false)}
-                    className="btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={createBook.isPending || updateBook.isPending}
-                    className="btn-primary"
-                  >
-                    {createBook.isPending || updateBook.isPending ? (
-                      <div className="spinner h-4 w-4 mr-2" />
+                {/* Demo PDF (Always available) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Demo PDF (Preview)
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center">
+                    {formData.demoPdfName ? (
+                      <div className="relative">
+                        <div className="flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                          <FileText className="h-8 w-8 text-green-500 mr-2" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-[150px]">
+                            {formData.demoPdfName}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={removeDemoPdf}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
                     ) : (
-                      <BookOpen className="h-4 w-4 mr-2" />
+                      <div>
+                        <Eye className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          Click to upload Demo PDF
+                        </p>
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={handleDemoPdfUpload}
+                          className="hidden"
+                          id="demo-pdf-upload"
+                        />
+                        <label
+                          htmlFor="demo-pdf-upload"
+                          className="btn-secondary cursor-pointer"
+                        >
+                          Upload Demo PDF
+                        </label>
+                      </div>
                     )}
-                    {editingBook ? 'Update Book' : 'Create Book'}
-                  </button>
+                  </div>
                 </div>
-              </form>
+              </div>
             </div>
-          </div>
+
+            {/* Submit Buttons */}
+            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={createBook.isPending || updateBook.isPending}
+                className="btn-primary"
+              >
+                {createBook.isPending || updateBook.isPending ? (
+                  <div className="spinner h-4 w-4 mr-2" />
+                ) : (
+                  <BookOpen className="h-4 w-4 mr-2" />
+                )}
+                {editingBook ? 'Update Book' : 'Create Book'}
+              </button>
+            </div>
+          </form>
         </div>
+          </div>
+        </div >
       )}
-    </div>
+    </div >
   );
 };
 
