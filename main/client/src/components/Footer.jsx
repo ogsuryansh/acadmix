@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import { 
-  Mail, 
-  Phone, 
+import {
+  Mail,
+  Phone,
   MapPin,
   BookOpen,
   Target,
@@ -18,7 +18,6 @@ const Footer = () => {
     { name: 'Home', href: '/' },
     { name: 'Class 11', href: '/class11' },
     { name: 'Class 12', href: '/class12' },
-    { name: 'Practice Tests', href: '/tests' },
     { name: 'My Books', href: '/my-books' },
     { name: 'Login', href: '/login' },
     { name: 'Register', href: '/register' },
@@ -45,7 +44,7 @@ const Footer = () => {
     <footer className="bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          
+
           {/* Column 1: Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
@@ -53,7 +52,7 @@ const Footer = () => {
               <span className="text-2xl font-bold">Acadmix</span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Your trusted partner for NEET & JEE preparation. Access comprehensive study materials, 
+              Your trusted partner for NEET & JEE preparation. Access comprehensive study materials,
               practice tests, and expert guidance to excel in your entrance exams.
             </p>
           </div>
@@ -107,8 +106,8 @@ const Footer = () => {
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <Mail className="h-4 w-4 text-gray-400" />
-                <a href="mailto:acadmix.shop@gmail.com" className="text-gray-400 hover:text-white transition-colors text-sm">
-                  acadmix.shop@gmail.com
+                <a href="mailto:acadmixlord@gmail.com" className="text-gray-400 hover:text-white transition-colors text-sm">
+                  acadmixlord@gmail.com
                 </a>
               </div>
               <div className="flex items-center space-x-2">

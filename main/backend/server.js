@@ -494,37 +494,72 @@ app.get(
     try {
       // User is automatically logged in via passport
 
-      // Smart environment detection: check actual host being accessed
+      // ULTRA-ROBUST environment detection with multiple fallback layers
       const host = req.get("host") || "";
-      const isProductionHost = host.includes("acadmix.shop") || host.includes("vercel.app");
+      const origin = req.get("origin") || "";
+      const referer = req.get("referer") || "";
+
+      // Check if this is a production request (multiple signals)
+      const isProductionHost =
+        host.includes("acadmix.shop") ||
+        host.includes("vercel.app") ||
+        origin.includes("acadmix.shop") ||
+        referer.includes("acadmix.shop");
+
       const isProduction = process.env.NODE_ENV === "production" || isProductionHost;
 
-      const frontendOrigin = process.env.FRONTEND_ORIGIN ||
-        (isProduction ? "https://acadmix.shop" : "http://localhost:5173");
+      // Explicit FRONTEND_ORIGIN with smart fallback
+      let frontendOrigin;
+      if (process.env.FRONTEND_ORIGIN) {
+        frontendOrigin = process.env.FRONTEND_ORIGIN;
+      } else if (isProduction) {
+        // HARDCODED production domain as ultimate fallback
+        frontendOrigin = "https://acadmix.shop";
+      } else {
+        frontendOrigin = "http://localhost:5173";
+      }
 
       // In development, redirect directly to home; in production use auth-callback for better UX
       const redirectPath = isProduction ? "/auth-callback" : "/";
 
       console.log('🔄 [OAuth Callback] Redirecting:', {
         host,
+        origin,
+        referer,
         isProductionHost,
         isProduction,
         frontendOrigin,
         redirectPath,
-        fullRedirect: `${frontendOrigin}${redirectPath}`
+        fullRedirect: `${frontendOrigin}${redirectPath}`,
+        envFrontendOrigin: process.env.FRONTEND_ORIGIN || 'NOT SET',
+        nodeEnv: process.env.NODE_ENV || 'NOT SET'
       });
 
       res.redirect(`${frontendOrigin}${redirectPath}`);
     } catch (err) {
       console.error('OAuth callback error:', err);
 
-      // Smart environment detection for error redirect too
+      // ULTRA-ROBUST environment detection for error redirect too
       const host = req.get("host") || "";
-      const isProductionHost = host.includes("acadmix.shop") || host.includes("vercel.app");
+      const origin = req.get("origin") || "";
+      const referer = req.get("referer") || "";
+
+      const isProductionHost =
+        host.includes("acadmix.shop") ||
+        host.includes("vercel.app") ||
+        origin.includes("acadmix.shop") ||
+        referer.includes("acadmix.shop");
+
       const isProduction = process.env.NODE_ENV === "production" || isProductionHost;
 
-      const frontendOrigin = process.env.FRONTEND_ORIGIN ||
-        (isProduction ? "https://acadmix.shop" : "http://localhost:5173");
+      let frontendOrigin;
+      if (process.env.FRONTEND_ORIGIN) {
+        frontendOrigin = process.env.FRONTEND_ORIGIN;
+      } else if (isProduction) {
+        frontendOrigin = "https://acadmix.shop";
+      } else {
+        frontendOrigin = "http://localhost:5173";
+      }
 
       res.redirect(`${frontendOrigin}/login?error=oauth_failed`);
     }

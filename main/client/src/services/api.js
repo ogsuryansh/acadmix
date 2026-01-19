@@ -63,9 +63,10 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401) {
       console.log('🚨 401 Unauthorized - Authentication failed');
-      // Only redirect to login if we're not already on login/register/admin-login pages
+      // Only redirect to login if we're not already on login/register/admin-login/auth-callback pages
       const currentPath = window.location.pathname;
-      if (!currentPath.includes('/login') && !currentPath.includes('/register') && !currentPath.includes('/admin-login')) {
+      const excludedPaths = ['/login', '/register', '/admin-login', '/auth-callback'];
+      if (!excludedPaths.some(path => currentPath.includes(path))) {
         console.log('🔄 Redirecting to login page...');
         // Use a more graceful redirect
         setTimeout(() => {
