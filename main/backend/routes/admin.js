@@ -197,6 +197,22 @@ router.put('/books/:id', requireAdmin, validate(schemas.bookId, 'params'), valid
     res.json({ success: true, book });
 }));
 
+// Get all books for admin (no section filter)
+router.get('/books', requireAdmin, asyncHandler(async (req, res) => {
+    await connectToDB();
+
+    const books = await Book.find()
+        .sort({ createdAt: -1 })
+        .lean();
+
+    logger.debug('Admin books list retrieved', {
+        adminId: req.user._id,
+        totalBooks: books.length
+    });
+
+    res.json(books);
+}));
+
 // Delete book
 router.delete('/books/:id', requireAdmin, validate(schemas.bookId, 'params'), asyncHandler(async (req, res) => {
     await connectToDB();
